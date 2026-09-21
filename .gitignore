@@ -1,0 +1,14 @@
+# Each of these is its own git repository
+week*/
+benjohnbill.github.io/
+function_visualizer/
+issue-template/
+
+# Local environment
+.venv/
+.ruff_cache/
+.impeccable/
+.envrc
+
+# CLAUDE.md drafts awaiting his copy
+docs/proposals/

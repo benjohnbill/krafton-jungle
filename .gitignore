@@ -1,9 +1,10 @@
 # Each of these is its own git repository
-week*/
+# week*/ and c-workshop/ are nested repos too, but stay unignored on purpose:
+# Zed's file finder skips gitignored paths. Never `git add -A` / `git add .`
+# here - it would stage them as broken gitlinks. Stage by explicit path.
 benjohnbill.github.io/
 function_visualizer/
 issue-template/
-c-workshop/
 
 # Local environment
 .venv/

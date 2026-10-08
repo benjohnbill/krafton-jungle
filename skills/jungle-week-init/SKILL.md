@@ -81,7 +81,9 @@ repository's `AGENTS.md`):
   `<div class="gh">`, after its `<h2>`. Skip aloud when he has no post yet.
 - Add an empty group for this week with the heading `N주차 · <name>` only
   when he wants it shown before its first page; otherwise the first card
-  creates it.
+  creates it. Either way, the heading text is wrapped in
+  `<a class="wk-repo" href="https://github.com/<owner>/<repo>">`, the
+  `origin` of this week's repository.
 
 Commit in that repository (`Link the week N-1 WIL post from the study
 index`). Push when he confirms; he reviews it on the live site. Criterion:

@@ -15,3 +15,6 @@ skills/jungle-deck/
 
 # CLAUDE.md drafts awaiting his copy
 docs/proposals/
+
+# Handoffs between his Claude sessions; not part of the repository (user said 2026-10-15)
+docs/handoffs/

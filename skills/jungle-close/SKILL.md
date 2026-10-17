@@ -52,6 +52,11 @@ was killed, the next step.
 Stage only the exercise files and `lab/` files he touched. Criterion:
 `git status` is clean of those paths and `git log -1` shows the title.
 
+The repository's own `CLAUDE.md` wins over the title and the staging rule above
+when it prescribes one. `c-workshop` does: the Solve title is
+`Solve NN-<brief name>: <cause>`, and `LEARNING_LOG.md` is staged with the
+exercise files, because a pass entry lands in the Solve commit.
+
 ## 3. Push
 
 `git push origin master` when his request names push or 마무리. When it names

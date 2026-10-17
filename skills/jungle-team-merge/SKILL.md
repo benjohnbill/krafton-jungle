@@ -15,9 +15,13 @@ A judgement call before the gate takes the default written here and goes into
 the gate as "decided: …".
 
 The course rule (week `CLAUDE.md`) forbids the agent to write logic under
-`pintos/`. Before the gate the agent only assembles lines teammates already
-wrote: merges and side-picks. Renames and cleanup wait for gate approval.
-Logic fixes are written as findings, never as code.
+`pintos/`. Default: before the gate the agent only assembles lines teammates
+already wrote (merges and side-picks); renames and cleanup wait for gate
+approval; logic fixes are written as findings, never as code.
+
+Waiver: when he says "알아서 해줘" (or names a fix) at the gate, the agent may
+write the code for the logic fixes listed there, in this run only. Each fix
+is still its own commit and goes through the re-verify in "After the gate".
 
 Scratch files go in the scratchpad. `run-tests.sh` (this folder) is the judge;
 its header defines the verdicts `PASS | PASS* | FAIL | UNJUDGED | STALE`.
@@ -129,8 +133,8 @@ week `CLAUDE.md`.
 
 3. The rename list and the cleanup list. Approval = consent to exactly those
    edits.
-4. Logic fixes as numbered findings. Each needs its own number to be applied.
-   Silence or "알아서" = no.
+4. Logic fixes as numbered findings. Default: not applied. Applied when he
+   names its number, or says "알아서" for all of them. Silence = no.
 5. Every other "decided: …".
 6. Push `integrate/<topic>` and open the PR into the base?
 7. The sync preview: clean / dirty / conflicting files. On conflict: (a) he

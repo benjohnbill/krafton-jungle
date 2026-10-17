@@ -38,8 +38,9 @@ hand-written exercise list (tab completion needs literal names), the labels
 When upstream `make check` runs each test in its own emulator (Pintos), add
 `dfast` too: the whole suite with `-j$(nproc)`, `-icount shift=N,sleep=off`
 and a short `TIMEOUT`. The week08 `GNUmakefile` holds the rule and, in its
-comments, why each part is there. Criterion: `make dfast` exits, and every
-`.output` it judged is newer than the run's start.
+comments, why each part is there. `make dfast TESTS="args-none …"` runs only
+those tests; `jungle-team-merge` runs it that way. Criterion: `make dfast`
+exits, and every `.output` it judged is newer than the run's start.
 
 Without a Makefile: a minimal one with the same labels.
 

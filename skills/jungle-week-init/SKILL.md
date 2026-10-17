@@ -8,7 +8,7 @@ description: Day-1 bootstrap of a new Krafton Jungle week repository — build l
 A conditional checklist. Each item runs when its condition holds and is
 skipped aloud when it does not: the upstream layout changes every week. The
 previous week's files are the templates: `LATEST` = the highest-numbered
-sibling `weekNN/` that has a `GNUmakefile` (week05 today).
+sibling `weekNN/` that has a `GNUmakefile`.
 
 ## 0. Facts, then questions
 
@@ -34,6 +34,12 @@ hand-written exercise list (tab completion needs literal names), the labels
 `r_` `g_` and, when a container exists, `dr_` `dg_` `dcheck` `dshell` with
 `DOCKER_TTY ?= -it`. Upstream files stay untouched. Criterion:
 `make <first exercise>` builds and `make` alone prints the label help.
+
+When upstream `make check` runs each test in its own emulator (Pintos), add
+`dfast` too: the whole suite with `-j$(nproc)`, `-icount shift=N,sleep=off`
+and a short `TIMEOUT`. The week08 `GNUmakefile` holds the rule and, in its
+comments, why each part is there. Criterion: `make dfast` exits, and every
+`.output` it judged is newer than the run's start.
 
 Without a Makefile: a minimal one with the same labels.
 

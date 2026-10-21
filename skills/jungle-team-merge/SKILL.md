@@ -1,6 +1,7 @@
 ---
 name: jungle-team-merge
-description: Pintos team weeks — merge teammates' personal branches into the shared base branch. Measure each branch (lint, the feature's tests plus every test the base already passes), judge it against the team criteria, integrate the best part of each on one local branch with history kept, verify and trace every hunk, then ask everything at one gate; after it, push, open the PR, and sync his personal branch. Use when he says "팀원 브랜치 합치자", "develop 구성", "머지 판정", "브랜치 비교해서 머지", "~ 구현했어, 팀끼리 머지 준비중", or asks which teammate's code to take.
+description: Pintos team weeks — measure teammates' branches and merge the best of each into the shared base branch behind one approval gate.
+disable-model-invocation: true
 ---
 
 # jungle-team-merge

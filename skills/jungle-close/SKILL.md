@@ -1,6 +1,7 @@
 ---
 name: jungle-close
-description: Day-close routine for a Krafton Jungle week repository — verify the touched exercises, commit (Solve or WIP), push, set the GitHub Project board, give the next exercises as hints, print the two Logseq lines, rewrite the progress memo. Use when he wraps up — "커밋/push", "보드 갱신", "진도 반영", "프로젝트 보드 최신화", "오늘 마무리", "커밋하고 보드" — or asks for any subset of those.
+description: Day-close routine for a Krafton Jungle week repository — verify, commit, push, update the board, write the progress memo.
+disable-model-invocation: true
 ---
 
 # jungle-close
@@ -59,7 +60,7 @@ exercise files, because a pass entry lands in the Solve commit.
 
 ## 3. Push
 
-`git push origin master` when his request names push or 마무리. When it names
+`git push origin HEAD` (the current branch) when his request names push or 마무리. When it names
 neither, commit, and end the report with "push도 할까요?". Criterion: the push
 exits 0 and `git status -sb` shows no `ahead`.
 

@@ -1,6 +1,7 @@
 ---
 name: jungle-week-init
-description: Day-1 bootstrap of a new Krafton Jungle week repository — build labels, .clangd, .gitignore, the issue script and GitHub Project board, and the week CLAUDE.md four-slot draft. Use when a new weekNN/ repository appears under ~/dev/krafton-jungle or he says "새 주차", "N주차 세팅", "이번 주 세팅", "주차 시작".
+description: Day-1 bootstrap of a new Krafton Jungle week repository (labels, editor config, issue board, week CLAUDE.md draft).
+disable-model-invocation: true
 ---
 
 # jungle-week-init

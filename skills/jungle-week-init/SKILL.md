@@ -21,10 +21,17 @@ Then one message, numbered, and wait:
 1. Week number and title for the board ("Week N").
 2. Solo tutoring or a team project? A team week gets `Mode:` on the first
    line of its CLAUDE.md.
-3. What step 2 is this week (the representation he must draw).
-4. Where the problem statement lives, and which blocks are spoilers.
-5. What "verify" means this week (the exit-0 check, a test runner, a grader).
-6. The velog WIL post URL of the previous week, and this week's name for
+3. The course guide's words on AI use (he pastes them), and the mode they
+   lead to: tutor mode (`docs/tutor-mode.md`), concept tutor
+   (`docs/concept-tutor-mode.md`), or transcription
+   (`docs/transcription-mode.md`).
+4. Where AI-generated code may go: which branches, and whether it is ever
+   pushed.
+5. Tutor mode only: what step 2 is this week (the representation he must
+   draw).
+6. Where the problem statement lives, and which blocks are spoilers.
+7. What "verify" means this week (the exit-0 check, a test runner, a grader).
+8. The velog WIL post URL of the previous week, and this week's name for
    the study index heading (for example `C언어(2) [Debugging lab]`).
 
 ## 1. Build layer — if upstream ships a Makefile
@@ -56,7 +63,7 @@ Build outputs (`build/`, `build-docker/`, binaries beside sources).
 
 Copy `~/dev/krafton-jungle/make_week05_issues.py` to `make_weekNN_issues.py`
 beside it; adapt `REPO`, `WEEK`, `ROOT`, `CSV`, and the collector that pulls
-each exercise's statement (question 4). The five `공통 -` rows are the same
+each exercise's statement (question 6). The five `공통 -` rows are the same
 every week. `--dry-run`, then run. Criterion: `gh issue list --limit 100`
 count equals the CSV row count.
 
@@ -73,11 +80,35 @@ every issue as Todo.
 
 ## 6. Week CLAUDE.md — the four slots
 
-Draft from the spine's slot list (`~/dev/krafton-jungle/docs/tutor-spine.md`,
-last section) and the answers to questions 2–5. `LATEST/CLAUDE.md` is the
+A week's `CLAUDE.md` is thin. It carries a one-paragraph purpose (what the
+exercises are, and what must remain after them) and four slots:
+
+1. **Step 2 and the ladder rungs** — what "the week's representation" is, and
+   the after-it-passes rungs in the week's terms. Both are tutor-mode
+   concepts (`docs/tutor-mode.md`); a week in another mode may leave this
+   slot out.
+2. **Where the statement and the spoilers live** — the file, block, or PDF
+   that is the specification, and the blocks that are spoilers.
+3. **Environment** — toolchain, build labels, container, custom commands,
+   the verify chain (`Verify:` — the commands whose exit 0 means done), and
+   the line `Board: <GitHub Project number>`.
+4. **Do not touch** — upstream-tracked files and fixed scaffolding.
+
+Plus, for a team or build week, `Mode:` on the first line.
+
+Draft from this slot list and the answers to questions 2–7. The Mode
+section records the course words and his answers to questions 3–4.
+`LATEST/CLAUDE.md` is the
 shape reference. CLAUDE.md is user scope: write the draft to
 `~/dev/krafton-jungle/docs/proposals/weekNN-claude-md.md` and give him the
 copy command. Criterion: he confirms the file is in place.
+
+## 6b. Transcription layer — if question 3 chose transcription mode
+
+Create `notes/sheets/` and a `GLOSSARY.md` skeleton (`domain-modeling`
+format) for the week's domain words; add both to `.git/info/exclude`. In
+the week CLAUDE.md draft, Slot 2 names the sheet location. Criterion: both
+paths exist and `git status` does not show them.
 
 ## 7. Study index — the previous week's WIL link and this week's heading
 

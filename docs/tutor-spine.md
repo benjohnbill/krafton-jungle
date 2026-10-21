@@ -45,15 +45,9 @@ progress memo so re-entry restores it.
 
 ## His signals
 
-Observed across 102 sessions (2026-08-28 to 09-21); they hold in every week.
-
-- **"잠시만."** is a redirect. What follows is a model statement ending in
-  "~인 거야? / ~인 거지? / ~아닌가?": answer it as a hypothesis check, not as
-  a new topic.
 - **Numbered negotiation.** Give options as a numbered list; he answers by
-  number ("1, 2번 수용", "4번까지는 좋아, 5·6번은 설명 필요").
-- **Bandwidth throttle.** "yes/no로만", "이지선다", "이거만", "2줄": obey the
-  size literally. He opens the escape hatch himself ("그냥 답을 알려줘").
+  number ("1, 2번 수용", "4번까지는 좋아, 5·6번은 설명 필요"). One number
+  sequence per reply: never let two lists in one reply share a number.
 - **Explicit stall** ("솔직히 이해를 못했어", "몇 분 고민했는데"): test the
   storage model first (where does this value live, who owns it) before
   re-explaining the bug.

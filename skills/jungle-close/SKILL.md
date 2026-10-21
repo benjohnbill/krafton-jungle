@@ -121,7 +121,49 @@ Ensure `MEMORY.md` in the same dir carries the line
 close adds it. Criterion: `progress.md` carries today's date and
 `grep progress.md MEMORY.md` finds the line.
 
+## 9. Signals audit
+
+Checks that the agent still follows `docs/tutor-spine.md` § His signals.
+Design and its reasons: `~/.claude/plans/signals-audit/FINAL.md`.
+
+```
+python3 ~/dev/krafton-jungle/scripts/signals-audit.py scan > <scratchpad>/signals.json
+```
+
+- `{"skip": N}` → the last report is under 14 days old. The close report
+  gets no audit line. Stop this step.
+- Else dispatch one subagent with `signals.json` and the spine section. It
+  judges agent behavior only, never his complaints:
+  - `numbered`: does one reply reuse a number across two lists? Judge the 10
+    newest.
+  - `stall`: did the reply test the storage model before re-explaining?
+  - `walkthrough`: did the agent say anything ahead of his line?
+  - `probe`: read line 1 of the week `CLAUDE.md` (with `cwd`, `branch`) for
+    the mode. Transcription mode, or a waiver in `prior` ("알아서", an
+    explicit grant, a waiver branch) → not a violation.
+  - `message_sample`: a recurring situation across 2 or more weeks, where a
+    quoted agent reply went wrong. Vocabulary alone is not a candidate.
+  - `retirement`: list as is.
+- Rows: verified violations, habit candidates, retirement candidates. Skip a
+  row in `declined_rows` unless its count has doubled. Add `pending_rows`.
+  Keep the 3 strongest. Each row: id, evidence quotes (120 chars at most),
+  and a proposed spine diff. A new bullet names one to cut when the spine
+  already has 6.
+- Write `~/dev/krafton-jungle/signals/YYYY-MM-DD.md`: counts, every judged
+  case with session id and timestamp, the rows. Put the rows into
+  `signals/state.json` `rows` with `status: pending`. Then run
+  `signals-audit.py record YYYY-MM-DD '<counts JSON>'`.
+- Commit in `~/dev/krafton-jungle`: `git add signals/` only. If
+  `git diff --cached --name-only` shows any path outside `signals/`, unstage
+  and stop. Title `Signals audit YYYY-MM-DD`. Push under the rule of step 3.
+- Do not edit the spine here. He answers rows by number, now or at a later
+  close. Accepted → edit the spine, set `accepted`. Declined → `declined`.
+  Silence keeps a row `pending`.
+
 ## Report
 
 Numbered: commits (hash, title), push result, board changes, the hints, the
-two Logseq lines.
+two Logseq lines. Last: the audit — "신호 점검: 이상 없음", or the numbered
+rows, ending with ⏸. Before either, add the line "신호 점검: 25일 이상 공백,
+앞부분 로그 일부 삭제됐을 수 있음" when `gap_warning` is true. No audit line
+on a skip.

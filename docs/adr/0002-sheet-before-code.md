@@ -5,3 +5,5 @@ He judges generated code against a sheet written before the code, as "코더들�
 **Status**: S rows (spec sentences judged T/F) are drafted by the agent with the source quote and URL, and he audits them. This part was an agent proposal (Q27) that he did not object to, but he did not approve it explicitly. Confirm it in the trial.
 
 Source: session 9a9b8353 (2026-10-22), L332, L366, L383.
+
+**Superseded in part** by ADR 0006 (2026-10-25): the S rows and T/F status were dropped after the trial.

@@ -56,6 +56,13 @@ Without a Makefile: a minimal one with the same labels.
 
 Copy `LATEST/.clangd`; set its flags equal to the build's `CSTD` + `WARN`.
 
+When the copied `GNUmakefile` has a `compiledb` rule (Pintos weeks), run
+`make compiledb` and keep `compile_commands.json` in `.git/info/exclude`.
+Without it clangd has no file list, so Ctrl+T (workspace symbols) finds only
+the files opened so far. Tell him to re-run it after adding or removing a
+`.c` file; edits and new headers need no re-run. Criterion: the command
+prints a file count, and `git status` does not show the file.
+
 ## 3. `.gitignore`
 
 Build outputs (`build/`, `build-docker/`, binaries beside sources).

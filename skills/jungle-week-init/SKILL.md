@@ -1,6 +1,6 @@
 ---
 name: jungle-week-init
-description: Day-1 bootstrap of a new Krafton Jungle week repository (labels, editor config, issue board, week CLAUDE.md draft).
+description: Day-1 bootstrap of a new Krafton Jungle week repository (build layer, editor config, issue board in solo weeks, week CLAUDE.md draft).
 disable-model-invocation: true
 ---
 
@@ -11,6 +11,11 @@ skipped aloud when it does not: the upstream layout changes every week. The
 previous week's files are the templates: `LATEST` = the highest-numbered
 sibling `weekNN/` that has a `GNUmakefile`.
 
+**Team week** (question 2): the repository is the team's. Everything this
+skill makes is his personal layer, so it stays local: add each path to
+`.git/info/exclude`, and the repo's own config, rules, and issues stand as
+the team keeps them. §3, §4, §5, and §8 are skipped aloud.
+
 ## 0. Facts, then questions
 
 Facts (look, do not ask): the new repository's path, `git remote -v`
@@ -19,7 +24,7 @@ none), the exercise layout, a README that states the order.
 
 Then one message, numbered, and wait:
 
-1. Week number and title for the board ("Week N").
+1. Week number and title ("Week N"; also the board title in a solo week).
 2. Solo tutoring or a team project? A team week gets `Mode:` on the first
    line of its CLAUDE.md.
 3. The course guide's words on AI use (he pastes them), and the mode they
@@ -45,29 +50,30 @@ hand-written exercise list (tab completion needs literal names), the labels
 
 When upstream `make check` runs each test in its own emulator (Pintos), add
 `dfast` too: the whole suite with `-j$(nproc)`, `-icount shift=N,sleep=off`
-and a short `TIMEOUT`. The week08 `GNUmakefile` holds the rule and, in its
-comments, why each part is there. `make dfast TESTS="args-none …"` runs only
-those tests; `jungle-team-merge` runs it that way. Criterion: `make dfast`
-exits, and every `.output` it judged is newer than the run's start.
+and a short `TIMEOUT`. `LATEST/GNUmakefile` holds the rule and, in its
+comments, why each part is there. Criterion: `make dfast` exits, and every
+`.output` it judged is newer than the run's start.
 
 Without a Makefile: a minimal one with the same labels.
 
 ## 2. `.clangd` — if the language is C or C++
 
 Copy `LATEST/.clangd`; set its flags equal to the build's `CSTD` + `WARN`.
+When the repo ships its own editor or style config (`.clangd`,
+`.clang-format`, `compile_flags.txt`), that config is the source: add only
+what it lacks, and lint and format results stay the team's.
 
 When the copied `GNUmakefile` has a `compiledb` rule (Pintos weeks), run
-`make compiledb` and keep `compile_commands.json` in `.git/info/exclude`.
-Without it clangd has no file list, so Ctrl+T (workspace symbols) finds only
-the files opened so far. Tell him to re-run it after adding or removing a
-`.c` file; edits and new headers need no re-run. Criterion: the command
-prints a file count, and `git status` does not show the file.
+`make compiledb` and exclude `compile_commands.json`: without it Ctrl+T finds
+only opened files. He re-runs it after adding or removing a `.c` file.
+Criterion: the command prints a file count, and `git status` does not show
+the file.
 
 ## 3. `.gitignore`
 
 Build outputs (`build/`, `build-docker/`, binaries beside sources).
 
-## 4. Issues — if `issue-template/weekN_issues_complete.csv` exists
+## 4. Issues — solo week, if `issue-template/weekN_issues_complete.csv` exists
 
 Copy `~/dev/krafton-jungle/make_week05_issues.py` to `make_weekNN_issues.py`
 beside it; adapt `REPO`, `WEEK`, `ROOT`, `CSV`, and the collector that pulls
@@ -75,7 +81,7 @@ each exercise's statement (question 6). The five `공통 -` rows are the same
 every week. `--dry-run`, then run. Criterion: `gh issue list --limit 100`
 count equals the CSV row count.
 
-## 5. Board
+## 5. Board — solo week
 
 ```
 gh project create --owner benjohnbill --title "Week N" --format json
@@ -91,23 +97,23 @@ every issue as Todo.
 A week's `CLAUDE.md` is thin. It carries a one-paragraph purpose (what the
 exercises are, and what must remain after them) and four slots:
 
-1. **Step 2 and the ladder rungs** — what "the week's representation" is, and
-   the after-it-passes rungs in the week's terms. Both are tutor-mode
-   concepts (`docs/tutor-mode.md`); a week in another mode may leave this
-   slot out.
+1. **Step 2 and the ladder rungs** — tutor mode only
+   (`docs/tutor-mode.md`): the week's representation, and the
+   after-it-passes rungs in the week's terms.
 2. **Where the statement and the spoilers live** — the file, block, or PDF
    that is the specification, and the blocks that are spoilers.
 3. **Environment** — toolchain, build labels, container, custom commands,
    the verify chain (`Verify:` — the commands whose exit 0 means done), and
-   the line `Board: <GitHub Project number>`.
+   the line `Board: <GitHub Project number>` (`Board: none` in a team week).
 4. **Do not touch** — upstream-tracked files and fixed scaffolding.
 
 Plus, for a team or build week, `Mode:` on the first line.
 
-Draft from this slot list and the answers to questions 2–7. The Mode
-section records the course words and his answers to questions 3–4.
-`LATEST/CLAUDE.md` is the
-shape reference. CLAUDE.md is user scope: write the draft to
+Draft from the answers to questions 2–7; the Mode section records the
+course words and his answers to 3–4. `LATEST/CLAUDE.md` is the shape
+reference. In a team week the file is local: an excluded `CLAUDE.md`, or
+`CLAUDE.local.md` when the repo tracks a `CLAUDE.md` or `AGENTS.md`.
+CLAUDE.md is user scope: write the draft to
 `~/dev/krafton-jungle/docs/proposals/weekNN-claude-md.md` and give him the
 copy command. Criterion: he confirms the file is in place.
 
@@ -135,7 +141,7 @@ Commit in that repository (`Link the week N-1 WIL post from the study
 index`). Push when he confirms; he reviews it on the live site. Criterion:
 the live index shows the link.
 
-## 8. First commit
+## 8. First commit — solo week
 
 In the week repository: `Add local build layer, clangd config, and tutoring
 protocol for week N`, listing in the body what was skipped and why. Push only

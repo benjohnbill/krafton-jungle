@@ -64,7 +64,7 @@ exercise files, because a pass entry lands in the Solve commit.
 neither, commit, and end the report with "push도 할까요?". Criterion: the push
 exits 0 and `git status -sb` shows no `ahead`.
 
-## 4. Board
+## 4. Board — when `Board:` is a number
 
 ```
 gh project item-list N --owner benjohnbill --format json --limit 100

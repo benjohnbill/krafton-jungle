@@ -1,171 +1,110 @@
 ---
 name: jungle-team-merge
-description: Pintos team weeks — measure teammates' branches and merge the best of each into the shared base branch behind one approval gate.
+description: Pintos team weeks — verify my PR, a teammate's PR, or a broken develop on the latest base, and report; the user approves and merges.
 disable-model-invocation: true
 ---
 
 # jungle-team-merge
 
-**One gate.** Steps 0–5 run locally; nothing leaves the machine before the
-gate. The gate asks everything at once in one numbered message, and he
-answers by number. **Never ask mid-run.** A failure stops the work and goes
-to the gate early as "stopped at step N: reason, state, rollback". After the
-gate, a failure ends with no push and the same report.
+The team has no CI. This skill is his personal stand-in for it: a build on
+the latest base before a merge, and a culprit report after a break. It reads
+and reports. He types the code, approves, and merges.
 
-A judgement call before the gate takes the default written here and goes into
-the gate as "decided: …".
+## Boundaries — every mode
 
-The course rule (week `CLAUDE.md`) forbids the agent to write logic under
-`pintos/`. Default: before the gate the agent only assembles lines teammates
-already wrote (merges and side-picks); renames and cleanup wait for gate
-approval; logic fixes are written as findings, never as code.
-
-Waiver: when he says "알아서 해줘" (or names a fix) at the gate, the agent may
-write the code for the logic fixes listed there, in this run only. Each fix
-is still its own commit and goes through the re-verify in "After the gate".
-
-Scratch files go in the scratchpad. `run-tests.sh` (this folder) is the judge;
-its header defines the verdicts `PASS | PASS* | FAIL | UNJUDGED | STALE`.
-
-## 0. Facts — look, do not ask
-
-- `git fetch --prune`. Every remote branch: `git log --oneline <base>..<b>` and
-  `git diff --stat <base>...<b>`. The base is `develop` if it exists, else
-  `main`.
-- The week `CLAUDE.md`: `Verify:`, the do-not-touch list, the course rule.
-- `CONVENTION.md` at the repository root and its rule IDs.
-- The week `GNUmakefile` and its `dfast` label. Missing → stop.
-- **Test scope** — from his words ("argument passing 구현했어", "write/exit
-  머지 준비중"):
-  - **Scoped tests**: the tests of the feature he named, by the test names in
-    the week `GNUmakefile` lists (argument passing → `args-*`; write/exit →
-    `exit`, `write-*`).
-  - **Regression set**: every test that is `PASS` or `PASS*` on the control's
-    full run (step 1). That is "what already passed", measured, not
-    remembered.
-  - Both lists go into the gate as "decided: scope".
-
-## 1. Measure
-
-1. `run-tests.sh --selftest <any tree>`. A mismatch stops the run.
-2. One scratch worktree per branch, plus the **control** (the base), each with
-   the week `GNUmakefile` copied in.
-3. The control's full run: `run-tests.sh [--wait-loop] <control> <nproc> 5`
-   with no test list (week08: 95 tests, about 30 s). Its `PASS`/`PASS*` lines
-   are the regression set.
-4. Write the expected verdict of each scoped test per branch before running.
-5. `make lint` in each tree.
-6. Every branch tree at once, from one Bash call (`&` per tree, then `wait`),
-   each with `nproc / trees` jobs:
-   `run-tests.sh [--wait-loop] <tree> <jobs> 5 <scoped ∪ regression>`.
-   `TIMEOUT` is wall time; oversubscribed QEMUs turn passes into timeouts.
-7. `--wait-loop` only for a tree whose `process_wait` loop is cited by
-   `file:line` in the judge table.
-8. A branch that cannot run the scoped tests alone (it lacks the syscall that
-   prints): graft the missing part from another branch, in its scratch tree
-   only, and say so in the table.
-
-Any `STALE`, a build failure, or a selftest mismatch goes to the gate early.
-
-## 2. Judge
-
-One table per criterion he gave; default: CONVENTION.md fidelity, stability
-for the next milestone, time and space cost, readability. Every cell cites a
-test line, a lint line, or `file:line`. A rewritten pass shows as `PASS*`. The
-stability column carries known windows the tests cannot see yet, with the
-tests that will show them.
-
-## 3. Plan
-
-- **Pick list**: per function or block, which branch it comes from.
-- **Function-overlap list**: for each file both sides change, the functions
-  both sides touched since the merge base. Each is taken whole from one side
-  or listed as a hand-merge. git folds one side's non-conflicting hunks into
-  the other side's function silently, and `merge-tree` does not report it.
+- **Read the team layer each run.** The PR template
+  (`.github/pull_request_template.md`), the README branch, commit, and PR
+  rules, and the merge rules from
+  `gh api repos/<owner>/<repo>/rules/branches/<base>`. When the README and
+  the ruleset disagree, the ruleset is the fact; list the gap under "team
+  agenda" in the report.
+- **Scratch only.** Every checkout, merge, build, and test runs in a
+  detached worktree under the scratchpad. The week working tree stays as he
+  left it: `git fetch` and read-only `git status` or `git log` only.
+- **Container only.** Build and test in the container the week `CLAUDE.md`
+  names, with the team's own targets (read the root `Makefile`):
 
   ```bash
-  printf '*.[ch] diff=cpp\n' > "$S/attrs"; mb=$(git merge-base A B)
-  for s in A B; do git -c core.attributesFile="$S/attrs" diff -U0 "$mb" "$s" -- <file> |
-    sed -n 's/^@@.*@@ //p' | sort -u > "$S/$s.fn"; done
-  comm -12 "$S/A.fn" "$S/B.fn"
+  docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+    -v "$WT":/work -w /work <image> make fast JOBS=<n>
   ```
 
-  Limit: a hunk that starts at a signature line is named after the previous
-  function. Step 5's provenance check is the real test; this list is the
-  early warning.
-- **Rename list**: every name that breaks CONVENTION.md, old → new,
-  `file:line`, rule ID.
-- **Cleanup list**: marker comments, commented-out code, planning notes.
-- **Logic fixes**: numbered findings — the property violated, the test that
-  shows it, where to look. No code.
-- **Conflict preview**: `git merge-tree --write-tree` of the merges in order.
+  `make lint` runs where the week environment doc says. Two trees at once
+  share the cores (`JOBS = nproc / 2`): `TIMEOUT` is wall time, and more
+  QEMUs than cores turn passes into false `FAIL`s.
+- **His hands only.** Code under `pintos/`, an approval, a merge, and any
+  write to the ruleset, labels, projects, or issues are his. Push and
+  `gh pr create` run only after he says yes in this run. Attribution follows
+  the week `CLAUDE.md`.
 
-## 4. Integrate
+## Mode
 
-Branch `integrate/<topic>` from the base. Merge each personal branch with
-`--no-ff --no-commit` in pick order. Resolve per the pick list and the overlap
-list, and commit each merge with a body that names what it kept and what it
-left out. No renames, cleanup, or logic fixes yet. Attribution follows the
-week `CLAUDE.md`.
+The line after `/jungle-team-merge` and the repo state pick the mode:
 
-## 5. Verify and trace
+| Mode | Fits when |
+|---|---|
+| **A — open my PR** | his branch has commits not in `origin/<base>`, or he says he will open a PR, or asks the state of his open PR |
+| **B — before I approve** | he names a teammate's PR number, or asks to check it before approval |
+| **C — develop health** | the base fails to build or test, or he says it broke after a pull |
 
-- `make lint`, and the same `run-tests.sh` command as step 1, so the
-  before/after columns compare.
-- **Provenance check**: per changed file,
-  `git diff <picked-source> integrate/<topic> -- <file>`. Every remaining hunk
-  maps to a row: another pick, a rename, a cleanup item, an approved fix. The
-  rows are the provenance table. An unmapped hunk is an unplanned fold: stop.
-- **Sync preview** of his personal branch: `git status --porcelain` and
-  `git merge-tree --write-tree <his-branch> origin/<base>`.
+Two modes fit → one numbered question, then wait. The first output line names
+the mode (`Mode B — before I approve #158`).
 
-## The gate — one message
+## Verify — the routine every mode uses
 
-1. The base: the integration was built on `<base>` at `<sha>`. May it serve as
-   the branch this meeting/PR certifies stable? If `develop` is absent: create
-   it from `main`?
-2. "decided: scope" (scoped tests, regression set), the judge tables, the pick
-   list, the provenance table, and the before/after test and lint lines.
-   `PASS*` caveat: a hang after the last output line is not detected.
+Input: a ref `X`, and whether to merge `origin/<base>` into it.
 
-   | Part | From | Changed in integration | Evidence |
-   |---|---|---|---|
-   | `load()` arg passing | JSY | merge only | args-* 5/5 `PASS*` |
+1. Worktree `X` (merged with `origin/<base>` when asked) and a **control**
+   worktree at `origin/<base>`. A merge conflict ends the routine: report
+   the files.
+2. In both: `make lint`, then the container run. Keep both outputs.
+3. Compare, and cite every line:
+   - lint lines new in `X` (the base already fails lint, so compare, not
+     require a clean pass);
+   - tests `PASS` on the control and `FAIL` on `X` (regressions), and the
+     reverse (progress);
+   - build errors, conflict markers (`^(<<<<<<<|=======|>>>>>>>)`), and
+     duplicate definitions, as `file:line`.
+4. `git worktree remove` both.
 
-3. The rename list and the cleanup list. Approval = consent to exactly those
-   edits.
-4. Logic fixes as numbered findings. Default: not applied. Applied when he
-   names its number, or says "알아서" for all of them. Silence = no.
-5. Every other "decided: …".
-6. Push `integrate/<topic>` and open the PR into the base?
-7. The sync preview: clean / dirty / conflicting files. On conflict: (a) he
-   resolves, or (b) the whole-file base side for the named files, with the
-   discarded diff shown (history keeps his commit).
-8. After his merge: may I sync his branch, delete the integration branch
-   (local and remote), and remove the worktrees?
-9. Slack text for teammates, ready to paste: commit first, then on their
-   personal branch `git pull --no-rebase origin <base>` and
-   `git push origin <branch>`. Parts not in the provenance table disappear on
-   this pull; push them first to keep them.
+## A — open my PR
 
-Stop until he answers.
+1. If an open PR exists for his branch (`gh pr list --head <branch>`), go to
+   step 5.
+2. His branch behind `origin/<base>` → he syncs it by the README procedure in
+   his own tree; wait. Verify his branch head merged with `origin/<base>`.
+3. Draft the PR in the scratchpad. The body is the repo template, filled:
+   - 🧪 table from step 2's lines (lint: "develop과 같은 N건, 신규 M건");
+   - "주요 변경" holds the `diff` sketch of the `pr` skill
+     (`~/.claude/skills/pr/SKILL.md`); the template stays the frame;
+   - 담당 범위 and 🤝 공통 코드 영향 from the diff; a field only he can judge
+     stays empty, marked for him.
+4. One numbered message: the draft path, open questions, "push and open the
+   PR?". On yes: `git push origin <branch>`, then
+   `gh pr create --base <base> --title … --body-file …`.
+5. **Status**: `gh pr view <n> --json reviews,commits,mergeable,mergedAt`.
+   Report approvals against the ruleset count, and flag an approval older
+   than the last commit.
 
-## After the gate
+## B — before I approve
 
-1. Apply the approved renames and cleanup as one commit, and each approved
-   logic fix as its own commit. Run step 5 again.
-2. Push only when every line equals the gate's line, or differs exactly as an
-   approved item says. Otherwise: no push, report.
-3. Push, then open the PR with the body from the `pr` skill. The Summary
-   carries the provenance table.
-4. Hand off: `! gh pr merge <N> --merge`, then tell me. (`gh pr merge` is
-   denied to the agent.)
-5. **Sync** his branch:
-   - Confirm that `origin/<base>` contains the merge commit.
-   - Re-run `git status --porcelain` and `merge-tree`. Different from the
-     gate's report → skip the sync and report. A gate answer never applies to
-     a different conflict set.
-   - Else `git pull --no-rebase origin <base>`; the whole-file base side only
-     for the files approved at gate item 7. No stash, no `-X theirs`. Push.
-6. Delete `integrate/<topic>` only after `git merge-base --is-ancestor` shows
-   it is in the base. `git worktree prune`. Report each new head.
+1. `gh pr view <n> --json headRefName,baseRefName,files,reviews,body`, then
+   `git fetch origin pull/<n>/head`.
+2. Verify that head merged with `origin/<base>`.
+3. Report `file:line` findings and where the measured lines differ from the
+   PR's 🧪 table. The approval decision is his; post nothing on the PR.
+
+## C — develop health
+
+1. Verify `origin/<base>` alone.
+2. Broken → find the culprit merge:
+   `git bisect start --first-parent origin/<base> <last good>` in a scratch
+   worktree, with the build or the failing tests as the bisect check.
+3. Report the culprit merge (sha, PR number, author), the `file:line`, and a
+   revert candidate as text (`git revert -m 1 <sha>`). Whether to revert or
+   fix is the team's call.
+
+## Report
+
+Every mode ends with: the mode, what was measured (commands and shas), the
+findings, and the team agenda when the README and the ruleset disagree.

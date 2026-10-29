@@ -1,5 +1,5 @@
 # Golden fixture (FINAL § 4 item 4). Typed by hand from the pintos source at
-# week09 HEAD 3840d42, not copied from tool output. Symbols are named, not
+# week09 HEAD 3840d42 (userprog facts: da4797a), not copied from tool output. Symbols are named, not
 # USR'd, so a reader can check each line against the source.
 
 kernel_tus = 67
@@ -90,3 +90,29 @@ kind = "fields"
 struct = "page"
 at = "include/vm/vm.h:60"
 fields = ["operations", "va", "frame", "writable", "is_stack", "spt_elem", "uninit", "anon", "file"]
+
+# userprog (slice 2)
+
+[[fact]]
+kind = "calls"
+src = "syscall_handler"
+dst = "sys_mmap"
+ev = "userprog/syscall.c:472"
+
+[[fact]]
+kind = "calls"
+src = "sys_mmap"
+dst = "do_mmap"
+ev = "userprog/syscall.c:383"
+
+[[fact]]
+kind = "registers"
+fn = "initd"
+ev = "userprog/process.c:165"
+into = "param 2 of thread_create"
+
+[[fact]]
+kind = "fields"
+struct = "load_info"
+at = "include/userprog/process.h:10"
+fields = ["file", "ofs", "read_bytes", "zero_bytes"]

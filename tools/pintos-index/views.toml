@@ -23,3 +23,10 @@ title = "sys_mmap 흐름"
 sub = "sys_mmap에서 나가는 호출 4단계 · 들어오는 호출 2단계. 간접 호출은 후보 전부"
 callee_depth = 4
 caller_depth = 2
+
+[[view]]
+name = "vm-structs"
+kind = "structs"
+title = "VM 구조체"
+sub = "page와 그 주변 구조체. 필드는 선언 순서, 타입 링크는 이 페이지 안의 구조체"
+structs = ["page", "page_operations", "uninit_page", "anon_page", "file_page", "frame", "supplemental_page_table", "load_info"]

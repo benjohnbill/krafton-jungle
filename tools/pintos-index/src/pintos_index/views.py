@@ -123,15 +123,17 @@ class FlowView:
             body = self.tree(root, step, depth) or '<p class="sub">없음</p>'
             sections.append(f'<section><h2 class="dh">{n}. {label} · 깊이 {depth}</h2>'
                             f'<div class="row">{self.fn(root)}<span class="at">{html.escape(sym.file)}:{sym.line}</span></div>{body}</section>')
-        meta = (f"HEAD {st['head']}{' (dirty)' if st['dirty'] else ''}\ngenerated {st['generated_at']}\n"
-                f"libclang {st['libclang']}\nflag {st['extra_flag']}\n"
-                f"edges: calls, dispatches (candidates), asm_calls; containment is not a flow edge")
-        return f"""<!doctype html>
+        meta = stamp_meta(st) + "\nedges: calls, dispatches (candidates), asm_calls; containment is not a flow edge"
+        return page(self.spec, ''.join(sections), meta)
+
+
+def page(spec: dict, body: str, meta: str) -> str:
+    return f"""<!doctype html>
 <html lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{html.escape(self.spec['title'])}</title>
+<title>{html.escape(spec['title'])}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap">
 <style>{CSS}</style>
@@ -139,10 +141,10 @@ class FlowView:
 <body>
 <div class="wrap">
 <header>
-  <h1 class="dh">{html.escape(self.spec['title'])}</h1>
-  <p class="sub">{html.escape(self.spec['sub'])}</p>
+  <h1 class="dh">{html.escape(spec['title'])}</h1>
+  <p class="sub">{html.escape(spec['sub'])}</p>
 </header>
-{''.join(sections)}
+{body}
 <details class="meta"><summary>생성 정보</summary><pre>{html.escape(meta)}</pre></details>
 </div>
 </body>
@@ -150,7 +152,68 @@ class FlowView:
 """
 
 
-VIEW_KINDS = {"flow": FlowView}
+def stamp_meta(st: dict) -> str:
+    return (f"HEAD {st['head']}{' (dirty)' if st['dirty'] else ''}\ngenerated {st['generated_at']}\n"
+            f"libclang {st['libclang']}\nflag {st['extra_flag']}")
+
+
+class StructsView:
+    """One section per struct in the spec: fields in declaration order, each
+    field's type linked when it is a struct in the same view, then the
+    functions whose signature names the struct (refs_type)."""
+
+    def __init__(self, idx: Index, spec: dict, cards: dict[str, str]):
+        self.idx, self.spec, self.cards = idx, spec, cards
+        self.g = Graph(idx)
+
+    def lookup(self, name: str) -> str:
+        hits = [s.usr for s in self.idx.symbols.values() if s.kind == "struct" and s.name == name]
+        if len(hits) != 1:
+            raise SystemExit(f"view {self.spec['name']}: struct {name} matched {len(hits)} structs")
+        return hits[0]
+
+    def fn(self, usr: str) -> str:
+        name = html.escape(self.g.name(usr))
+        if usr in self.cards:
+            return f'<a class="fn" href="../symbols/{html.escape(self.cards[usr])}">{name}</a>'
+        return f'<span class="fn">{name}</span>'
+
+    def render(self) -> str:
+        shown = {self.lookup(n): n for n in self.spec["structs"]}
+        fields: dict[str, list] = {}
+        types: dict[str, list[str]] = {}
+        users: dict[str, list] = {}
+        for e in self.idx.edges:
+            if e.kind == "field_of" and e.dst in shown:
+                fields.setdefault(e.dst, []).append(e)
+            elif e.kind == "refs_type" and e.dst in shown:
+                src = self.idx.symbols.get(e.src)
+                if src and src.kind == "field":
+                    types.setdefault(e.src, []).append(e.dst)
+                elif src and src.kind == "function" and src.defined:
+                    users.setdefault(e.dst, []).append(e)
+        line = lambda e: (e.ev.rsplit(":", 1)[0], int(e.ev.rsplit(":", 1)[1]), e.col)
+        sections = []
+        for n, (usr, name) in enumerate(shown.items(), 1):
+            s = self.idx.symbols[usr]
+            rows = []
+            for e in sorted(fields.get(usr, []), key=line):
+                f = self.idx.symbols[e.src]
+                links = "".join(f'<a class="b" href="#{html.escape(shown[t])}">→ {html.escape(shown[t])}</a>' for t in types.get(e.src, []))
+                anon = '<span class="b">anonymous union</span>' if e.attrs.get("anonymous") else ""
+                rows.append(f'<li><div class="row"><span class="fn">{html.escape(f.name)}</span>'
+                            f'<code class="at">{html.escape(f.signature)}</code>{anon}{links}<span class="at">{html.escape(e.ev)}</span></div></li>')
+            fns = sorted({(self.g.name(e.src), e.src) for e in users.get(usr, [])})
+            used = " ".join(self.fn(u) for _, u in fns) or '<span class="sub">없음</span>'
+            sections.append(f'<section id="{html.escape(name)}"><h2 class="dh">{n}. {html.escape(s.signature)}</h2>'
+                            f'<div class="row"><span class="at">{html.escape(s.file)}:{s.line}</span></div>'
+                            f'<ul class="tree">{"".join(rows)}</ul>'
+                            f'<h3 class="sub">시그니처에 쓰는 함수 {len(fns)}</h3><div class="row">{used}</div></section>')
+        meta = stamp_meta(self.idx.stamp) + "\nfields: field_of; types: refs_type from fields; users: refs_type from function signatures"
+        return page(self.spec, "".join(sections), meta)
+
+
+VIEW_KINDS = {"flow": FlowView, "structs": StructsView}
 
 
 def render(idx: Index, out: Path, views_toml: Path) -> int:

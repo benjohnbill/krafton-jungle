@@ -25,7 +25,7 @@ excluded in week09's `.git/info/exclude`.
 |---|---|
 | `INDEX.md` | Symbol to card to `file:line`, grouped by file. Start here. |
 | `symbols/<name>.md` | One card per function and function-like macro in the card scope (`views.toml` `[cards]`). A name used twice gets `<name>@<path-with-dashes>.md`. |
-| `views/*.html` | Views from `views.toml`, re-rendered every run. |
+| `views/*.html` | Views from `views.toml`, re-rendered every run. Kinds: `flow` (call tree from a root) and `structs` (fields in declaration order, field types linked within the view, functions whose signature names the struct). |
 | `index.json` | The fact store. Scripts only. |
 
 ## Data shape (`model.py`)

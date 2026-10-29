@@ -1,0 +1,15 @@
+# Render specs. Every run re-renders all of them; nothing here is hand content.
+
+[cards]
+# Files whose functions and function-like macros get a card (fnmatch patterns).
+scope = ["vm/*.c", "include/vm/*.h"]
+
+[[view]]
+name = "fault-flow"
+kind = "flow"
+root = "page_fault"
+root_file = "userprog/exception.c"
+title = "page_fault 흐름"
+sub = "page_fault에서 나가는 호출 4단계 · 들어오는 호출 2단계. 간접 호출은 후보 전부"
+callee_depth = 4
+caller_depth = 2

@@ -1,0 +1,92 @@
+# Golden fixture (FINAL § 4 item 4). Typed by hand from the pintos source at
+# week09 HEAD 3840d42, not copied from tool output. Symbols are named, not
+# USR'd, so a reader can check each line against the source.
+
+kernel_tus = 67
+
+[[fact]]
+kind = "registers"
+fn = "anon_swap_in"
+ev = "vm/anon.c:18"
+into = "field page_operations.swap_in"
+
+[[fact]]
+kind = "registers"
+fn = "uninit_initialize"
+ev = "vm/uninit.c:31"
+into = "field page_operations.swap_in"
+
+[[fact]]
+kind = "registers"
+fn = "file_backed_swap_in"
+ev = "vm/file.c:13"
+into = "field page_operations.swap_in"
+
+[[fact]]
+kind = "calls"
+src = "page_fault"
+dst = "vm_try_handle_fault"
+ev = "userprog/exception.c:150"
+
+[[fact]]
+kind = "calls"
+src = "exception_init"
+dst = "intr_register_int"
+ev = "userprog/exception.c:61"
+
+[[fact]]
+kind = "dispatches"
+src = "uninit_initialize"
+ev = "vm/uninit.c:71"
+via = "local init"
+rule = "b"
+
+[[fact]]
+kind = "dispatches"
+src = "vm_do_claim_page"
+ev = "vm/vm.c:349"
+via = "field page_operations.swap_in"
+via_macro = "swap_in"
+rule = "a"
+candidates = [
+  { fn = "anon_swap_in", ev = "vm/anon.c:18" },
+  { fn = "file_backed_swap_in", ev = "vm/file.c:13" },
+  { fn = "uninit_initialize", ev = "vm/uninit.c:31" },
+]
+
+[[fact]]
+kind = "dispatches"
+src = "intr_handler"
+ev = "threads/interrupt.c:346"
+via = "local handler"
+candidates = [{ fn = "page_fault", ev = "userprog/exception.c:61" }]
+
+[[fact]]
+kind = "asm_calls"
+src = "intr_entry"
+dst = "intr_handler"
+ev = "threads/intr-stubs.S:45"
+
+[[fact]]
+kind = "asm_calls"
+src = "syscall_entry"
+dst = "syscall_handler"
+ev = "userprog/syscall-entry.S:46"
+
+[[fact]]
+kind = "includes"
+src = "vm/vm.c"
+dst = "include/vm/vm.h"
+ev = "vm/vm.c:9"
+
+[[fact]]
+kind = "includes"
+src = "include/vm/vm.h"
+dst = "include/vm/uninit.h"
+ev = "include/vm/vm.h:38"
+
+[[fact]]
+kind = "fields"
+struct = "page"
+at = "include/vm/vm.h:60"
+fields = ["operations", "va", "frame", "writable", "is_stack", "spt_elem", "uninit", "anon", "file"]

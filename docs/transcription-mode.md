@@ -155,7 +155,8 @@ gets a task line under the D table (`- [ ] D4 팀 회의: …`); the meeting res
 goes on that line. When it differs from his choice, keep both: that row feeds
 the close-step counter-example.
 
-Code style = the team `CONVENTION.md` in a team week. Glossary = the week's
+Code style = the team `CONVENTION.md` in a team week. Code structure and
+comments = `docs/code-principles.md` (draft, 2026-10-29). Glossary = the week's
 glossary file. Pintos weeks: read `docs/transcription-pintos.md` for the
 spec source and the P3 sheet shapes.
 

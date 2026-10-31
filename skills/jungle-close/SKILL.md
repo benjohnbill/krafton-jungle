@@ -44,6 +44,10 @@ close.
    호출자, 인자, 인자의 사용·변화, 반환값 with the card
    `.code-index/symbols/<name>.md`. Each difference is a candidate: a stale
    sheet row or code that drifted from the design. He decides which.
+   If the rebuild exits non-zero (the tree does not compile mid-stage), do
+   not stop: report "index stale" with the first error line, compare with the
+   cards of the last good build, and mark each difference "stale card" when
+   the function changed after that build.
 2. **Upstream tests.** The edit hook (`.claude/hooks/protect-upstream-tests.py`)
    cannot see shell edits or human edits. Run
    `git diff --stat $(git rev-list --max-parents=0 HEAD) -- pintos/tests`
@@ -76,8 +80,14 @@ was killed, the next step.
 Stage only the exercise files and `lab/` files he touched. Criterion:
 `git status` is clean of those paths and `git log -1` shows the title.
 
-The repository's own `CLAUDE.md` wins over the title and the staging rule above
-when it prescribes one. `c-workshop` does: the Solve title is
+The repository's own rules win over the title and the staging rule above when
+they prescribe one: its `CLAUDE.md` first, then, in a team week, the team's
+commit section in the repository (`README.md` or `CONVENTION.md`). Team week
+`week09` does (`README.md`, "Commit with context"): the title is a Korean
+sentence of the change's purpose and result, the body has one line per file
+in the form `파일 / Create|Update|Delete|Fix: 함수 / 설명`, and no commit carries
+a Claude trace (`week09/CLAUDE.md`). Solve and WIP titles do not apply there.
+`c-workshop` does: the Solve title is
 `Solve NN-<brief name>: <cause>`, and `LEARNING_LOG.md` is staged with the
 exercise files, because a pass entry lands in the Solve commit.
 

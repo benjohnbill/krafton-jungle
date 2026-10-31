@@ -4,7 +4,7 @@ truth: This file, for structure and comments. Names and layout belong to the pro
 born: 2026-10-29 (settled by grilling, user said)
 status: Draft. First run: week09 mmap production code. After mmap, he revises it from that run and then fixes it
 read_when: before the agent generates code that he types (transcription mode), and before a refactoring pass over his code
-edits: The agent may update this file (Tier 2). Mark findings from a run with their date
+edits: The agent proposes a change; he approves it before it lands (user said 2026-10-31). Mark findings from a run with their date
 ---
 
 # Code principles
@@ -16,29 +16,43 @@ cost (lookups and calls followed) is the tie-breaker only.
 
 This file does not repeat the style guide. Layout is fixed by `clang-format`.
 Name shape, one name per concept, and named constants are in the team
-`CONVENTION.md` (C1–C6). No new mechanical check is added here. A mechanical
-check is accepted only when no legitimate exception exists, and the existing
-`clang-format` and `clang-tidy` already cover those cases.
+`CONVENTION.md` (C1–C6). A mechanical check is accepted only when no
+legitimate exception exists. No tool checks any rule in this file today:
+`clang-format` checks layout, and `clang-tidy` checks name case and braces
+only (`week09/.clang-tidy:5`). Each rule below names who or what detects a
+violation, and what that detector cannot see.
 
 ## Absolute rules
 
-No legitimate exception exists for these. A violation is fixed, not justified.
+No legitimate exception exists for these. A violation is fixed, not justified
+(no `[CJG]` exception). "Absolute" states how strong the obligation is. It
+does not claim that a tool catches every violation: each rule names its
+detector and the detector's blind spots.
 
-1. **A name does not lie.** A function with a query name (`find`, `get`,
-   `is_`, `has_`, `lookup`) does not change state. If a function has a side
-   effect, its name shows the side effect.
+1. **A name and its contract do not lie.** A caller can tell the observable
+   effects (state changed, resources taken, failure results) from the name
+   and the comment at the declaration, without reading the body. A query
+   name (`find`, `is_`, `has_`, `lookup`) changes no state. An upstream
+   Pintos API keeps its name: `palloc_get_page` takes a page and a lock, and
+   its contract says so (`week09/CONVENTION.md:192`).
    Why: a reader trusts a name and skips the body. A lying name makes the
    reader skip the line where the bug is.
-2. **Every failure path releases what the function acquired before it.** This
-   includes memory, frames, page-table entries, locks, and open files.
+
+   | Detector | Covers | Blind spots |
+   |---|---|---|
+   | Review at the transcription close; a `pintos-index` card that shows member writes under a query name | Functions he types or reviews | Effects through globals or deep callees; code nobody reviews |
+
+2. **Every acquired resource has a responsible owner until release or an
+   explicit transfer, on every path.** This includes memory, frames,
+   page-table entries, locks, and open files. On a failure path, the function
+   releases what it still owns. A transfer (for example a frame handed to the
+   supplemental page table) is written at the transfer point.
    Why: a leak on a failure path does not fail a test until a later stage
    (swap, many processes) makes the path common.
-3. **No comment restates the code.** The comment rule of transcription mode
-   applies (`docs/transcription-mode.md`, "He writes code comments"). He
-   writes a comment only when the code does not show the fact and the reason
-   is not obvious.
-   Why: a restating comment adds nothing, and it becomes false when the code
-   changes.
+
+   | Detector | Covers | Blind spots |
+   |---|---|---|
+   | Review question at close: "On each early return, what does this function still own?" A bin-2 `lab/` probe that forces the failure (see below) | Paths he reviews or forces | Failure paths no test reaches. No sanitizer runs inside the kernel. The leak test `multi-oom` is in the userprog suite only (`tests/userprog/no-vm`), not in the VM suite |
 
 ## Judgment questions
 
@@ -80,6 +94,13 @@ the code, or write down why the code stays (a `[CJG]` comment or a sheet row).
    show one concept only?
    Why: a name is the search key. A generic name (`process`, `handle`, `data`)
    returns every unrelated use.
+6. **Comment.** Does each comment add a necessary fact that the code does not
+   show? The comment rule of transcription mode applies
+   (`docs/transcription-mode.md`, "He writes code comments"). A contract
+   comment at a declaration (rule 1) counts as a necessary fact.
+   Why: a restating comment adds nothing, and it becomes false when the code
+   changes. No tool can judge this; a similarity check would reward deleting
+   useful comments.
 
 ## Refactoring a past exercise
 
@@ -102,6 +123,11 @@ Each candidate goes into one bin:
 | 2. Small behavior fix | The fix changes what the code does, usually on a failure path | First show the failure (test, `lab/` probe, or gdb). After the fix, the failure is gone and `make dfast` has no regression | Separate PR |
 | 3. Not reachable yet | The path cannot run in the current stage | None now | Deferred to the stage that reaches it |
 
+An unchanged `make dfast` result is a regression observation, not proof that
+behavior is kept: it says nothing about failure paths no test reaches. A fix
+that changes behavior on such a path is bin 2 or bin 3 even when the suite
+stays the same.
+
 Do not put bin 1 and bin 2 changes in one PR. If the test result changes, a
 mixed PR cannot tell which change caused it.
 
@@ -117,3 +143,25 @@ Steps for one pass:
 4. Verify by the bin. If the change touches `userprog/` or `threads/`, also run
    the userprog and threads suites.
 5. Commit, and open one PR for each bin. Follow the week's PR and commit rules.
+
+## Candidate universal intents
+
+Status: local candidates (user said 2026-10-31). They move to
+`~/.claude/docs/code-principles.md`, with a pointer in
+`~/.claude/rules/agent-operating-model.md`, only after one attempt to falsify
+them on a non-C task. A second language can falsify an intent; it cannot
+prove one. Source: `docs/dialectic/2026-10-31-rules-barriers/critique-c-universal.md`.
+
+1. **Resource responsibility.** Every resource retained during work has a
+   responsible owner until release or explicit transfer, failure included.
+   The barrier changes per language: review and probes in C; `with` in
+   Python, `defer` in Go, `Drop` in Rust, `using` in TypeScript.
+2. **Predictable contracts.** A caller can tell accepted inputs, observable
+   effects, and outcomes without reading the body.
+3. **Contained decisions.** Changing a private decision while the public
+   agreement stays the same does not force unrelated callers to change.
+4. **Evidence matches the claim.** Confidence matches what the observation
+   could detect, in the actual working environment.
+
+The five judgment questions above are aids to intents 2 and 3 in C. They are
+not universal by themselves.

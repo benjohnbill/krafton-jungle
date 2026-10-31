@@ -29,6 +29,29 @@ Criterion: every command exits 0 → the exercise is **Solve**. Any other exit �
 it is **WIP**. If he called it done and it is WIP, stop here and show him the
 failing output; nothing is committed yet.
 
+## 1b. Shape and test checks — weeks with `notes/sheets/` and `pintos/tests/`
+
+Trial from 2026-10-31 (`docs/dialectic/2026-10-31-rules-barriers/JUDGMENT.md`).
+Run both checks yourself; report only differences. Neither check stops the
+close.
+
+1. **Sheet against card.** The sheet row holds the intended shape; the
+   `pintos-index` card shows the actual shape. Rebuild the index
+   (`cd ~/dev/krafton-jungle/tools/pintos-index && uv run pintos-index`).
+   For each function changed since the last close
+   (`git diff --name-only` plus today's commits, then the functions in those
+   hunks) that has a row in `notes/sheets/<stage>/`, compare the row's
+   호출자, 인자, 인자의 사용·변화, 반환값 with the card
+   `.code-index/symbols/<name>.md`. Each difference is a candidate: a stale
+   sheet row or code that drifted from the design. He decides which.
+2. **Upstream tests.** The edit hook (`.claude/hooks/protect-upstream-tests.py`)
+   cannot see shell edits or human edits. Run
+   `git diff --stat $(git rev-list --max-parents=0 HEAD) -- pintos/tests`
+   and list modified files that exist in the root commit, `Make.tests`
+   excepted. New files are allowed.
+
+Retire check 1 after one stage in which it finds no difference.
+
 ## 2. Commit
 
 One commit per exercise. Several exercises share one commit only when he asked

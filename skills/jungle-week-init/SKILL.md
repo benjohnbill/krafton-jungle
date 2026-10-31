@@ -69,6 +69,26 @@ only opened files. He re-runs it after adding or removing a `.c` file.
 Criterion: the command prints a file count, and `git status` does not show
 the file.
 
+## 2b. Barriers — trial from 2026-10-31
+
+Read `~/.claude/docs/tool-guides/barrier-placement.md` first.
+
+1. **Test protection.** If the repo has `pintos/tests/`, write
+   `.claude/settings.local.json` with the `PreToolUse` hook that runs
+   `~/dev/krafton-jungle/.claude/hooks/protect-upstream-tests.py` (copy it
+   from `week09/.claude/settings.local.json`). Criterion: a real `claude -p`
+   session started in the week repo is blocked when it edits an upstream
+   test, and a new test file passes.
+2. **`convention.py` fix — once.** If he brings `scripts/convention.py`
+   forward, fix it before its first use: read each tool's `returncode`,
+   report a tool failure apart from findings and exit 2, and label
+   `clang-diagnostic-error` as a compiler error, not "naming". Defect and
+   repro: `docs/dialectic/2026-10-31-rules-barriers/team-issue-draft.md`.
+   Criterion: with fake `clang-format` and `clang-tidy` that exit 2 silently,
+   `make lint` exits non-zero. Delete this item after the fix lands.
+3. **`make verify`.** Propose `verify` = lint on the diff + the fastest full
+   test runner. Lint-only CI only with the team's agreement.
+
 ## 3. `.gitignore`
 
 Build outputs (`build/`, `build-docker/`, binaries beside sources).

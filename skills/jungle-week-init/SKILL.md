@@ -156,7 +156,8 @@ with `Status: active`.
   the README with §8.
 - Team week: write `~/dev/krafton-jungle/docs/proposals/weekNN-readme.md`
   only when the repo has no README or the upstream test from §0 holds. Its
-  Map lists only paths a teammate's clone has. Otherwise skip aloud.
+  Map lists only paths a teammate's clone has, and it also carries the team
+  sections. Otherwise skip aloud.
 
 Criterion: `~/.claude/scripts/readme-check <readme> <repo>` exits 0.
 

@@ -20,7 +20,10 @@ the team keeps them. §3, §4, §5, and §8 are skipped aloud.
 
 Facts (look, do not ask): the new repository's path, `git remote -v`
 (upstream vs origin), the build system upstream ships (`Makefile`, CMake,
-none), the exercise layout, a README that states the order.
+none), the exercise layout, a README that states the order (and
+`README.upstream.md` when it exists). Upstream test for the README: with an
+`upstream` remote, `git log upstream/HEAD..HEAD -- README.md` is empty;
+otherwise `git log --format=%h -- README.md` lists only the root commit.
 
 Then one message, numbered, and wait:
 
@@ -144,6 +147,19 @@ format) for the week's domain words; add both to `.git/info/exclude`. In
 the week CLAUDE.md draft, Slot 2 names the sheet location. Criterion: both
 paths exist and `git status` does not show them.
 
+## 6c. README — core only
+
+Read `~/.claude/skills/readme/SKILL.md` and follow it for the core only,
+with `Status: active`.
+
+- Solo week: the Map includes the personal layer from §1 to §6b. Commit
+  the README with §8.
+- Team week: write `~/dev/krafton-jungle/docs/proposals/weekNN-readme.md`
+  only when the repo has no README or the upstream test from §0 holds. Its
+  Map lists only paths a teammate's clone has. Otherwise skip aloud.
+
+Criterion: `~/.claude/scripts/readme-check <readme> <repo>` exits 0.
+
 ## 7. Study index — the previous week's WIL link and this week's heading
 
 In `~/dev/krafton-jungle/benjohnbill.github.io/index.html` (rules: that
@@ -161,6 +177,11 @@ Commit in that repository (`Link the week N-1 WIL post from the study
 index`). Push when he confirms; he reviews it on the live site. Criterion:
 the live index shows the link.
 
+Then the README of `LATEST`: run the `freeze` guards of
+`~/.claude/skills/readme/SKILL.md` first. Only when they pass, write
+`Learning log: <URL>` in that README, then follow `freeze`. Push when he
+confirms. When a guard fails, skip aloud with the guard that failed.
+
 ## 8. First commit — solo week
 
 In the week repository: `Add local build layer, clangd config, and tutoring
@@ -170,4 +191,5 @@ when he asks.
 ## Report
 
 Numbered: what ran, what was skipped (with the condition that failed), the
-board number, the proposal path and its copy command.
+board number, the proposal paths and their copy commands, the README result
+(this week's core, and the `LATEST` freeze or the guard that skipped it).

@@ -13,8 +13,8 @@ and reports. He types the code, approves, and merges.
 ## Boundaries — every mode
 
 - **Read the team layer each run.** The PR template
-  (`.github/pull_request_template.md`), the README branch, commit, and PR
-  rules, and the merge rules from
+  (`.github/pull_request_template.md`), the branch, commit, and PR rules in
+  `README.md` or `CONVENTION.md`, and the merge rules from
   `gh api repos/<owner>/<repo>/rules/branches/<base>`. When the README and
   the ruleset disagree, the ruleset is the fact; list the gap under "team
   agenda" in the report.

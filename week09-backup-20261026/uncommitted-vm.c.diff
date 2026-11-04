@@ -1,0 +1,14 @@
+diff --git a/pintos/vm/vm.c b/pintos/vm/vm.c
+index d4dea5d..b9a495b 100644
+--- a/pintos/vm/vm.c
++++ b/pintos/vm/vm.c
+@@ -201,6 +201,9 @@ bool vm_claim_page(void *va)
+         return false;
+     }
+ 
++    /* [CJG]  Find the appropirate page for user's va. */
++    /* [CJG] 유저의 va를 넣을 페이지 할당 요청. */
++
+     return vm_do_claim_page(page);
+ }
+ 

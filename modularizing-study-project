@@ -1,0 +1,71 @@
+### [main.c의 변화]
+
+// ============= Before =============
+
+// The last leak: main walks the array itself. Stage 7 replaces this loop.
+for (size_t i = 0; i < r->count; i++){
+    printf("Subject : %s\n- Minutes : %d\n", r->list[i]->name, r->list[i]->minutes);
+}
+
+// ============= After =============
+
+// 1. 단일 데이터 처리 함수 정의 (main 함수 위쪽)
+void print_input(const char *name, int minutes){
+    printf("Subject : %s\n- Minutes : %d\n", name, minutes);
+}
+
+// 2. main 함수 내부: 루프 제거 및 함수 호출로 대체
+print_result(r, print_input);
+
+### [record.h의 변화]
+
+// ============= Before =============
+
+typedef struct _subject{
+    int minutes;
+    char *name;
+} Sub;
+
+typedef struct _Record{
+    size_t count;
+    size_t capacity;
+    Sub **list;
+} Rec;
+
+// ============= After =============
+
+// 1. 불완전 타입 선언 (내부 멤버 숨김)
+typedef struct _subject Sub;
+typedef struct _Record Rec;
+
+// 2. 콜백 함수 포인터 타입 및 순회 함수 선언
+typedef void (*result)(const char *name, int minutes);
+void print_result(const Rec *r, result func);
+
+### [record.c의 변화]
+
+// ============= Before =============
+
+// 아무것도 없었음
+
+// ============= After =============
+
+// 1. 실제 구조체 본체 정의 (record.c 내부에서만 접근 가능)
+struct _subject {
+    int minutes;
+    char *name;
+};
+
+struct _Record {
+    size_t count;
+    size_t capacity;
+    Sub **list;
+};
+
+// 2. 순회 엔진 구현
+void print_result(const Rec *r, result func){
+    if (!r || !func) return;
+    for (size_t i = 0; i < r->count; i++){
+        func(r->list[i]->name, r->list[i]->minutes);
+    }
+}

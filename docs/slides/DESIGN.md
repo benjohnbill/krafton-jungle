@@ -4,7 +4,8 @@ name: Plex Swiss Grid
 description: >-
   Swiss Modern slide system for Korean technical talks about code.
   White paper, 12-column hairline grid, IBM Plex Sans KR + IBM Plex Mono,
-  one accent color. Code panels are the hero. Built on frontend-slides.
+  one accent color. Structure is drawn as a figure, and text on a figure is
+  names only. Built on frontend-slides.
 colors:
   primary: "#0a0a0a"          # ink: text, rules, panel borders
   neutral: "#ffffff"          # paper: slide background
@@ -175,8 +176,9 @@ Personality: calm, exact, editorial. Swiss Modern: white paper, black ink,
 a visible column grid, one accent. No illustration, no gradient, no shadow
 on slides. The look says "this is evidence", not "this is a pitch".
 
-The code panel is the hero of every content slide. Text exists to tell the
-viewer where to look in the code, and what it means.
+Draw structure as a figure: nodes and lines, not text in a code panel. Text on
+a figure is names only. Detail goes to the speaker notes. Use a code panel only
+when the code itself is the point of the slide.
 
 ## Colors
 
@@ -500,7 +502,8 @@ Preset entry for `STYLE_PRESETS.md` (paste under "Light Themes"):
 **Vibe:** Exact, calm, evidence-first. Korean technical talks about code.
 
 **Layout:** Head band (label · number) / content / foot band (source path).
-12-column hairline grid behind every slide. Code panels are the hero.
+12-column hairline grid behind every slide. Structure is drawn as a figure,
+and text on a figure is names only.
 
 **Typography:**
 - Display/Body: `IBM Plex Sans KR` (400/500/700)

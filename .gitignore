@@ -1,11 +1,8 @@
-# Each of these is its own git repository
-# week*/ and c-workshop/ are nested repos too, but stay unignored on purpose:
-# Zed's file finder skips gitignored paths. Never `git add -A` / `git add .`
-# here - it would stage them as broken gitlinks. Stage by explicit path.
-benjohnbill.github.io/
+# Nested repositories are submodules: see .gitmodules. Update a pointer with
+# `git add <path>` after the child repository is pushed.
+# These two are course repositories that this account can only read:
 function_visualizer/
 issue-template/
-skills/jungle-deck/
 
 # Local environment
 .venv/
@@ -18,3 +15,7 @@ docs/proposals/
 
 # Handoffs between his Claude sessions; not part of the repository (user said 2026-10-15)
 docs/handoffs/
+
+# Build output
+__pycache__/
+csapp_ch1/hello_thread

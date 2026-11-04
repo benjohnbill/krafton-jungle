@@ -1,0 +1,36 @@
+[submodule "week02-03"]
+	path = week02-03
+	url = git@github.com:benjohnbill/SW-AI-W02-03.git
+[submodule "week04"]
+	path = week04
+	url = git@github.com:benjohnbill/SW-AI-C.git
+[submodule "week05"]
+	path = week05
+	url = git@github.com:benjohnbill/SW-AI-C-debugging.git
+[submodule "week06"]
+	path = week06
+	url = git@github.com:benjohnbill/SW-AI-malloc-lab.git
+[submodule "week07"]
+	path = week07
+	url = git@github.com:cc8s/pintos-team9.git
+[submodule "week08"]
+	path = week08
+	url = git@github.com:benjohnbill/pintos-userprog.git
+[submodule "week09"]
+	path = week09
+	url = https://github.com/Pintos-W9-10-T6-VM/Pintos-W9-10-T6-VM.git
+[submodule "jingeunOS"]
+	path = jingeunOS
+	url = git@github.com:benjohnbill/jingeunOS.git
+[submodule "c-workshop"]
+	path = c-workshop
+	url = git@github.com:benjohnbill/c-workshop.git
+[submodule "malloc-baseline"]
+	path = malloc-baseline
+	url = git@github.com:benjohnbill/malloc-baseline.git
+[submodule "benjohnbill.github.io"]
+	path = benjohnbill.github.io
+	url = git@github.com:benjohnbill/benjohnbill.github.io.git
+[submodule "skills/jungle-deck"]
+	path = skills/jungle-deck
+	url = git@github.com:benjohnbill/jungle-deck.git

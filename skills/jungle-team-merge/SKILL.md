@@ -90,9 +90,33 @@ Input: a ref `X`, and whether to merge `origin/<base>` into it.
 
 1. `gh pr view <n> --json headRefName,baseRefName,files,reviews,body`, then
    `git fetch origin pull/<n>/head`.
-2. Verify that head merged with `origin/<base>`.
+2. Verify that head merged with `origin/<base>`. After Verify step 1 and
+   before the build, run the impact list on the merged worktree `$WT`:
+
+   ```bash
+   codebase-memory-mcp cli index_repository --repo-path "$WT" --name pr-<n>
+   codebase-memory-mcp cli detect_changes --project pr-<n> \
+     --since origin/<base> --fixpoint true --via true --seeds list \
+     --edge-types '["CALLS","USAGE","IMPORTS","WRITES"]'
+   codebase-memory-mcp cli delete_project --project pr-<n>
+   ```
+
+   - Index the worktree of this run. The project of the week tree reads its own
+     checked-out tree, so it cannot answer for a PR ref.
+   - Do not put `test` in the name. A name with `test` removes edges from the
+     index and rows from the list.
+   - Compare `changed_files` with the `gh pr view` files. Report any difference
+     with the list.
+   - If a `*_has_more` field is `true`, read the next page with its cursor.
 3. Report `file:line` findings and where the measured lines differ from the
    PR's 🧪 table. The approval decision is his; post nothing on the PR.
+4. Report the impact list as candidates to read, not as findings:
+   - A zero is not absence. Function-pointer dispatch is not linked: in #166,
+     `anon_swap_out` has 0 callers, but `evict_frame` calls it through
+     `swap_out(page)`.
+   - `Field` seeds match by name. Read `via_qn` to the seed, and confirm in the
+     source: in #165, 38 of 75 rows start at `load_info.ofs`, and `lookup` is
+     on the list for its own local `ofs`.
 
 ## C — develop health
 

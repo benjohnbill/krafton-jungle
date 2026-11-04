@@ -153,7 +153,7 @@ row only when the user says so. Source: the user's own words in past sessions
 | Audience | Krafton Jungle people who study C together. Wide level spread; more than half already know the topic | Do not explain the exercise. Lead with the surprise; define a domain macro (e.g. `GET_SIZE`) on the slide when it is not general C |
 | Language | Korean speech and prose; code, identifiers, tool output in original form | Plex Sans KR + Plex Mono; `keep-all` breaking |
 | Time limit | 2 minutes, every week. No Q&A time | 6 ± 2 slides. The 2 minutes is background, not a gate: notes are a suggested script, light weight. Do not cut content only to fit a timer |
-| Speaker | user, alone, from his own script; calm speaking pace | In-browser editing is required: he revises the slides himself after every build, and that live loop is the main work. Speaker notes (`N`) stay, as a light suggestion he rewrites |
+| Speaker | The user, alone, from his own script; calm speaking pace | In-browser editing is required: he revises the slides himself after every build, and that live loop is the main work. Speaker notes (`N`) stay, as a light suggestion he rewrites |
 | Display | Large monitor in a bright lecture room | White paper theme. Accent and code must hold in bright ambient light. Test at 1280 × 720 and 1920 × 1080 |
 | Room | Same lecture room every week. Size and head count `unknown` | Code font ≥ `.95rem` at 1280 × 720 |
 | Presenter screen | Mirrored or extended, and whose laptop runs the deck: `unknown` | Until known, the notes panel stays hidden by default and opens only on `N` |

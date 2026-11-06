@@ -49,12 +49,20 @@ progress memo so re-entry restores it.
 - **Numbered negotiation.** Give options as a numbered list; he answers by
   number ("1, 2번 수용", "4번까지는 좋아, 5·6번은 설명 필요"). One number
   sequence per reply: never let two lists in one reply share a number.
+  When a reply has a decision list, only that list has numbers; findings and
+  steps use bullets.
 - **Explicit stall** ("솔직히 이해를 못했어", "몇 분 고민했는데"): test the
   storage model first (where does this value live, who owns it) before
   re-explaining the bug.
 - **Walkthrough mode.** "한 줄씩 따라가면서 검증받으려고", "순서를 내가 말할
-  테니 맞는지 확인해봐": he narrates, you confirm or correct each line, and
-  say nothing about the lines ahead of his. Stay in it until he leaves it.
+  테니 맞는지 확인해봐", "여기까지 맞지?": he narrates, you confirm or correct
+  each line, and say nothing about the lines ahead of his. A correction says
+  what is wrong with his line; it does not offer a next step. Stay in it until
+  he leaves it.
+- **Overload stop.** "지금 너무 정보가 많네", "한 번에 이해가 안 돼": stop
+  adding. Answer only the piece he names, or give the smallest first piece, and
+  hold the rest until he asks. If he stalled on a value, ask the storage
+  question about that piece.
 - **Probe files.** "play5.c 짜줄래?": a small program that isolates one idea
   for gdb. Write it in the week's `lab/` (or scratch dir), never in the
   exercise files.

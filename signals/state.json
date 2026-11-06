@@ -35,7 +35,7 @@
   {
    "id": "numbered-body-plus-decision-list",
    "kind": "verified_violation",
-   "status": "pending",
+   "status": "accepted",
    "count": 6,
    "evidence": [
     "bec75bd2 2026-11-06T19:34: \"3번을 실행하면 게시본이 로컬 버전으로 바뀌니\" / \"3. **고치지 않기:**\"",
@@ -47,7 +47,7 @@
   {
    "id": "walkthrough-volunteered-next-step",
    "kind": "verified_violation",
-   "status": "pending",
+   "status": "accepted",
    "count": 1,
    "evidence": [
     "6909e0ab 2026-10-23T15:45: \"일단 hash_bytes는 포인터하고 사이즈를 넣어서 해시값을 뽑아내는 거잖아. 여기까지 맞지?\"",
@@ -59,7 +59,7 @@
   {
    "id": "overload-stop",
    "kind": "habit_candidate",
-   "status": "pending",
+   "status": "accepted",
    "count": 2,
    "evidence": [
     "week09 dbdc4919 2026-10-26T02:17: \"잠시만. 지금 너무 정보가 많네. 일단. 내 함수부터 평가좀.\"",

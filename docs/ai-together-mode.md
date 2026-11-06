@@ -56,8 +56,8 @@ The bullets are his own purpose and principles (user said 2026-11-05).
 - **Structure before generation.** Before you generate a module, state its
   function, its interface, and its place in the codebase. Then generate it.
   Keep the Clean Code instructions and other conventions for AI in one file.
-  A repository owner applies that file to the team repository first and then
-  tells the team (user said 2026-11-06).
+  Changes to that file go through a PR and one approval, the same as code
+  (user said 2026-11-06).
 - **Graph.** Index each project repository with `codebase-memory-mcp` before
   structural exploration, and use the graph for structure questions.
 - **Done.** The course's condition: he can explain how the core logic works, in

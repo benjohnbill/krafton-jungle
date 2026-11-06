@@ -14,11 +14,12 @@ team has none. It reads and reports. He approves and merges.
 
 - **Read the team layer each run.** `AGENTS.md`, the PR template
   (`.github/pull_request_template.md`), the branch, commit, and PR rules in
-  `README.md` or `CONVENTION.md`, and the merge rules from
-  `gh api repos/<owner>/<repo>/rules/branches/<base>`. `<base>` is the PR
-  target that the README and the ruleset name. No branch name is fixed. When
-  the README and the ruleset disagree, the ruleset is the fact; list the gap
-  under "team agenda" in the report.
+  `README.md` and `CONVENTION.md` (read each file that exists), and the merge
+  rules from `gh api repos/<owner>/<repo>/rules/branches/<base>`. `<base>` is
+  the PR target that those files and the ruleset name. No branch name is fixed.
+  When those files and the ruleset disagree, the ruleset is the fact; list the
+  gap under "team agenda" in the report. When `README.md` and `CONVENTION.md`
+  disagree, neither file wins; list the gap under "team agenda".
 - **Scratch only.** Every checkout, merge, build, and test runs in a
   detached worktree under the scratchpad. The week working tree stays as he
   left it: `git fetch` and read-only `git status` or `git log` only.
@@ -79,8 +80,8 @@ Input: a ref `X`, and whether to merge `origin/<base>` into it.
 
 1. If an open PR exists for his branch (`gh pr list --head <branch>`), go to
    step 5.
-2. His branch behind `origin/<base>` → he syncs it by the README procedure in
-   his own tree; wait. Verify his branch head merged with `origin/<base>`.
+2. His branch behind `origin/<base>` → he syncs it by the procedure in `README.md` or
+   `CONVENTION.md`, in his own tree; wait. Verify his branch head merged with `origin/<base>`.
 3. Draft the PR in the scratchpad. The frame is the repo's PR template, and
    its comments say what each field holds:
    - Fill the fields with `diff` code blocks and Mermaid, by the visual
@@ -143,4 +144,5 @@ Input: a ref `X`, and whether to merge `origin/<base>` into it.
 ## Report
 
 Every mode ends with: the mode, what was measured (commands and shas), the
-findings, and the team agenda when the README and the ruleset disagree.
+findings, and the team agenda when `README.md`, `CONVENTION.md`, and the
+ruleset disagree.

@@ -4,7 +4,7 @@ Mode: team project (AI 함께하기). AI-together mode (`../docs/ai-together-mod
 
 Three team projects in order: mini React, mini Redis, mini DBMS. What must remain: why each framework has the functions it has, a way of working with AI that he can repeat, and a team code base that an AI can extend. He can also explain the core logic of each project in his own words.
 
-This file is the personal layer. It sits above the three repositories, so it loads in each one, and no teammate's clone has it. Rules for the team go in each repository's `AGENTS.md`.
+This file is the personal layer. It sits above the three repositories, so it loads in each one, and no teammate's clone has it. Rules for the team go in each repository's `CONVENTION.md`. `AGENTS.md` points to that file.
 
 ## Mode
 
@@ -56,4 +56,4 @@ Board: none
 
 ## Do not touch
 
-No upstream or scaffolding exists. He applies team conventions first and then tells the team (his choice 2026-11-06). The agent changes team-tracked conventions only when he asks.
+No upstream or scaffolding exists. Team convention changes go through a PR and one approval, the same as code (user said 2026-11-06). The owner applies GitHub settings after approval. PR #2 merged once with no approval, by his explicit exception (user said 2026-11-06), so that teammates clone the new conventions. The agent changes team-tracked conventions only when he asks.

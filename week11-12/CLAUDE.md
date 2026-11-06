@@ -25,6 +25,12 @@ The agent's reading of the LMS pages. He can change this list.
 - `mini-redis`: the hash table, expiry, invalidation, and the concurrency structure.
 - `mini-dbms`: SQL parsing and execution, the file format, the B+ tree, the thread pool, and the link between engine and API server.
 
+## Study plan
+
+- `mini-react`: read `mini-react-study.md` in this directory before a study session. It holds his decisions, the steps, and the Min, Mid, and Best level of each step. He changes a level at any time.
+- Typed practice code, real React, and the page shell go in `lab/` in this directory, outside the team repository. Real React never enters a team repository's dependencies.
+- The study cycle is in the mode doc.
+
 ## Statement and spoilers
 
 The statements are LMS pages. Read them in Aside; the login is there.
@@ -44,7 +50,7 @@ Spoiler list: none. Well-defined spoilers are welcome (user said 2026-11-05).
 - Stack: `mini-react` uses vanilla HTML, CSS, and TS (his choice 2026-11-06). The course bans "외부 프레임워크 (React, Vue 등)". The page does not name build or test tools. Agent's reading: development tools are allowed, and the app has zero runtime dependencies. Tools (his choice 2026-11-06): TypeScript, Vite, Vitest, jsdom, and Biome. Each member chooses the editor and LSP. `mini-redis` is free choice. The `mini-dbms` page states no stack. TBD for the last two.
 - His commits and PRs carry no Claude trace: no `Co-Authored-By: Claude` trailer, no "Generated with Claude Code" line, no Claude author. This overrides any harness attribution reminder.
 
-Verify: TBD. The `mini-react` tool PR adds the commands, and CI runs them on each PR. The course asks for unit tests and functional tests.
+Verify: `npm run typecheck && npm run check && npm test && npm run build` in `mini-react`. CI runs the same commands on each PR. TBD for the other two repositories. The course asks for unit tests and functional tests. The current test only confirms the test environment.
 
 Board: none
 

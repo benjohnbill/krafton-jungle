@@ -21,6 +21,7 @@ week file says so. Read the mode's doc before the first reply in that mode:
 | No `Mode:` line | Tutor mode (the default) | `docs/tutor-mode.md` |
 | `Mode:` names concept tutor | Concept tutor | `docs/concept-tutor-mode.md` |
 | `Mode:` names transcription (따라치기) | Transcription | `docs/transcription-mode.md` |
+| `Mode:` names AI-together (AI 함께하기) | AI-together | `docs/ai-together-mode.md` |
 
 A `Mode:` declaration replaces tutor mode. The rest of this file stays in
 force in every mode.

@@ -23,7 +23,9 @@ Facts (look, do not ask): the new repository's path, `git remote -v`
 none), the exercise layout, a README that states the order (and
 `README.upstream.md` when it exists). Upstream test for the README: with an
 `upstream` remote, `git log upstream/HEAD..HEAD -- README.md` is empty;
-otherwise `git log --format=%h -- README.md` lists only the root commit.
+otherwise `git log --format=%h -- README.md` lists only the root commit, and
+that commit holds a file other than README, LICENSE, and `.gitignore` files
+(with only those files, the README is his own).
 
 Then one message, numbered, and wait:
 
@@ -32,8 +34,9 @@ Then one message, numbered, and wait:
    line of its CLAUDE.md.
 3. The course guide's words on AI use (he pastes them), and the mode they
    lead to: tutor mode (`docs/tutor-mode.md`), concept tutor
-   (`docs/concept-tutor-mode.md`), or transcription
-   (`docs/transcription-mode.md`).
+   (`docs/concept-tutor-mode.md`), transcription
+   (`docs/transcription-mode.md`), or AI-together
+   (`docs/ai-together-mode.md`).
 4. Where AI-generated code may go: which branches, and whether it is ever
    pushed.
 5. Tutor mode only: what step 2 is this week (the representation he must
@@ -157,7 +160,8 @@ with `Status: active`.
 - Team week: write `~/dev/krafton-jungle/docs/proposals/weekNN-readme.md`
   only when the repo has no README or the upstream test from §0 holds. Its
   Map lists only paths a teammate's clone has, and it also carries the team
-  sections. Otherwise skip aloud.
+  sections. Otherwise skip aloud. When he owns the repo and asks, commit the
+  README directly to the team repo instead of the proposal.
 
 Criterion: `~/.claude/scripts/readme-check <readme> <repo>` exits 0.
 

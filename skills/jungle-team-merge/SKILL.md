@@ -1,28 +1,33 @@
 ---
 name: jungle-team-merge
-description: Pintos team weeks — verify my PR, a teammate's PR, or a broken develop on the latest base, and report; the user approves and merges.
+description: Team weeks — verify my PR, a teammate's PR, or a broken base branch on the latest base, and report; the user approves and merges.
 disable-model-invocation: true
 ---
 
 # jungle-team-merge
 
-The team has no CI. This skill is his personal stand-in for it: a build on
-the latest base before a merge, and a culprit report after a break. It reads
-and reports. He types the code, approves, and merges.
+This skill is his personal check before a merge: a build and test on the
+latest base, and a culprit report after a break. It stands in for CI when the
+team has none. It reads and reports. He approves and merges.
 
 ## Boundaries — every mode
 
-- **Read the team layer each run.** The PR template
+- **Read the team layer each run.** `AGENTS.md`, the PR template
   (`.github/pull_request_template.md`), the branch, commit, and PR rules in
   `README.md` or `CONVENTION.md`, and the merge rules from
-  `gh api repos/<owner>/<repo>/rules/branches/<base>`. When the README and
-  the ruleset disagree, the ruleset is the fact; list the gap under "team
-  agenda" in the report.
+  `gh api repos/<owner>/<repo>/rules/branches/<base>`. `<base>` is the PR
+  target that the README and the ruleset name. No branch name is fixed. When
+  the README and the ruleset disagree, the ruleset is the fact; list the gap
+  under "team agenda" in the report.
 - **Scratch only.** Every checkout, merge, build, and test runs in a
   detached worktree under the scratchpad. The week working tree stays as he
   left it: `git fetch` and read-only `git status` or `git log` only.
-- **Container only.** Build and test in the container the week `CLAUDE.md`
-  names, with the team's own targets (read the root `Makefile`):
+- **Repo commands.** Read the install, build, lint, and test commands from the
+  repo's README or `package.json`. Install dependencies in each worktree when
+  the commands need them.
+
+  A repo with a `pintos/` tree: build and test in the container the week
+  `CLAUDE.md` names, with the team's own targets (read the root `Makefile`):
 
   ```bash
   docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
@@ -32,10 +37,12 @@ and reports. He types the code, approves, and merges.
   `make lint` runs where the week environment doc says. Two trees at once
   share the cores (`JOBS = nproc / 2`): `TIMEOUT` is wall time, and more
   QEMUs than cores turn passes into false `FAIL`s.
-- **His hands only.** Code under `pintos/`, an approval, a merge, and any
-  write to the ruleset, labels, projects, or issues are his. Push and
-  `gh pr create` run only after he says yes in this run. Attribution follows
-  the week `CLAUDE.md`.
+- **His hands only.** An approval, a merge, and any write to the ruleset,
+  labels, projects, or issues are his. The agent never approves. The agent
+  merges only when he asks for that merge explicitly, by the repo's merge
+  rule. Code is his when the week's mode says so (a Pintos week: code under
+  `pintos/`). Push and `gh pr create` run only after he says yes in this run.
+  Attribution follows the week `CLAUDE.md`.
 
 ## Mode
 
@@ -45,7 +52,7 @@ The line after `/jungle-team-merge` and the repo state pick the mode:
 |---|---|
 | **A — open my PR** | his branch has commits not in `origin/<base>`, or he says he will open a PR, or asks the state of his open PR |
 | **B — before I approve** | he names a teammate's PR number, or asks to check it before approval |
-| **C — develop health** | the base fails to build or test, or he says it broke after a pull |
+| **C — base health** | the base fails to build or test, or he says it broke after a pull |
 
 Two modes fit → one numbered question, then wait. The first output line names
 the mode (`Mode B — before I approve #158`).
@@ -57,9 +64,10 @@ Input: a ref `X`, and whether to merge `origin/<base>` into it.
 1. Worktree `X` (merged with `origin/<base>` when asked) and a **control**
    worktree at `origin/<base>`. A merge conflict ends the routine: report
    the files.
-2. In both: `make lint`, then the container run. Keep both outputs.
+2. In both: the repo's lint command, then its build and test commands. Keep
+   both outputs.
 3. Compare, and cite every line:
-   - lint lines new in `X` (the base already fails lint, so compare, not
+   - lint lines new in `X` (a base can already fail lint, so compare, not
      require a clean pass);
    - tests `PASS` on the control and `FAIL` on `X` (regressions), and the
      reverse (progress);
@@ -73,12 +81,13 @@ Input: a ref `X`, and whether to merge `origin/<base>` into it.
    step 5.
 2. His branch behind `origin/<base>` → he syncs it by the README procedure in
    his own tree; wait. Verify his branch head merged with `origin/<base>`.
-3. Draft the PR in the scratchpad. The body is the repo template, filled:
-   - 🧪 table from step 2's lines (lint: "develop과 같은 N건, 신규 M건");
-   - "주요 변경" holds the `diff` sketch of the `pr` skill
-     (`~/.claude/skills/pr/SKILL.md`); the template stays the frame;
-   - 담당 범위 and 🤝 공통 코드 영향 from the diff; a field only he can judge
-     stays empty, marked for him.
+3. Draft the PR in the scratchpad. The frame is the repo's PR template, and
+   its comments say what each field holds:
+   - Fill the fields with `diff` code blocks and Mermaid, by the visual
+     guidance of the `pr` skill (`~/.claude/skills/pr/SKILL.md`, § Summary).
+   - The verification fields hold step 2's measured lines, against the base.
+   - A field only he can judge stays empty, marked for him.
+   - The author-check boxes stay empty.
 4. One numbered message: the draft path, open questions, "push and open the
    PR?". On yes: `git push origin <branch>`, then
    `gh pr create --base <base> --title … --body-file …`.
@@ -89,9 +98,11 @@ Input: a ref `X`, and whether to merge `origin/<base>` into it.
 ## B — before I approve
 
 1. `gh pr view <n> --json headRefName,baseRefName,files,reviews,body`, then
-   `git fetch origin pull/<n>/head`.
+   `git fetch origin pull/<n>/head`. `<base>` is `baseRefName`.
 2. Verify that head merged with `origin/<base>`. After Verify step 1 and
-   before the build, run the impact list on the merged worktree `$WT`:
+   before the build, run the impact list on the merged worktree `$WT`, with
+   the edge types for the language from `~/.claude/rules/change-impact.md`
+   (C is shown):
 
    ```bash
    codebase-memory-mcp cli index_repository --repo-path "$WT" --name pr-<n>
@@ -109,16 +120,17 @@ Input: a ref `X`, and whether to merge `origin/<base>` into it.
      with the list.
    - If a `*_has_more` field is `true`, read the next page with its cursor.
 3. Report `file:line` findings and where the measured lines differ from the
-   PR's 🧪 table. The approval decision is his; post nothing on the PR.
+   PR's verification fields. The approval decision is his; post nothing on the
+   PR.
 4. Report the impact list as candidates to read, not as findings:
-   - A zero is not absence. Function-pointer dispatch is not linked: in #166,
-     `anon_swap_out` has 0 callers, but `evict_frame` calls it through
+   - A zero is not absence. Function-pointer dispatch is not linked: in week09
+     #166, `anon_swap_out` has 0 callers, but `evict_frame` calls it through
      `swap_out(page)`.
    - `Field` seeds match by name. Read `via_qn` to the seed, and confirm in the
-     source: in #165, 38 of 75 rows start at `load_info.ofs`, and `lookup` is
-     on the list for its own local `ofs`.
+     source: in week09 #165, 38 of 75 rows start at `load_info.ofs`, and
+     `lookup` is on the list for its own local `ofs`.
 
-## C — develop health
+## C — base health
 
 1. Verify `origin/<base>` alone.
 2. Broken → find the culprit merge:

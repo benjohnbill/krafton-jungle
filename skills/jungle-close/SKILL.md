@@ -82,8 +82,8 @@ Stage only the exercise files and `lab/` files he touched. Criterion:
 
 The repository's own rules win over the title and the staging rule above when
 they prescribe one: its `CLAUDE.md` first, then, in a team week, the team's
-commit section in the repository (`README.md` or `CONVENTION.md`). Team week
-`week09` does (`README.md`, "Commit with context"): the title is a Korean
+commit rules in `AGENTS.md`, `README.md`, or `CONVENTION.md`. Team week
+`week09` does (`README.md`, its commit section): the title is a Korean
 sentence of the change's purpose and result, the body has one line per file
 in the form `파일 / Create|Update|Delete|Fix: 함수 / 설명`, and no commit carries
 a Claude trace (`week09/CLAUDE.md`). Solve and WIP titles do not apply there.

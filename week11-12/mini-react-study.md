@@ -88,7 +88,7 @@ Mid가 에이전트의 기본값입니다. 시간이 모자라면 R, 학습 단�
 ## Environment
 
 - Vanilla and real React practice code: `week11-12/lab/`. This path is in `.git/info/exclude` of the `krafton-jungle` repository. `week11-12` has no repository of its own.
-- From step 4a (his choice 2026-11-07): he types in `mini-react` on `CJG`. The agent gives only TS code that passes `npm run typecheck` and `npm run check` in `mini-react`. Do not commit this practice code until he asks.
+- From step 4a (his choice 2026-11-07): he types in `mini-react` on the study branch `CJG-study`, which is pushed and never merged as a whole. The agent gives only TS code that passes `npm run typecheck` and `npm run check` in `mini-react`. For a PR, take only code that he can explain into `CJG`.
 - Tools: Vite and npm, set up by the agent. Node version from `mini-react/.nvmrc`.
 - Real React stays in the lab. It does not enter `mini-react` dependencies.
 

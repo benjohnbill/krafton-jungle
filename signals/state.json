@@ -1,10 +1,72 @@
 {
- "last_report": "2026-10-22",
+ "last_report": "2026-11-07",
  "history": [
   {
    "date": "2026-10-22",
    "counts": {}
+  },
+  {
+   "date": "2026-11-07",
+   "counts": {
+    "numbered": {
+     "candidates": 50,
+     "judged": 10,
+     "violations": 6
+    },
+    "stall": {
+     "candidates": 9,
+     "judged": 9,
+     "violations": 1
+    },
+    "walkthrough": {
+     "candidates": 1,
+     "judged": 1,
+     "violations": 1
+    },
+    "probe": {
+     "candidates": 11,
+     "judged": 11,
+     "violations": 0
+    }
+   }
   }
  ],
- "rows": []
+ "rows": [
+  {
+   "id": "numbered-body-plus-decision-list",
+   "kind": "verified_violation",
+   "status": "pending",
+   "count": 6,
+   "evidence": [
+    "bec75bd2 2026-11-06T19:34: \"3번을 실행하면 게시본이 로컬 버전으로 바뀌니\" / \"3. **고치지 않기:**\"",
+    "3095c33a 2026-11-06T08:21: \"1. **기본 수준:**\" / \"1. 문서를 확인하고 피드백을 주세요.\"",
+    "3095c33a 2026-11-06T07:42: \"1. **제 인과 설명이 틀렸어요.**\" / \"1. **실제 React를 언제 칠까요?**\""
+   ],
+   "proposed_diff": "Numbered negotiation: add \"When a reply has a decision list, only that list has numbers; findings and steps use bullets.\""
+  },
+  {
+   "id": "walkthrough-volunteered-next-step",
+   "kind": "verified_violation",
+   "status": "pending",
+   "count": 1,
+   "evidence": [
+    "6909e0ab 2026-10-23T15:45: \"일단 hash_bytes는 포인터하고 사이즈를 넣어서 해시값을 뽑아내는 거잖아. 여기까지 맞지?\"",
+    "6909e0ab 2026-10-23T15:46: \"`(void *)p->va`로 캐스트하면 타입 에러는 사라져요.\"",
+    "6909e0ab 2026-10-23T15:46: \"그럼 그냥 캐스팅만 해주면 되는거 아냐?\""
+   ],
+   "proposed_diff": "Walkthrough mode: add trigger \"여기까지 맞지?\" and \"A correction says what is wrong with his line; it does not offer a next step.\""
+  },
+  {
+   "id": "overload-stop",
+   "kind": "habit_candidate",
+   "status": "pending",
+   "count": 2,
+   "evidence": [
+    "week09 dbdc4919 2026-10-26T02:17: \"잠시만. 지금 너무 정보가 많네. 일단. 내 함수부터 평가좀.\"",
+    "week11-12 bec75bd2 2026-11-06T17:36: \"코드가 한 번에 이해가 안 되는데. 어디서부터 시작을 해야 하지.\"",
+    "week11-12 bec75bd2 2026-11-06T17:36: \"제가 한 번에 너무 많이 드렸어요.\""
+   ],
+   "proposed_diff": "New bullet, Overload stop: \"지금 너무 정보가 많네\", \"한 번에 이해가 안 돼\": stop adding. Answer only the piece he names, or give the smallest first piece, and hold the rest until he asks. If he stalled on a value, ask the storage question about that piece."
+  }
+ ]
 }

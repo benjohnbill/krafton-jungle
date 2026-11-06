@@ -28,7 +28,8 @@ The agent's reading of the LMS pages. He can change this list.
 ## Study plan
 
 - `mini-react`: read `mini-react-study.md` in this directory before a study session. It holds his decisions, the steps, and the Min, Mid, and Best level of each step. He changes a level at any time.
-- Typed practice code, real React, and the page shell go in `lab/` in this directory, outside the team repository. Real React never enters a team repository's dependencies.
+- Vanilla and real React practice code go in `lab/` in this directory, outside the team repository. Real React never enters a team repository's dependencies.
+- From step 4a (his choice 2026-11-07), he types in `mini-react` on `CJG`. The agent gives only TS code that passes `npm run typecheck` and `npm run check` there. This practice code stays uncommitted until he asks.
 - The study cycle is in the mode doc.
 
 ## Statement and spoilers

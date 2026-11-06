@@ -87,6 +87,10 @@ concrete to abstract. A week file names the study plan of each project.
 - Record a dated observation after one cycle. One cycle does not prove the
   method, so do not promote it to a rule.
 
+### Observations
+
+- 2026-11-07, first `mini-react` run, steps 0 to 4a (agent inferred). Wrong predictions or wrong reasons: five (`getAttribute` after typing, `defaultValue`, the empty notice on add, the count of `createDom` calls, missing storage as the cause of the lost cursor). He often asked before he predicted, and asked many mechanism questions, more than the block flow expects. He stalled once, when a block held `vdom.ts` and `main.ts` together; narrowing to one object fixed it. Each React explanation landed better after he compared it with his vanilla code. Next-morning recall: not recorded yet. One run; not a rule.
+
 ## From the other modes
 
 The spine stays in force, except the sentence named above. No section of

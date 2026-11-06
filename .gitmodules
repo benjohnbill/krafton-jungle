@@ -34,3 +34,12 @@
 [submodule "skills/jungle-deck"]
 	path = skills/jungle-deck
 	url = git@github.com:benjohnbill/jungle-deck.git
+[submodule "week11-12/mini-react"]
+	path = week11-12/mini-react
+	url = git@github.com:benjohnbill/mini-react.git
+[submodule "week11-12/mini-redis"]
+	path = week11-12/mini-redis
+	url = git@github.com:benjohnbill/mini-redis.git
+[submodule "week11-12/mini-dbms"]
+	path = week11-12/mini-dbms
+	url = git@github.com:benjohnbill/mini-dbms.git

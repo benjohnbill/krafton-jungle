@@ -70,6 +70,24 @@ Mid가 에이전트의 기본값입니다. 시간이 모자라면 R, 학습 단�
 | 7 | 함수를 다시 실행하면 상태는 어디에 있을까요? | 클로저, hooks 배열, `useState` | + React로 카운터 2개 비교 | + `if` 안의 `useState`를 일부러 깨 보기 |
 | 8 | `useEffect`와 `useMemo`는 왜 있을까요? | 각 Hook의 짧은 구현 | + 렌더링 중 타이머, 재계산 횟수 실험 | + 정리 함수, 의존성 엣지 케이스 |
 
+## Phase 2 decisions
+
+학습자가 2026-11-10에 정한 내용입니다. 팀 계획은 "11/10 각자 AI로 구현 → 각자 발표 내용으로 dataflow와 ADR 확정 → 회의에서 발표와 테스트 대상 토의"입니다.
+
+- **Implementation:** 각자 Phase 2 전체를 개인 브랜치에서 구현합니다. 학습자는 `CJG`에서 하고, `useState`를 발표합니다.
+- **Typing:** 직접 치는 것은 `useState`와, `FunctionComponent`에서 `useState`가 닿는 두 줄(인덱스를 0으로 되돌리는 줄, 지금 컴포넌트를 설정하는 줄)입니다. 나머지는 생성합니다. 시간이 되면 나머지도 따라 치며 묻습니다.
+- **Break to explain:** 결정마다 대안으로 직접 바꿔서 깨뜨려 보고, 그 결과를 ADR의 실패 사례로 적습니다. 코드의 출처(직접 침, 생성)가 아니라 바꿔 본 경험이 팀원 발표와의 차이를 만듭니다.
+- **Presentation:** 병합하지 않는 draft PR입니다. base는 `main`, diff는 `FunctionComponent` + `useState`와 테스트, 본문은 Mermaid sequence diagram과 ADR입니다.
+- **ADR format (trial):** 결정 한 문장 + 실패 사례 하나. 실패 사례는 GitHub 경고 상자 `> [!CAUTION]`로 표시합니다. 발표 PR에 올리는 새 ADR에만 적용하고, 파일명에 번호를 붙이지 않으며(팀 ADR 번호와 겹치지 않게), 팀 반응을 본 뒤 규칙 PR로 올릴지 정합니다.
+- **Deferred:** 테스트 대상, 직접 치는 시간 상한. 팀원의 Phase 2 코드는 11/11 늦게 올라오므로 미리 비교하지 않습니다.
+
+```markdown
+# Hook 상태는 컴포넌트마다 배열에 호출 순서대로 둡니다
+
+> [!CAUTION]
+> `if` 안에서 `useState`를 부르면, 조건이 바뀐 렌더링에서 뒤쪽 Hook이 앞쪽 Hook의 값을 받습니다.
+```
+
 ## Meeting and reading levels
 
 | Item | Min | Mid | Best |

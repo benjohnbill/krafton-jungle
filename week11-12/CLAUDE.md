@@ -30,6 +30,7 @@ The agent's reading of the LMS pages. He can change this list.
 - `mini-react`: read `mini-react-study.md` in this directory before a study session. It holds his decisions, the steps, and the Min, Mid, and Best level of each step. He changes a level at any time.
 - Vanilla and real React practice code go in `lab/` in this directory, outside the team repository. Real React never enters a team repository's dependencies.
 - From step 4a, he types in `mini-react` in team milestone order, M1 to M4, and keeps the study cycle (his choice 2026-11-07). He works on `CJG`. The agent gives only TS code that passes `npm run typecheck` and `npm run check` there. For a PR, take only code that he can explain into `CJG`.
+- Phase 2 (his choice 2026-11-10): he types `useState` on `CJG` and presents it in a draft PR that is never merged. Read `mini-react-study.md` § Phase 2 decisions before a Phase 2 session.
 - The first study code (`createDom`, 2026-11-07) is kept as the tag `study/createDom` in `mini-react`. The branch `CJG-study` was deleted on 2026-11-09 after PRs #16 and #3 merged.
 - The study cycle is in the mode doc.
 

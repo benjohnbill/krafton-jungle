@@ -1,7 +1,7 @@
 ---
 role: product (대조군과 실험군) 계획. 개인 층이며 팀원은 읽지 않아요
 truth: 2026-11-09 grilling 세션의 합의. 근거 페이지는 benjohnbill.github.io/study/week11/framework-control.html
-status: Draft. 대조군은 mini-redis와 mini-dbms를 완성한 뒤 시작해요. 그때 이 파일의 Deferred부터 다시 열어요
+status: Draft. 대조군 시작 시점은 미정이에요. 실험군을 시작할 때 이 파일의 Deferred부터 다시 열어요
 ---
 
 # product plan
@@ -17,7 +17,8 @@ status: Draft. 대조군은 mini-redis와 mini-dbms를 완성한 뒤 시작해�
 - **Location**: `week11-12/product/` 로컬 git 레포로 시작해요. 원격 레포는 팀 결정 3(폴더 2개 또는 레포 2개)이 나온 뒤 오라버니가 만들어요.
 - **Stack**: product는 TS예요. 개발 도구와 테스트 환경은 우리 라이브러리들과 맞추고, 런타임 의존성은 우리 라이브러리뿐이에요. Node v26은 `.ts`를 직접 실행해요.
 - **Data scale**: `tools/seed.ts`는 고정 시드값을 쓰고 크기를 인자로 받아요. 100만 건 측정(인덱스 대 선형 탐색)은 mini-dbms 레포 안의 벤치마크로 해요. product에서 mini-dbms가 필요한 근거는 규모가 아니라 새 조건 추가와 동시 쓰기예요. 데이터는 현실 규모(반 32명)로 둬요.
-- **Timing**: 대조군은 mini-redis와 mini-dbms를 완성한 뒤에 만들어요.
+- **Layout**: product 레포 하나에 `control/`과 `experiment/`를 최상위 폴더로 둬요 (오라버니 결정 2026-11-09). 팀 결정 3의 A안과 같아요.
+- **Timing**: 실험군은 mini-redis와 mini-dbms를 완성한 뒤에 만들어요. 대조군은 우리 라이브러리가 필요 없으니 더 일찍 시작할 수 있어요. 처음 grilling의 Q13 답은 대조군과 실험군을 헷갈린 답이었어요 (오라버니 정정 2026-11-09).
 
 ## Deferred
 

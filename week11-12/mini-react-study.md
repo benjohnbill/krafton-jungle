@@ -26,6 +26,7 @@ progress: memory/progress.md holds the current step. This file does not
 - **Page:** 버튼과 측정 화면은 에이전트가 만들고, `diff`와 `patch`는 학습자가 친 함수를 불러 씁니다.
 - **Levels:** 모든 세부 단계에 Min, Mid, Best를 적어 둡니다. 학습자가 진행하면서 단계별로 수준을 바꿉니다.
 - **Time:** 분 단위로 계획하지 않습니다. 순서와 비중만 봅니다. 4a~4c가 오늘 작업의 절반 정도입니다.
+- **Order (2026-11-07):** 4a 이후에는 팀 마일스톤 순서(M1~M4)로 칩니다. 치는 방식은 "One block"을 유지합니다. M1은 4a Best, M2와 M3는 4b와 4c, M4는 6단계에 해당합니다. 5단계의 `key`는 M9의 선택 사항으로 넘깁니다.
 
 ## One block
 
@@ -88,7 +89,7 @@ Mid가 에이전트의 기본값입니다. 시간이 모자라면 R, 학습 단�
 ## Environment
 
 - Vanilla and real React practice code: `week11-12/lab/`. This path is in `.git/info/exclude` of the `krafton-jungle` repository. `week11-12` has no repository of its own.
-- From step 4a (his choice 2026-11-07): he types in `mini-react` on the study branch `CJG-study`, which is pushed and never merged as a whole. The agent gives only TS code that passes `npm run typecheck` and `npm run check` in `mini-react`. For a PR, take only code that he can explain into `CJG`.
+- From step 4a (his choice 2026-11-07): he types in `mini-react` on `CJG`. The agent gives only TS code that passes `npm run typecheck` and `npm run check` in `mini-react`. For a PR, take only code that he can explain into `CJG`. The first study code is the tag `study/createDom` (branch `CJG-study` deleted 2026-11-09).
 - Tools: Vite and npm, set up by the agent. Node version from `mini-react/.nvmrc`.
 - Real React stays in the lab. It does not enter `mini-react` dependencies.
 

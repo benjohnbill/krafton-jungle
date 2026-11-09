@@ -29,7 +29,8 @@ The agent's reading of the LMS pages. He can change this list.
 
 - `mini-react`: read `mini-react-study.md` in this directory before a study session. It holds his decisions, the steps, and the Min, Mid, and Best level of each step. He changes a level at any time.
 - Vanilla and real React practice code go in `lab/` in this directory, outside the team repository. Real React never enters a team repository's dependencies.
-- From step 4a (his choice 2026-11-07), he types in `mini-react` on the study branch `CJG-study`, which is pushed and never merged as a whole (his choice 2026-11-07). The agent gives only TS code that passes `npm run typecheck` and `npm run check` there. For a PR, take only code that he can explain into `CJG`.
+- From step 4a, he types in `mini-react` in team milestone order, M1 to M4, and keeps the study cycle (his choice 2026-11-07). He works on `CJG`. The agent gives only TS code that passes `npm run typecheck` and `npm run check` there. For a PR, take only code that he can explain into `CJG`.
+- The first study code (`createDom`, 2026-11-07) is kept as the tag `study/createDom` in `mini-react`. The branch `CJG-study` was deleted on 2026-11-09 after PRs #16 and #3 merged.
 - The study cycle is in the mode doc.
 
 ## Statement and spoilers
@@ -57,4 +58,4 @@ Board: none
 
 ## Do not touch
 
-No upstream or scaffolding exists. Team convention changes go through a PR and one approval, the same as code (user said 2026-11-06). The owner applies GitHub settings after approval. PR #2 merged once with no approval, by his explicit exception (user said 2026-11-06), so that teammates clone the new conventions. The agent changes team-tracked conventions only when he asks.
+No upstream or scaffolding exists. Team convention changes go through a PR and one approval, the same as code (user said 2026-11-06). The owner applies GitHub settings after approval. PR #2 merged once with no approval, by his explicit exception (user said 2026-11-06), so that teammates clone the new conventions. PRs #27, #28, and #29 merged with no approval through a temporary admin bypass (PR merges only) on ruleset `main-protection`, removed right after, by his explicit exception (user said 2026-11-09). The agent changes team-tracked conventions only when he asks.

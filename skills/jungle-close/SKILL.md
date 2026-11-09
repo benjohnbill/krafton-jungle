@@ -127,7 +127,10 @@ line 2 = next. He pastes them.
 ## 7. Blog card
 
 Only when he names the blog (`benjohnbill.github.io/` beside the week
-repositories). Ask for the card's target when it is unclear.
+repositories). Ask for the card's target when it is unclear. When the
+week group has a project hub for the page (the site's `AGENTS.md`, "Project
+hubs"), the target is a phase inside that hub. Ask which phase when it is
+unclear.
 
 ## 8. Progress memo
 

@@ -76,7 +76,14 @@ Mid가 에이전트의 기본값입니다. 시간이 모자라면 R, 학습 단�
 
 - **Implementation:** 각자 Phase 2 전체를 개인 브랜치에서 구현합니다. 학습자는 `CJG`에서 하고, `useState`를 발표합니다.
 - **Workflow (2026-11-10 오후, 아래 Typing과 Break to explain을 대체):** matt-pocock 흐름 `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement-spec`을 따릅니다. 직접 치기와 블록 학습 사이클은 폐기합니다(시간 부족). ADR 감의 결정은 grill에서 합의하고, 데이터 흐름은 grill 중 개념을 짚으며 다룹니다. 부족한 부분은 학습자가 `/teach`로 HTML을 부탁하며, 작업 폴더는 `lab/teach/`(로컬)입니다. 코드 품질은 티켓마다 `tdd`, 끝에 `code-review`로 챙깁니다.
-- **Grill 범위:** Phase 2 전체(`FunctionComponent`, `useState`, `useEffect`, `useMemo`)를 한 번에 grill하고, `useState`의 결정부터 묻습니다. 테스트 대상(전에 미룬 Q5)도 grill에서 함께 정합니다.
+- **Grill 범위:** Phase 2 전체(`FunctionComponent`, `useState`, `useEffect`, `useMemo`)를 한 번에 grill하고, `useState`의 결정부터 묻습니다. grill은 LMS 요구사항과 그 빈 공간만 다룹니다. 학습자와 에이전트가 LMS `learning/1307`의 Phase 2를 동시에 띄워 놓고 진행합니다.
+- **사람과 기계의 몫:** 사람이 정하는 것은 ADR(추상적인 기능, 요구사항의 빈 공간)과 테스트 대상(데이터 흐름에서 추론)입니다. 테스트 코드는 대상 × 입력(엣지 케이스) × 기대 결과로 펼쳐지며, 기대 결과의 근거는 LMS나 ADR입니다. 기대 결과가 없는 칸은 요구사항의 빈 공간이므로 ADR 후보로 돌아갑니다.
+- **데이터 흐름의 두 층:** 동작 흐름(렌더링 → Hook 호출 → set → 다시 렌더링)은 코드 전에 grill에서 잡고, 테스트 대상의 근거가 됩니다. 코드 흐름(슬롯 인덱스, 클로저)은 구현 뒤에 생성된 코드를 읽으며 익힙니다. grill에서 흐름이 안 그려지면 `/prototype`이나 `/teach`를 씁니다.
+- **흐름 (단계 추가):** `/grill-with-docs` → `/to-spec`(seam 단계에서 학습자가 테스트 대상 결정) → 엣지 케이스 단계 → `/to-tickets` → `/implement-spec`. 엣지 케이스 단계: 새 서브에이전트가 spec, ADR, 코드만 받아 대상 × 입력 × 기대 결과를 펼치고, 케이스마다 근거(LMS 문장 또는 ADR)를 댑니다. 결과는 spec 이슈의 댓글로 달아 `/to-tickets`가 읽게 합니다. 에이전트가 교차 확인하고, 학습자가 케이스마다 테스트, `it.todo`, 범위 밖 중 하나를 고릅니다. 근거가 없는 케이스(예: `key` 없는 목록 순서 변경, M9로 미룸)는 "근거 없음"으로 표시합니다.
+- **추천의 근거 사다리:** grill의 질문마다 에이전트가 추천 답을 붙이고, 근거 칸과 출처를 적습니다. 1 LMS Phase 2 문장(결정이 아니라 인용) → 2 팀 ADR과 `CONVENTION.md`(Phase 1과 일관) → 3 react.dev(기본값은 React처럼; 다르게 가면 이유를 시간, 범위, 강의용 구조 중 하나로 적음) → 4 에이전트 판단("근거 없음" 표시, 학습자가 결정, ADR 후보, `status: proposed`로 회의에 넘김). 같은 칸에 대안이 여럿이면 LMS를 통과하는 가장 작은 구현을 추천합니다.
+- **멈춤과 이해 확인:** `/implement-spec`은 `FunctionComponent`와 `useState` 티켓이 끝나면 멈춥니다. 학습자가 그 코드를 읽고 `useState`의 흐름을 자기 말로 설명하며, 에이전트가 빠진 곳을 짚습니다. 이 확인을 통과한 뒤 발표 PR을 엽니다. `useEffect`와 `useMemo` 티켓은 그동안 다른 브랜치에서 백그라운드로 돌릴 수 있습니다.
+- **시간 (남은 약 3시간, 2026-11-10 오후):** Phase 2 전부를 하되, 모자라면 이 순서로 뺍니다: `useMemo` 티켓 → `useEffect`의 정리 함수 → `useState` 엣지 케이스를 `it.todo`로.
+- **PR 본문:** 에이전트가 Mermaid diagram과 본문 초안을 쓰고, 학습자가 리뷰하고 고쳐 씁니다.
 - **Tracker:** spec과 티켓은 `mini-react`의 GitHub 이슈입니다. 설정은 `week11-12/CLAUDE.md` § Agent skills에 둡니다(팀 `AGENTS.md`에 넣지 않음).
 - ~~**Typing:**~~ 폐기. 블록 1 코드는 `lab/usestate/function-component.ts`에 기록으로 남깁니다.
 - ~~**Break to explain:**~~ 대체. ADR의 실패 사례는 구현 단계에서 그 실패를 보여 주는 테스트로 확인합니다.

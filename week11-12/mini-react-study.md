@@ -90,6 +90,19 @@ Mid가 에이전트의 기본값입니다. 시간이 모자라면 R, 학습 단�
 - **Presentation:** 병합하지 않는 draft PR입니다. base는 `main`, diff는 `FunctionComponent` + `useState`와 테스트만, 본문은 Mermaid sequence diagram과 ADR입니다. `useEffect`와 `useMemo`는 다른 PR로 나누어 올립니다. 그래서 티켓 순서는 `FunctionComponent`와 `useState`가 먼저 끝나도록 잡습니다.
 - **ADR 범위 (2026-11-10 저녁, 학습자 결정):** LMS에 없는 결정은 짧게라도 모두 ADR로 남깁니다. `domain-modeling`의 세 기준(되돌리기 어려움, 놀라움, 실제 대안)보다 이 규칙이 우선합니다.
 - **ADR format (trial):** 결정 한 문장 + 실패 사례 하나. 실패 사례는 GitHub 경고 상자 `> [!CAUTION]`로 표시합니다. 발표 PR에 올리는 새 ADR에만 적용하고, 파일명에 번호를 붙이지 않으며(팀 ADR 번호와 겹치지 않게), 팀 반응을 본 뒤 규칙 PR로 올릴지 정합니다.
+- **Grill 압축 (2026-11-10 저녁, 학습자 결정):** 시간 부족으로, 남은 빈칸은 하나씩 묻지 않고 에이전트의 기본값 표를 학습자가 한 번에 승인했습니다. `/to-spec`부터의 흐름과 이해 확인 멈춤은 그대로입니다. ADR은 구현 뒤 이 표에서 쓰고, 실패 사례는 테스트로 확인합니다. 이미 쓴 ADR 4개(`root-only-function-component`, `root-instance-keeps-container-and-current-view`, `setter-updates-without-batching`, `setter-skips-same-value`)는 그대로 둡니다. 숫자는 근거 사다리 단계입니다.
+
+  | 빈칸 | 승인한 기본값 | 근거 |
+  |---|---|---|
+  | 클릭에서 setter까지 | `data-action` 문자열을 props에 두고, 함수는 Root Instance의 `actions` 표에 둡니다. 컨테이너에 리스너 하나를 답니다. View에 함수가 없으므로 `StateHistory`는 바뀌지 않습니다 | 4 (`StateHistory`를 그대로 두는 가장 작은 구현) |
+  | 렌더링 밖에서 Hook 호출 | `Error`를 던집니다 | 3 (React의 "Invalid hook call") |
+  | updater 함수 `setCount(c => c + 1)` | 지원합니다 (`typeof` 검사) | 3 |
+  | `useEffect` 실행 시점 | patch 직후 동기로 실행합니다 | 3과 다름. 이유: 범위 (React는 화면을 그린 뒤) |
+  | deps 비교 | 칸마다 `Object.is`. `[]`는 mount 때 한 번, 생략하면 매 렌더링 | 3 |
+  | `useEffect` 정리 함수 | 다음 effect 실행 전에 부릅니다. 시간이 모자라면 뺍니다 | 3 |
+  | `useMemo` | deps가 바뀔 때만 다시 계산합니다 | 3 |
+  | 데모 페이지 주제 | 카운터 하나 | 4 (발표 범위가 `useState`) |
+
 - **Deferred:** 팀원의 Phase 2 코드는 11/11 늦게 올라오므로 미리 비교하지 않습니다.
 
 ```markdown

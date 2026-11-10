@@ -75,11 +75,14 @@ Mid가 에이전트의 기본값입니다. 시간이 모자라면 R, 학습 단�
 학습자가 2026-11-10에 정한 내용입니다. 팀 계획은 "11/10 각자 AI로 구현 → 각자 발표 내용으로 dataflow와 ADR 확정 → 회의에서 발표와 테스트 대상 토의"입니다.
 
 - **Implementation:** 각자 Phase 2 전체를 개인 브랜치에서 구현합니다. 학습자는 `CJG`에서 하고, `useState`를 발표합니다.
-- **Typing:** 직접 치는 것은 `useState`와, `FunctionComponent`에서 `useState`가 닿는 두 줄(인덱스를 0으로 되돌리는 줄, 지금 컴포넌트를 설정하는 줄)입니다. 나머지는 생성합니다. 시간이 되면 나머지도 따라 치며 묻습니다.
-- **Break to explain:** 결정마다 대안으로 직접 바꿔서 깨뜨려 보고, 그 결과를 ADR의 실패 사례로 적습니다. 코드의 출처(직접 침, 생성)가 아니라 바꿔 본 경험이 팀원 발표와의 차이를 만듭니다.
-- **Presentation:** 병합하지 않는 draft PR입니다. base는 `main`, diff는 `FunctionComponent` + `useState`와 테스트, 본문은 Mermaid sequence diagram과 ADR입니다.
+- **Workflow (2026-11-10 오후, 아래 Typing과 Break to explain을 대체):** matt-pocock 흐름 `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement-spec`을 따릅니다. 직접 치기와 블록 학습 사이클은 폐기합니다(시간 부족). ADR 감의 결정은 grill에서 합의하고, 데이터 흐름은 grill 중 개념을 짚으며 다룹니다. 부족한 부분은 학습자가 `/teach`로 HTML을 부탁하며, 작업 폴더는 `lab/teach/`(로컬)입니다. 코드 품질은 티켓마다 `tdd`, 끝에 `code-review`로 챙깁니다.
+- **Grill 범위:** Phase 2 전체(`FunctionComponent`, `useState`, `useEffect`, `useMemo`)를 한 번에 grill하고, `useState`의 결정부터 묻습니다. 테스트 대상(전에 미룬 Q5)도 grill에서 함께 정합니다.
+- **Tracker:** spec과 티켓은 `mini-react`의 GitHub 이슈입니다. 설정은 `week11-12/CLAUDE.md` § Agent skills에 둡니다(팀 `AGENTS.md`에 넣지 않음).
+- ~~**Typing:**~~ 폐기. 블록 1 코드는 `lab/usestate/function-component.ts`에 기록으로 남깁니다.
+- ~~**Break to explain:**~~ 대체. ADR의 실패 사례는 구현 단계에서 그 실패를 보여 주는 테스트로 확인합니다.
+- **Presentation:** 병합하지 않는 draft PR입니다. base는 `main`, diff는 `FunctionComponent` + `useState`와 테스트만, 본문은 Mermaid sequence diagram과 ADR입니다. `useEffect`와 `useMemo`는 다른 PR로 나누어 올립니다. 그래서 티켓 순서는 `FunctionComponent`와 `useState`가 먼저 끝나도록 잡습니다.
 - **ADR format (trial):** 결정 한 문장 + 실패 사례 하나. 실패 사례는 GitHub 경고 상자 `> [!CAUTION]`로 표시합니다. 발표 PR에 올리는 새 ADR에만 적용하고, 파일명에 번호를 붙이지 않으며(팀 ADR 번호와 겹치지 않게), 팀 반응을 본 뒤 규칙 PR로 올릴지 정합니다.
-- **Deferred:** 테스트 대상, 직접 치는 시간 상한. 팀원의 Phase 2 코드는 11/11 늦게 올라오므로 미리 비교하지 않습니다.
+- **Deferred:** 팀원의 Phase 2 코드는 11/11 늦게 올라오므로 미리 비교하지 않습니다.
 
 ```markdown
 # Hook 상태는 컴포넌트마다 배열에 호출 순서대로 둡니다

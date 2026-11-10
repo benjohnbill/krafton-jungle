@@ -87,9 +87,9 @@ Mid가 에이전트의 기본값입니다. 시간이 모자라면 R, 학습 단�
 - **Tracker:** spec과 티켓은 `mini-react`의 GitHub 이슈입니다. 설정은 `week11-12/CLAUDE.md` § Agent skills에 둡니다(팀 `AGENTS.md`에 넣지 않음).
 - ~~**Typing:**~~ 폐기. 블록 1 코드는 `lab/usestate/function-component.ts`에 기록으로 남깁니다.
 - ~~**Break to explain:**~~ 대체. ADR의 실패 사례는 구현 단계에서 그 실패를 보여 주는 테스트로 확인합니다.
-- **Presentation:** 병합하지 않는 draft PR입니다. base는 `main`, diff는 `FunctionComponent` + `useState`와 테스트만, 본문은 Mermaid sequence diagram과 ADR입니다. `useEffect`와 `useMemo`는 다른 PR로 나누어 올립니다. 그래서 티켓 순서는 `FunctionComponent`와 `useState`가 먼저 끝나도록 잡습니다.
+- ~~**Presentation:**~~ 생략 (2026-11-11, 학습자 결정). `useState` 이해 확인과 발표용 draft PR을 하지 않습니다. `CJG-phase2`는 원격에 있습니다.
 - **ADR 범위 (2026-11-10 저녁, 학습자 결정):** LMS에 없는 결정은 짧게라도 모두 ADR로 남깁니다. `domain-modeling`의 세 기준(되돌리기 어려움, 놀라움, 실제 대안)보다 이 규칙이 우선합니다.
-- **ADR format (trial):** 결정 한 문장 + 실패 사례 하나. 실패 사례는 GitHub 경고 상자 `> [!CAUTION]`로 표시합니다. 발표 PR에 올리는 새 ADR에만 적용하고, 파일명에 번호를 붙이지 않으며(팀 ADR 번호와 겹치지 않게), 팀 반응을 본 뒤 규칙 PR로 올릴지 정합니다.
+- **ADR format (2026-11-11, 팀 규칙):** `CONVENTION.md` § ADR 쓰기(PR #37, #38). 번호 없는 파일에 결정 한 문장과 CAUTION 한 줄, 마지막 두 줄에 `결정: (테스트: …)`와 `CAUTION: (테스트: …)`. GLOSSARY는 § 프로젝트 공통 용어 가이드(`용어 | 뜻 | 코드`, `Avoid` 없음).
 - **Grill 압축 (2026-11-10 저녁, 학습자 결정):** 시간 부족으로, 남은 빈칸은 하나씩 묻지 않고 에이전트의 기본값 표를 학습자가 한 번에 승인했습니다. `/to-spec`부터의 흐름과 이해 확인 멈춤은 그대로입니다. ADR은 구현 뒤 이 표에서 쓰고, 실패 사례는 테스트로 확인합니다. 이미 쓴 ADR 4개(`root-only-function-component`, `root-instance-keeps-container-and-current-view`, `setter-updates-without-batching`, `setter-skips-same-value`)는 그대로 둡니다. 숫자는 근거 사다리 단계입니다.
 
   | 빈칸 | 승인한 기본값 | 근거 |
@@ -103,6 +103,7 @@ Mid가 에이전트의 기본값입니다. 시간이 모자라면 R, 학습 단�
   | `useMemo` | deps가 바뀔 때만 다시 계산합니다 | 3 |
   | 데모 페이지 주제 | 카운터 하나 | 4 (발표 범위가 `useState`) |
 
+- **역추출 (2026-11-11, 학습자 결정):** grill 대신 LMS 문장마다 현재 코드를 맞춰 보는 표 `phase2-extraction.md`에서 GLOSSARY(LMS의 추상적인 단어)와 ADR(코드가 정한 결정)을 뽑았습니다. 테스트 ID는 `F` + #30 표의 행 번호입니다. `useEffect`와 `useMemo`는 같은 표에서 결정을 뽑고, ADR → 테스트 → 구현 순서로 갑니다.
 - **Deferred:** 팀원의 Phase 2 코드는 11/11 늦게 올라오므로 미리 비교하지 않습니다.
 
 ```markdown

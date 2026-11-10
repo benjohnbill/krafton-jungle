@@ -1,6 +1,6 @@
 ---
 scope: mini-react Phase 2 — LMS 문장마다 요구사항 충족 판정과 그 근거 ADR
-source: LMS learning/1307, mini-react `CJG-phase2` `945a689`
+source: LMS learning/1307, mini-react `CJG-phase2` `b6d3145`
 status: 2026-11-11 최신. 판정은 코드를 쓰지 않은 새 에이전트가 했고(`a3691ac` 기준), 그 뒤 L27과 L36의 버그를 고친 결과를 반영했습니다
 ---
 
@@ -12,8 +12,8 @@ status: 2026-11-11 최신. 판정은 코드를 쓰지 않은 새 에이전트가
 
 ## 요약
 
-- 충족 33, 부분 1 (L36), 대상 아님 3 (L31, L32, L37).
-- 판정 뒤에 고친 것: L27 데모를 자식 Component로 나눔(`demo-splits-view-into-child-components`), L36의 버그 수정(렌더링 `Error` 뒤 클릭 함수가 사라져 페이지가 멈춤, `render-error-keeps-previous-render`, F116).
+- 충족 34, 대상 아님 3 (L31, L32, L37).
+- 판정 뒤에 고친 것: L27 데모를 자식 Component로 나눔(`demo-splits-view-into-child-components`), L36의 버그 수정(렌더링 `Error` 뒤 클릭 함수가 사라져 페이지가 멈춤, `render-error-keeps-previous-render`, F116)과 "근거 없음" `it.todo` 15개 정리(결정 9개는 ADR과 테스트, 6개는 범위 밖).
 - 판정 밖에서 볼 것: `README.md`의 파일 지도와 동작 흐름이 Phase 2를 담지 않고, `index.html`의 `<title>`이 "mini-react 검증 페이지"입니다(데모가 실행되면 "숫자 N"으로 바뀜). README는 팀이 최종 코드에서 씁니다.
 
 | ID | LMS 문장 | 충족 | 근거 | 남은 일 |
@@ -53,7 +53,7 @@ status: 2026-11-11 최신. 판정은 코드를 쓰지 않은 새 에이전트가
 | L33 | 단위 테스트 를 통해 각 모듈 (Virtual DOM 변환, Diff, Patch, useState, useEffect, useMemo 등) 을 검증합니다. | 충족 | (테스트: T1, D1, P1, H1, F16, F71, F94) | — |
 | L34 | 기능 테스트를 통해 화면이 제대로 동작하는지 확인합니다. | 충족 | 0008-verification-page, demo-page-is-one-counter | — |
 | L35 | 테스트 영역에 다양한 태그와 요소를 추가해 여러 동작과 변화를 자유롭게 확인해 보세요. | 충족 | 0008-verification-page | — |
-| L36 | 엣지 케이스를 최대한 고려 합니다. | 부분 | setter-skips-same-value, deps-compare-each-item-with-object-is, hook-outside-render-throws-error, update-before-mount-throws-error, render-error-keeps-previous-render, effect-error-propagates-after-dom-update, effect-non-function-return-is-ignored | "근거 없음" `it.todo` 14개를 결정합니다. 판정 에이전트가 짚은 다음 경우는 F6(같은 인스턴스에 `mount`를 두 번 부르면 클릭 한 번에 숫자가 2 오름)입니다. |
+| L36 | 엣지 케이스를 최대한 고려 합니다. | 충족 | setter-skips-same-value, deps-compare-each-item-with-object-is, hook-outside-render-throws-error, update-before-mount-throws-error, render-error-keeps-previous-render, effect-error-propagates-after-dom-update, effect-non-function-return-is-ignored, mount-can-be-called-once, root-instances-are-independent, updater-error-leaves-state-unchanged, setter-is-same-function-every-render, setter-during-render-throws-error, on-outside-render-throws-error, same-action-name-last-registration-wins | 검토하고 범위 밖으로 뺀 경우(테스트 없음): `useMemo` 계산 함수 안의 `useState`(Hook 규칙 위반, `hook-rule-kept-by-convention`), 글자 노드에 보낸 클릭(실제 브라우저의 클릭 대상은 요소), `data-action=""`(쓰는 화면 없음), 클릭 함수가 `Error`를 던진 뒤의 클릭(브라우저가 리스너를 지킴), effect 안 setter의 끝없는 반복(`setter-in-effect-updates-immediately`의 CAUTION), `main.ts`를 직접 부르는 테스트(시작 함수 테스트가 대신함). |
 | L37 | 이력서와 포트폴리오에 포함할 수 있을 만큼 완성도 높은 수준으로 구현합니다. | 대상 아님 | 품질 목표라 코드로 판정할 수 없음 (참고: `README.md`의 파일 지도와 동작 흐름에 `function-component.ts`와 데모 페이지가 없고, "`src/main.ts`는 아직 이 함수들을 잇지 않습니다"라는 옛 문장이 남아 있음) | — |
 
 

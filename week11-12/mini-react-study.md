@@ -88,6 +88,7 @@ Mid가 에이전트의 기본값입니다. 시간이 모자라면 R, 학습 단�
 - ~~**Typing:**~~ 폐기. 블록 1 코드는 `lab/usestate/function-component.ts`에 기록으로 남깁니다.
 - ~~**Break to explain:**~~ 대체. ADR의 실패 사례는 구현 단계에서 그 실패를 보여 주는 테스트로 확인합니다.
 - **Presentation:** 병합하지 않는 draft PR입니다. base는 `main`, diff는 `FunctionComponent` + `useState`와 테스트만, 본문은 Mermaid sequence diagram과 ADR입니다. `useEffect`와 `useMemo`는 다른 PR로 나누어 올립니다. 그래서 티켓 순서는 `FunctionComponent`와 `useState`가 먼저 끝나도록 잡습니다.
+- **ADR 범위 (2026-11-10 저녁, 학습자 결정):** LMS에 없는 결정은 짧게라도 모두 ADR로 남깁니다. `domain-modeling`의 세 기준(되돌리기 어려움, 놀라움, 실제 대안)보다 이 규칙이 우선합니다.
 - **ADR format (trial):** 결정 한 문장 + 실패 사례 하나. 실패 사례는 GitHub 경고 상자 `> [!CAUTION]`로 표시합니다. 발표 PR에 올리는 새 ADR에만 적용하고, 파일명에 번호를 붙이지 않으며(팀 ADR 번호와 겹치지 않게), 팀 반응을 본 뒤 규칙 PR로 올릴지 정합니다.
 - **Deferred:** 팀원의 Phase 2 코드는 11/11 늦게 올라오므로 미리 비교하지 않습니다.
 

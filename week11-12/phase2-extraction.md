@@ -18,7 +18,7 @@ status: 2026-11-11 최신. 판정은 코드를 쓰지 않은 새 에이전트가
 
 | ID | LMS 문장 | 충족 | 근거 | 남은 일 |
 |---|---|---|---|---|
-| L1 | 기존 React 의 핵심 기능인 Component · State · Hooks 를 직접 구현하고 이를 활용하여 동작하는 웹 페이지를 만들어 보는 것입니다. | 충족 | root-only-function-component, demo-page-is-one-counter, 0002-zero-runtime-dependencies | — |
+| L1 | 기존 React 의 핵심 기능인 Component · State · Hooks 를 직접 구현하고 이를 활용하여 동작하는 웹 페이지를 만들어 보는 것입니다. | 충족 | root-only-function-component, demo-page-is-one-counter, zero-runtime-dependencies | — |
 | L2 | Component 는 UI 를 나누는 작은 단위입니다. | 충족 | root-only-function-component (자식 Component를 props를 받아 `VNode`를 돌려주는 함수로 정함, F67~F69가 UI를 자식으로 나눔) | — |
 | L3 | 각각의 Component 는 자신만의 로직과 렌더링을 담당합니다. | 충족 | component-returns-view-and-function-component-draws, root-only-function-component | — |
 | L4 | 반드시 함수형 컴포넌트 로 구현합니다. | 충족 | root-only-function-component | — |
@@ -40,9 +40,9 @@ status: 2026-11-11 최신. 판정은 코드를 쓰지 않은 새 에이전트가
 | L20 | Phase 2 의 상태가 변경되어 다시 렌더링할 때, Phase 1 에서 만든 Virtual DOM 을 그대로 활용합니다. | 충족 | root-instance-keeps-container-and-current-view | — |
 | L21 | 동작 흐름: Virtual DOM 생성 | 충족 | component-returns-view-and-function-component-draws | — |
 | L22 | 이전 Virtual DOM 과 비교 (Diff) | 충족 | root-instance-keeps-container-and-current-view | — |
-| L23 | 바뀐 부분만 실제 DOM 에 반영 (Patch) | 충족 | root-instance-keeps-container-and-current-view, 0006-patch-format-and-path | — |
+| L23 | 바뀐 부분만 실제 DOM 에 반영 (Patch) | 충족 | root-instance-keeps-container-and-current-view, patch-kinds-are-text-replace-props-insert-remove, path-is-children-index-list-from-view | — |
 | L24 | 목표: 전체를 다시 그리지 않고 필요한 부분만 업데이트 | 충족 | root-instance-keeps-container-and-current-view, setter-skips-same-value | — |
-| L25 | Phase 1 과 Phase 2 에서 구현한 내용을 활용하여 브라우저에서 동작하는 웹 페이지를 구현합니다. | 충족 | demo-page-is-one-counter, 0008-verification-page | — |
+| L25 | Phase 1 과 Phase 2 에서 구현한 내용을 활용하여 브라우저에서 동작하는 웹 페이지를 구현합니다. | 충족 | demo-page-is-one-counter, verification-test-area-is-html-textarea, verification-patch-compares-against-real-area | — |
 | L26 | 어떤 주제라도 상관 없습니다. 다만, 반드시 사용자의 입력/클릭 등에 따라 화면이 변경되어야 합니다. | 충족 | demo-page-is-one-counter, click-wires-through-data-action-and-actions-table, only-click-events-are-wired | — |
 | L27 | UI 를 어떻게 Component 로 나눌 것인가? | 충족 | root-only-function-component, demo-splits-view-into-child-components | — |
 | L28 | State (상태) 는 어디에 두는 것이 좋은가? | 충족 | root-only-function-component | — |
@@ -51,8 +51,8 @@ status: 2026-11-11 최신. 판정은 코드를 쓰지 않은 새 에이전트가
 | L31 | Batching 방법을 고민해 보세요. 단 선택 과제입니다. | 대상 아님 | 선택 과제라 구현 여부를 판정하지 않음 (구현은 하지 않았음: setter-updates-without-batching) | — |
 | L32 | 이번에 구현한 React 와 실제 React 의 차이점에 대해서 공부해 보세요. | 대상 아님 | 공부 항목이라 코드로 판정할 수 없음 (참고: "(범위)"가 붙은 ADR 5개가 차이를 기록함) | — |
 | L33 | 단위 테스트 를 통해 각 모듈 (Virtual DOM 변환, Diff, Patch, useState, useEffect, useMemo 등) 을 검증합니다. | 충족 | (테스트: T1, D1, P1, H1, F16, F71, F94) | — |
-| L34 | 기능 테스트를 통해 화면이 제대로 동작하는지 확인합니다. | 충족 | 0008-verification-page, demo-page-is-one-counter | — |
-| L35 | 테스트 영역에 다양한 태그와 요소를 추가해 여러 동작과 변화를 자유롭게 확인해 보세요. | 충족 | 0008-verification-page | — |
+| L34 | 기능 테스트를 통해 화면이 제대로 동작하는지 확인합니다. | 충족 | verification-page-tested-in-jsdom-without-browser-runner, demo-page-is-one-counter | — |
+| L35 | 테스트 영역에 다양한 태그와 요소를 추가해 여러 동작과 변화를 자유롭게 확인해 보세요. | 충족 | verification-test-area-is-html-textarea, verification-patch-compares-against-real-area | — |
 | L36 | 엣지 케이스를 최대한 고려 합니다. | 충족 | setter-skips-same-value, deps-compare-each-item-with-object-is, hook-outside-render-throws-error, update-before-mount-throws-error, render-error-keeps-previous-render, effect-error-propagates-after-dom-update, effect-non-function-return-is-ignored, mount-can-be-called-once, root-instances-are-independent, updater-error-leaves-state-unchanged, setter-is-same-function-every-render, setter-during-render-throws-error, on-outside-render-throws-error, same-action-name-last-registration-wins | 검토하고 범위 밖으로 뺀 경우(테스트 없음): `useMemo` 계산 함수 안의 `useState`(Hook 규칙 위반, `hook-rule-kept-by-convention`), 글자 노드에 보낸 클릭(실제 브라우저의 클릭 대상은 요소), `data-action=""`(쓰는 화면 없음), 클릭 함수가 `Error`를 던진 뒤의 클릭(브라우저가 리스너를 지킴), effect 안 setter의 끝없는 반복(`setter-in-effect-updates-immediately`의 CAUTION), `main.ts`를 직접 부르는 테스트(시작 함수 테스트가 대신함). |
 | L37 | 이력서와 포트폴리오에 포함할 수 있을 만큼 완성도 높은 수준으로 구현합니다. | 대상 아님 | 품질 목표라 코드로 판정할 수 없음 (참고: `README.md`의 파일 지도와 동작 흐름에 `function-component.ts`와 데모 페이지가 없고, "`src/main.ts`는 아직 이 함수들을 잇지 않습니다"라는 옛 문장이 남아 있음) | — |
 

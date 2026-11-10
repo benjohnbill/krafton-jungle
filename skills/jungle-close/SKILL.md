@@ -93,8 +93,7 @@ exercise files, because a pass entry lands in the Solve commit.
 
 ## 3. Push
 
-`git push origin HEAD` (the current branch) when his request names push or 마무리. When it names
-neither, commit, and end the report with "push도 할까요?". Criterion: the push
+After the commit, `git push origin HEAD` (the current branch). Criterion: the push
 exits 0 and `git status -sb` shows no `ahead`.
 
 ## 4. Board — when `Board:` is a number

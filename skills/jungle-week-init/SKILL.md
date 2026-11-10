@@ -184,14 +184,13 @@ the live index shows the link.
 
 Then the README of `LATEST`: run the `freeze` guards of
 `~/.claude/skills/readme/SKILL.md` first. Only when they pass, write
-`Learning log: <URL>` in that README, then follow `freeze`. Push when he
-confirms. When a guard fails, skip aloud with the guard that failed.
+`Learning log: <URL>` in that README, then follow `freeze`, push included.
+When a guard fails, skip aloud with the guard that failed.
 
 ## 8. First commit — solo week
 
 In the week repository: `Add local build layer, clangd config, and tutoring
-protocol for week N`, listing in the body what was skipped and why. Push only
-when he asks.
+protocol for week N`, listing in the body what was skipped and why. Then push.
 
 ## Report
 

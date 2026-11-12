@@ -28,6 +28,7 @@ The agent's reading of the LMS pages. He can change this list.
 ## Study plan
 
 - `mini-react`: read `mini-react-study.md` in this directory before a study session. It holds his decisions, the steps, and the Min, Mid, and Best level of each step. He changes a level at any time.
+- `mini-redis` and `mini-dbms`: read `doc-structure-decisions.md` in this directory before you set up their docs or file tree. It holds his decisions on document roles (2026-11-12). They are not team rules yet.
 - Vanilla and real React practice code go in `lab/` in this directory, outside the team repository. Real React never enters a team repository's dependencies.
 - From step 4a, he types in `mini-react` in team milestone order, M1 to M4, and keeps the study cycle (his choice 2026-11-07). He works on `CJG`. The agent gives only TS code that passes `npm run typecheck` and `npm run check` there. For a PR, take only code that he can explain into `CJG`.
 - Phase 2 (his choice 2026-11-10): the matt-pocock flow `/grill-with-docs` → `/to-spec` → `/to-tickets` → `/implement-spec`, with no typing. He presents `FunctionComponent` and `useState` in a draft PR that is never merged. Read `mini-react-study.md` § Phase 2 decisions before a Phase 2 session.

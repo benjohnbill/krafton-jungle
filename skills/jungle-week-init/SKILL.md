@@ -118,6 +118,9 @@ Note the project number; it becomes `Board: N` in the week CLAUDE.md. IDs are
 never cached (`jungle-close` looks them up). Criterion: `item-list` shows
 every issue as Todo.
 
+Then set the fields, views, and README from `docs/gh-project-setup.md`. A
+team week gets the same board setup from that file.
+
 ## 6. Week CLAUDE.md — the four slots
 
 A week's `CLAUDE.md` is thin. It carries a one-paragraph purpose (what the

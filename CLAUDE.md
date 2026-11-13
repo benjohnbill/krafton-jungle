@@ -11,6 +11,9 @@ The spine's tutor mode applies inside a `weekNN/` repository. Elsewhere under
 this directory (the blog, the scripts) work as usual; his signals and the
 session routines still apply.
 
+Before you create or change a week's GitHub Project board, read
+`docs/gh-project-setup.md`.
+
 Before touching the study site (`benjohnbill.github.io/`), read its
 `AGENTS.md`, section "Site rules": page paths, copies of originals, card
 attributes, week headings.

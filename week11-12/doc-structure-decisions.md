@@ -1,6 +1,6 @@
 ---
 scope: Document roles and layout for mini-redis and mini-dbms, learned from mini-react
-decided: 2026-11-12 (grilling session; his decisions, not yet team rules); mini-redis section and Roles revised 2026-11-13
+decided: 2026-11-12 (grilling session; his decisions, not yet team rules); mini-redis section and Roles revised 2026-11-13; mini-dbms section added 2026-11-16 (team flow merged in mini-dbms PR #1, rest is his personal layer)
 status: 확정 (개인 층). 팀 합의 전이므로 팀 레포에는 아직 적용하지 않음
 read_when: before setting up the docs or file tree of mini-redis or mini-dbms
 ---
@@ -178,12 +178,71 @@ mini-redis/
 - `CONVENTION.md`는 mini-react의 번호 붙은 팀 규칙(브랜치, PR, 커밋)만 복사해요. 테스트 절의 "결정하지 못한 경우는 ADR로"(원인 2)와 `docs/adr/team/` 링크는 가져오지 않고, 링크는 이유 한 구절로 바꿔요(Q11). 코딩 스타일 컨벤션은 나중에 해요.
 - 코드 주석, 알려진 한계, 테스트 ID 규칙은 위 절들의 결정 그대로예요.
 
+## mini-dbms 적용 (2026-11-16 grilling)
+
+11-13의 "mini-dbms는 mini-redis 설정을 복사한다"에서 마일스톤 사이클을 뺐어요. 팀 작업 방식이 바뀌었기 때문이에요(user said 2026-11-16). 근거 테스트는 `lab/dbms/`(로컬)에 있어요.
+
+### 팀 흐름 (PR #1로 `main`에 병합됨)
+
+- 마일스톤은 없어요. 최종 PRD 하나가 LMS Phase 1\~3을 모두 다뤄요.
+- 4단계예요. 각자 AI와 grill한 뒤 PRD 초안을 `docs/prd/<이니셜>.md`에 쓰고, 회의에서 초안들을 견주어 트레이드오프를 정하고, 최종 PRD `docs/prd/final.md`와 ADR을 쓰고, 에이전트가 구현해요.
+- `README.md`는 mini-redis와 같은 절로 자리만 잡았어요. 최종 PRD가 나오면 각 절을 그 내용으로 바꿔요.
+- `docs/requirements.md`에 LMS 1305 문장 51개(L1\~L51)가 있어요. ADR frontmatter는 `milestone` 대신 `phase`(1, 2, 3, 전체)예요.
+- 언어는 C로 정해졌어요(팀 결정, user said 2026-11-16). 검증 명령, CI, 코드 규칙은 최종 PRD에서 더해요.
+- 구현 계획(his idea 2026-11-16): 에이전트가 실험 브랜치 `CJG-engine`에 기본선과 추가 기능을 기능마다 커밋으로 나눠 구현하고, 그가 code-map과 코드 질문으로 공부해요. code-map에는 C 추출기(clangd, SPEC US 18과 ADR 0002에 이미 예정)가 아직 없어요.
+
+### 이 grill의 방식
+
+- 스포일러를 켰어요(his choice 2026-11-16). week 파일의 "team repositories are problem first"와 달리, 실제 DBMS의 답, 실제 사용 예, 데이터 흐름, before/after 테스트를 위에서부터 보여 줘요. 목적이 "DBMS 이해"이기 때문이에요.
+- 개념 공부와 결정을 묶어요. 결정은 가안으로 걸어 두고, 개념 테스트 하나를 돌린 뒤 그 개념에 달린 결정을 그의 말로 확정해요. 회의 전에 못 끝낸 가안은 PRD에 "추천, 검토 전"으로 표시해요.
+- PRD 근거는 팀이 함께 읽는 것만 써요. LMS 문장, 우리 테스트 결과, 실제 DB의 공식 문서예요. cstack "Let's Build a Simple Database"는 근거에서 뺐어요. 팀원이 읽지 않고, 디스크 페이지 B-tree라서 L21(메모리 B+ 트리)과 달라요.
+
+### PRD 초안 (`docs/prd/CJG.md`)의 내용
+
+- 절: 문제(왜 DBMS인가), 해결, 범위, 핵심 문제 표, 범용 추가 기능, 조정할 트레이드오프, 테스트 결정.
+- **문제:** 본질은 속도가 아니라 "무엇"과 "어떻게"의 분리(데이터 독립성, Codd 1970)예요. 앱은 SQL로 무엇만 말하고, 인덱스를 쓸지 훑을지는 엔진이 정해요. "가장 작은 DBMS"라는 틀은 그가 거절했어요. 목표는 정말 사용 가능한 DBMS예요. 문장은 그가 직접 써요.
+- **두 층:** 기본선은 LMS Phase 1\~3이고 팀 범위예요. 목표는 사용처(mini-redis 상품 데모의 원본 교체)예요. 회의의 첫 안건은 "기본선만 할지, 어디까지 갈지"예요.
+- **핵심 문제 표:** 7행이에요. 칸은 핵심 문제, 내 정의, 내 해결, 실제 DBMS의 답, 회의에 가져갈 트레이드오프예요.
+
+| # | 핵심 문제 | LMS |
+|---|---|---|
+| 1 | SQL 텍스트 → 구조 → 동작 (처리기) | L35 L37 L38 |
+| 2 | 파일 안의 레코드 형식 | L36 |
+| 3 | B+ 트리로 `id` 찾기 | L39 |
+| 4 | 100만 건 생성과 측정 | L40 |
+| 5 | 인덱스와 파일이 어긋나지 않기 (Phase 1과의 연결) | L41 |
+| 6 | 여러 스레드, 엔진 하나 | L42 |
+| 7 | 엔진과 API 서버의 경계 | L43 L44 |
+
+- **원자성:** 동시성 원자성은 필수예요(Phase 3, L42). `INSERT` 하나의 크래시 원자성은 "체크섬이 깨진 마지막 레코드 버리기"로 범위에 넣어요. 트랜잭션이 없고 B+ 트리를 시작 때 파일에서 다시 만들어서 거의 공짜예요. 영속성(`fsync`)은 조정할 트레이드오프예요. `fsync`는 원자성이 아니라 영속성의 장치예요.
+- **범용 추가 기능:** 1순위는 `EXPLAIN`(쿼리마다 INDEX 또는 SCAN 출력)이에요. 2순위는 두 번째 인덱스, 3순위는 저널이에요.
+- **조정할 트레이드오프 (지금은 나열만):** `fsync`를 매번 vs 묶어서, 텍스트 vs 바이너리 형식, 테이블 잠금 하나 vs 읽기와 쓰기 잠금 분리, 스레드 풀 크기, B+ 트리 노드 크기. 공부가 진행되면서 늘어나요.
+- **측정:** 인덱스 대 선형 탐색(L25, 11-09 페이지의 비교 3)은 같은 엔진, 같은 프로세스에서 재고, 재기 전에 한 번 데워요. 비교 4(조건 하나 추가에 바뀌는 코드 줄 수)와 비교 5(동시 쓰기 뒤 레코드 수)는 판독기 쪽이에요.
+- `CJG.md`에는 "외부 사용처가 있으니 API를 특정 client에 묶지 않는다"는 한 줄을 적어요.
+
+### 판독기 (개인 테스트 영역)
+
+- 11-09 페이지 `study/week11/framework-control.html`의 "나만무 팀 판독기"예요. 세 프로젝트를 모두 쓰는 제품이고, 그가 혼자 만들어요. 팀에게 같이 하자고 하지 않아요.
+- LMS 밖 SQL(범위 검색, `UPDATE`, `DELETE`, `ORDER BY`, 집계)은 팀 구현 뒤에 그가 엔진에 PR로 더해요. 합의가 안 되어도 그의 개인 브랜치에는 반드시 있어요. 그래서 팀 PRD에는 "SQL 종류를 나중에 더하기 쉬운 처리기 구조"만 요청해요.
+- 상품 데모는 id를 직접 넣어요(`INSERT INTO products VALUES(?,?,?)`). LMS L22는 자동 id예요. 이 차이는 판독기 쪽 어댑터가 맞춰요.
+
+### §2 가안 (개념 공부 뒤 그의 말로 확정)
+
+공부 순서: SQL → AST(`lab/dbms/s2_sql_to_ast.py`, 만듦) → 레코드 파일 → 메모리 B+ 트리(분할, `id=`, 범위) → 스레드 풀과 잠금 → PRD 쓰기.
+
+- Q2 처리기: 직접 쓴 tokenizer와 재귀 하강 parser → AST → 문장마다 실행 함수 하나, 행 읽기는 iterator 모양. 파서 생성기는 쓰지 않아요.
+- Q3 파일: 레코드마다 헤더(길이, 삭제 표시 1바이트, 체크섬)를 붙인 바이너리 파일이고, 뒤에 붙이기만 해요. B+ 트리는 id → 파일 offset이에요. 이 구조는 Bitcask와 같고, 차이는 해시 대신 B+ 트리라서 범위 검색이 된다는 점이에요.
+- Q4 스키마: 데이터 폴더에 사람이 읽는 스키마 파일 하나를 둬요.
+- Q5 타입: `INT`(64비트)와 `TEXT`(가변 길이)만 지원해요.
+- Q6 id: 기본선은 자동 id만이고, 다음 id는 시작할 때 파일에서 알아내요.
+
 ## Open
 
 - **Q8, Q13:** 팀이 확신하고 책임질 수 있는 결정의 기준과 grill 진행 속도예요. 첫 grill 세션 뒤에 정해요. 후보 기준은 "팀원 한 명이 버린 대안과 버린 이유를 말할 수 있으면 짧은 검색으로 충분하고, 말할 수 없으면 보류 목록에 올린다"예요. 보류 목록은 흩어져 조사한 뒤 `docs/research/<주제>.md`로 남기는 안이 있어요.
 - **비판자 grill의 깊이 (2026-11-13):** grill AI가 이해도 확인이 아니라 비판자로 팀 설계를 공격하는 방향(깨지는 경우, 엣지 케이스, 다른 저장소와 비교, Redis 답을 우리 `hash.c`·C·HTTP에 옮겼을 때)에 그가 동의했어요. 공격의 양과 시간은 첫 grill(M1 `store`)을 해 본 뒤 정해요. 정해지면 `docs/agents/grill.md`로 레포에 넣는 안이 있어요. Q8, Q13과 함께 봐요.
 - **팀 합의:** 이 메모는 그의 결정이에요. 팀 레포에 적용하려면 첫 grill에서 팀에게 보여 주고 `CONVENTION.md` PR과 승인 1건을 받아야 해요.
 - **검사 스크립트:** 언어는 C로 정해졌어요. mini-redis M0에서 만들어요.
+- **mini-dbms (2026-11-16):** 판독기를 별도 개인 레포로 둘지는 아직 미정이에요. 에이전트는 별도 레포를 추천했고, 만든다면 회의 뒤에 만들어요. 세 프레임워크를 가져오는 방법(submodule 등)은 그 레포의 grill에서 정해요. §2 Q2\~Q6은 가안이고, §2-1 테스트의 예측 문제 2개는 아직 답이 없어요. §3(B+ 트리)과 §4(스레드 풀, API) 질문은 시작 전이에요. week `CLAUDE.md`의 "milestone cycle" 줄은 그가 고칠지 정해요(에이전트는 제안만 해요).
 
 ## Evidence
 

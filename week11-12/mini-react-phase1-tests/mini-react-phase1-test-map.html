@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mini-react Phase 1 테스트 지도</title>
+<link rel="stylesheet" href="https://benjohnbill.github.io/assets/site.css">
+<style>
+/* Site rules: outer boxes = 1px var(--line), no fill; fill one level in only.
+   Color meaning: --s3 = selected path, --s2 = added test, --s4 = decision, --s1 = not written. */
+html{font-size:19px}
+.wrap{max-width:1180px; margin:0 auto; padding:28px 20px 80px; display:flex; flex-direction:column; gap:18px}
+h1{font-family:var(--font-head); font-size:1.95rem; line-height:1.3; margin:.4rem 0 0}
+.sub{margin:0; color:var(--ink-2)}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--s3); outline-offset:2px}
+
+details.fold{border:1px solid var(--line); border-radius:4px}
+details.fold>summary{cursor:pointer; list-style:none; padding:8px 14px; display:flex; gap:10px; align-items:center}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary:hover{background:var(--surface-2)}
+.chev{display:inline-block; font-family:var(--font-code); transition:transform .15s}
+details[open] .chev{transform:rotate(90deg)}
+.fchip{margin-left:auto; font-family:var(--font-code); font-size:12.5px; color:var(--muted); border:1px solid var(--line); border-radius:3px; padding:0 6px}
+.fchip::after{content:"펼치기"}
+details[open] .fchip::after{content:"접기"}
+.fold-body{padding:2px 14px 12px; color:var(--ink-2); font-size:.85rem}
+.fold-body ul{margin:0; padding-left:1.1em}
+
+.layout{display:grid; grid-template-columns:220px minmax(0,1fr); gap:32px; align-items:start}
+nav.targets{position:sticky; top:16px}
+nav.targets h2{font-family:var(--font-code); font-size:13px; font-weight:600; color:var(--ink-2); margin:12px 0 4px}
+nav.targets h2:first-child{margin-top:0}
+nav.targets ul{list-style:none; margin:0; padding:0}
+nav.targets a{display:block; padding:3px 10px; border-left:2px solid var(--line); color:var(--ink); text-decoration:none; font-size:.85rem; line-height:1.45}
+nav.targets a .tid{display:block; font-family:var(--font-code); font-size:12.5px; color:var(--ink-2)}
+nav.targets a:hover{border-left-color:var(--ink-2)}
+nav.targets a[aria-current="page"]{border-left-color:var(--s3); color:var(--s3)}
+nav.targets a[aria-current="page"] .tid{color:var(--s3)}
+
+main{display:flex; flex-direction:column; min-width:0}
+.target{border:1px solid var(--line); border-radius:4px; padding:14px 18px}
+.target p{margin:0}
+.target .tid{font-family:var(--font-code); font-size:13px; color:var(--ink-2)}
+.target h2{font-family:var(--font-code); font-size:1.05rem; font-weight:600; line-height:1.5; margin:.15rem 0 .35rem; overflow-wrap:anywhere}
+.target .io{margin-top:.25rem}
+.target .io b{font-weight:600}
+.status{margin-top:10px; padding-top:8px; border-top:1px solid var(--line); font-size:.85rem; display:grid; gap:2px}
+.status .num{font-family:var(--font-code)}
+
+.tree{list-style:none; margin:0; padding:14px 0 0; position:relative}
+.tree::before{content:""; position:absolute; left:16px; top:0; height:14px; width:2px; background:var(--s3)}
+.tree li{position:relative; padding:5px 0 5px 42px}
+.tree li::before{content:""; position:absolute; left:16px; top:0; bottom:0; width:2px; background:var(--line)}
+.tree li:last-child::before{bottom:50%}
+.tree li::after{content:""; position:absolute; left:16px; top:50%; width:26px; height:2px; background:var(--line)}
+.tree li.on::before{background:var(--s3)}
+.tree li.sel::before{background:linear-gradient(var(--s3) 50%, var(--line) 50%)}
+.tree li.sel:last-child::before{background:var(--s3)}
+.tree li.sel::after{background:var(--s3)}
+.branch{display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:0 10px; width:100%; text-align:left; font:inherit; color:inherit; background:none; border:1px solid var(--line); border-radius:4px; padding:7px 12px; cursor:pointer}
+.branch:hover{border-color:var(--ink-2)}
+.branch[aria-pressed="true"]{border-color:var(--s3)}
+.branch[aria-pressed="true"] .bn,.branch[aria-pressed="true"] .bnum{color:var(--s3)}
+.bnum{font-family:var(--font-code); font-size:13px; padding-top:.2em}
+.bn{font-weight:600; line-height:1.5}
+.bp{grid-column:2; font-size:.85rem; color:var(--ink-2); line-height:1.5}
+.bc{grid-column:3; grid-row:1 / span 2; align-self:center; font-family:var(--font-code); font-size:12.5px; white-space:nowrap}
+.bc .miss{color:var(--s1)}
+
+.detail{margin-top:18px; border:1px solid var(--line); border-radius:4px; padding:14px 18px; scroll-margin-top:12px}
+.detail h3{font-size:1.25rem; line-height:1.4; margin:0}
+.detail .prop{margin:.3rem 0 0}
+.detail .prop b{font-weight:600}
+.cols{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; margin-top:14px}
+.cols h4{font-size:.85rem; margin:0 0 6px}
+.h-add{color:var(--s2)}
+.h-dec{color:var(--s4)}
+.cols ul{list-style:none; margin:0; padding:0; display:grid; gap:9px}
+.cols li{font-size:.85rem; line-height:1.55}
+.cols .tn{display:block; color:var(--ink-2)}
+.cols .note{display:block}
+.cols .none{color:var(--ink-2)}
+.cols li.skip{color:var(--s1)}
+.cols code{overflow-wrap:anywhere}
+.cand,.tag{font-family:var(--font-code); font-size:12px; border:1px solid var(--line); border-radius:3px; padding:0 5px; white-space:nowrap}
+.err{margin:14px 0 0; padding-top:10px; border-top:1px solid var(--line)}
+.err b{font-weight:600}
+
+@media (max-width:980px){ .cols{grid-template-columns:1fr} }
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr; gap:18px}
+  nav.targets{position:static}
+  nav.targets ul{display:flex; flex-wrap:wrap; gap:6px}
+  nav.targets a{border:1px solid var(--line); border-radius:4px; padding:3px 9px}
+  nav.targets a:hover{border-color:var(--ink-2)}
+  nav.targets a[aria-current="page"]{border-color:var(--s3)}
+  nav.targets a .tname{display:none}
+}
+@media (max-width:560px){
+  .wrap{padding:20px 14px 64px}
+  .branch{grid-template-columns:auto minmax(0,1fr)}
+  .bc{grid-column:2; grid-row:auto; white-space:normal}
+  .tree li{padding-left:34px}
+  .tree li::after{width:18px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
+<h1>mini-react Phase 1 테스트 지도</h1>
+<p class="sub">대상 13개, 검증 갈래 57개 · 테스트 214 passed, 2 todo (CJG <code>a261c83</code>) · 결정 근거는 <a href="mini-react-phase1-decisions.html">결정 요약</a></p>
+
+<details class="fold">
+<summary><span class="chev">›</span>읽는 법과 출처<span class="fchip"></span></summary>
+<div class="fold-body">
+<ul>
+<li>대상 = 함수나 기능 하나. 검증 갈래 = 그 책임에서 나온 검증 성질 하나. 갈래 하나가 테스트 하나는 아님.</li>
+<li><b>기존 테스트</b> = Lark React Tests 시트의 행 번호와 ID, 그리고 그 행을 코드로 옮긴 로컬 테스트 ID.</li>
+<li><b>이번에 추가한 테스트</b> = Lark 행에 없는 보완 테스트. 옆의 <span class="cand">CONV-N001</span> 같은 표시는 설계 단계의 보완 후보 ID. <span class="tag">M1</span> = M1 커밋 <code>f696068</code>에서 이미 작성한 테스트(T1~T37). 파일 이름 표시 = 다른 대상의 파일에 있는 테스트.</li>
+<li><b>작성 안 함</b> = 설계 후보 중 코드로 옮기지 않은 것과 그 이유.</li>
+<li>Lark 44행 ID는 <code>patch-insert</code>(이전 <code>patch-create</code>), 9행은 <code>fromdom-keep-whitespace</code>(이전 <code>fromdom-skip-whitespace</code>). Patch 종류는 <code>CREATE</code> 대신 <code>INSERT</code>.</li>
+<li>테스트 이름과 개수 = <code>npx vitest run</code> 결과(2026-11-09, 독립 리뷰 반영 뒤). 같은 ID가 여러 번 나오는 <code>HR-N07</code>은 같은 테스트를 세 입력으로 돌린 것. 합계 214 passed에는 환경 확인용 <code>setup.test.ts</code> 1개 포함.</li>
+<li>설계 출처 = Aside 설계 세션의 <code>phase1-test-design.md</code>, <code>phase1-test-inventory.md</code>, <code>phase1-model.json</code>.</li>
+</ul>
+</div>
+</details>
+
+<div class="layout">
+<nav class="targets" id="targets" aria-label="테스트 대상"></nav>
+<main id="view" aria-live="polite">
+<noscript><p>이 페이지는 JavaScript로 대상과 갈래를 그림. 결정 내용은 <a href="mini-react-phase1-decisions.html">결정 요약</a>에서 읽을 수 있음.</p></noscript>
+</main>
+</div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+// Test registry from `npx vitest run --reporter=json` (2026-11-09, CJG a261c83).
+// id: [file under src/, status, title without the id]. A repeated id gets "#2", "#3" (it.each); the page shows the id without it.
+const TESTS = {"I1":["diff-patch.test.ts","pass","글자만 다른 두 View로 고치면 다시 읽은 결과가 새 View와 같습니다"],"I2":["diff-patch.test.ts","pass","속성의 추가, 변경, 삭제가 섞여도 다시 읽은 결과가 새 View와 같습니다"],"I3":["diff-patch.test.ts","pass","자식의 추가, 삭제, 가운데 끼워 넣기가 섞여도 다시 읽은 결과가 새 View와 같습니다"],"I4":["diff-patch.test.ts","pass","중간 깊이의 태그와 그 아래 구조가 바뀌면 그 노드만 새로 만들고 바깥 노드는 남깁니다"],"I5":["diff-patch.test.ts","pass","최상위 태그가 바뀌면 View를 바꾸고 container와 자식 수는 그대로 둡니다"],"I6":["diff-patch.test.ts","pass","A → B → C → A로 이어서 고치면 단계마다 그 View가 되고, 남는 노드와 .value가 맞습니다"],"I7":["diff-patch.test.ts","pass","한 곳만 다르면 바뀌지 않은 요소와 글자 노드가 모두 같은 객체로 남습니다"],"I8":["diff-patch.test.ts","pass","내용이 같은 다른 객체의 두 View로 고치면 DOM을 바꾸지 않습니다"],"I9":["diff-patch.test.ts","pass","속성 추가, 글자 변경, 깊은 INSERT, 끝 REMOVE가 섞여도 같은 자리의 노드는 같은 객체로 남습니다"],"I10":["diff-patch.test.ts","pass","고정한 시드로 만든 View 쌍 500개 모두 새 View에 도달합니다"],"I11":["diff-patch.test.ts","pass","DOM에서 읽은 두 View로 고치면 빈 글자 노드, 공백, 주석 옆의 대상만 바뀌고 친 글자는 빈 값이 됩니다"],"I12":["diff-patch.test.ts","pass","DOM에서 읽은 두 View로 고치면 주석이 있어도 그 자리의 노드를 바꾸고, 새 입력칸에 친 글자를 넣습니다"],"D1":["diff.test.ts","pass","내용이 같은 두 View는 빈 배열을 돌려줍니다"],"D2":["diff.test.ts","pass","같은 객체를 두 인자로 넘기면 빈 배열을 돌려줍니다"],"D3":["diff.test.ts","pass","중첩된 내용이 같으면 객체가 달라도 빈 배열을 돌려줍니다"],"D4":["diff.test.ts","pass","속성을 적은 순서만 다르면 빈 배열을 돌려줍니다"],"D5":["diff.test.ts","pass","태그가 바뀌면 REPLACE 하나만 돌려주고 안쪽의 Patch는 없습니다"],"D6":["diff.test.ts","pass","문자열이 요소로 바뀌면 그 path에 REPLACE를 돌려줍니다"],"D7":["diff.test.ts","pass","요소가 문자열로 바뀌면 그 path에 REPLACE를 돌려줍니다"],"D8":["diff.test.ts","pass","깊은 자식의 태그가 바뀌면 그 path에 REPLACE를 돌려줍니다"],"D9":["diff.test.ts","pass","태그와 속성과 자식이 함께 바뀌어도 REPLACE 하나만 돌려줍니다"],"D10":["diff.test.ts","pass","글자가 바뀌면 TEXT 하나만 돌려주고 REPLACE는 없습니다"],"D11":["diff.test.ts","pass","빈 글자와 글자 사이의 변경도 TEXT로 돌려줍니다"],"D12":["diff.test.ts","pass","빈 글자가 그대로면 Patch가 없습니다"],"D13":["diff.test.ts","pass","공백과 줄바꿈만 달라도 글자를 다듬지 않고 TEXT를 돌려줍니다"],"D14":["diff.test.ts","pass","한글과 특수문자를 그대로 TEXT에 담습니다"],"D15":["diff.test.ts","pass","View 자체가 문자열이면 path []에 TEXT를 돌려줍니다"],"D16":["diff.test.ts","pass","속성값이 바뀌면 set에 새 값을 담습니다"],"D17":["diff.test.ts","pass","속성이 생기면 set에 담고 remove는 비웁니다"],"D18":["diff.test.ts","pass","속성이 사라지면 remove에 담고 set은 비웁니다"],"D19":["diff.test.ts","pass","속성 없음과 빈 값을 구별합니다"],"D20":["diff.test.ts","pass","빈 값 속성이 그대로면 Patch가 없습니다"],"D21":["diff.test.ts","pass","바뀐 속성만 담고 그대로인 속성은 담지 않습니다"],"D22":["diff.test.ts","pass","추가와 변경과 삭제를 PROPS 하나에 함께 담습니다"],"D23":["diff.test.ts","pass","입력칸의 value가 빈 값이 되면 remove가 아니라 set으로 담습니다"],"D24":["diff.test.ts","pass","자식이 늘면 그 번호에 INSERT를 돌려줍니다"],"D25":["diff.test.ts","pass","자식이 줄면 뒤 번호부터 REMOVE를 돌려줍니다"],"D26":["diff.test.ts","pass","가운데에 끼워 넣으면 같은 번호끼리 비교한 뒤 끝에 INSERT합니다"],"D27":["diff.test.ts","pass","맨 앞에 끼워 넣어도 같은 번호끼리 비교합니다"],"D28":["diff.test.ts","pass","맨 앞이나 가운데를 지워도 남은 번호를 바꾼 뒤 끝을 REMOVE합니다"],"D29":["diff.test.ts","pass","자식을 모두 지우면 뒤 번호부터 REMOVE합니다"],"D30":["diff.test.ts","pass","빈 자식에 자식이 생기면 앞 번호부터 INSERT합니다"],"D31":["diff.test.ts","pass","글자와 요소가 섞인 자식도 번호대로 비교합니다"],"D32":["diff.test.ts","pass","깊은 곳의 글자 하나가 바뀌면 그 path의 TEXT 하나만 돌려줍니다"],"D33":["diff.test.ts","pass","서로 다른 곳의 글자와 속성이 바뀌면 그 두 Patch만 돌려줍니다"],"D34":["diff.test.ts","pass","부모의 속성과 자식의 글자가 함께 바뀌면 부모의 PROPS를 먼저 돌려줍니다"],"D35":["diff.test.ts","pass","한 가지의 자식 삭제와 다른 가지의 변경을 각자의 path로 돌려줍니다"],"D39":["diff.test.ts","pass","속성 추가, 글자 변경, 깊은 INSERT, 끝 REMOVE가 섞여도 바뀐 곳만 순서대로 돌려줍니다"],"D36":["diff.test.ts","pass","두 View의 내용과 안쪽 객체의 참조를 바꾸지 않습니다"],"D37":["diff.test.ts","pass","앞의 호출이 돌려준 Patch는 다음 호출로 바뀌거나 쌓이지 않습니다"],"D38":["diff.test.ts","pass","인자가 null이나 undefined이면 TypeError를 던집니다"],"H1":["history.test.ts","pass","새 이력은 현재 View가 없고 앞뒤로 갈 수 없습니다"],"H2":["history.test.ts","pass","View 하나를 저장하면 그 View가 현재가 됩니다"],"H3":["history.test.ts","pass","빈 이력에서 앞뒤로 여러 번 가도 null이고 이후 저장이 정상입니다"],"H4":["history.test.ts","pass","뒤로 가면 이전 View를 돌려주고 앞으로 갈 수 있게 됩니다"],"H5":["history.test.ts","pass","뒤로 갔다가 앞으로 가면 최신 View로 돌아옵니다"],"H6":["history.test.ts","pass","첫 View에서 뒤로 가면 null이고 현재는 그대로입니다"],"H7":["history.test.ts","pass","마지막 View에서 앞으로 가면 null이고 현재는 그대로입니다"],"H8":["history.test.ts","pass","View 하나에서 앞뒤로 여러 번 가도 현재와 개수가 그대로입니다"],"H9":["history.test.ts","pass","경계에서 여러 번 더 가도 반대 방향 이동은 한 칸씩 정상입니다"],"H10":["history.test.ts","pass","여러 번 저장하고 이동해도 돌려준 View와 현재와 개수가 맞습니다"],"H11":["history.test.ts","pass","뒤로 간 뒤 저장하면 앞쪽 View를 지웁니다"],"H12":["history.test.ts","pass","분기한 뒤에는 이전 View와 새 View 사이만 오갑니다"],"H13":["history.test.ts","pass","현재와 내용이 같은 View도 저장합니다"],"H14":["history.test.ts","pass","뒤로 간 뒤 같은 내용을 저장해도 앞쪽 View를 지웁니다"],"H15":["history.test.ts","pass","저장한 뒤 원본 View를 고쳐도 저장된 View는 그대로입니다"],"H16":["history.test.ts","pass","current로 받은 View를 고쳐도 저장된 View는 그대로입니다"],"H17":["history.test.ts","pass","back과 forward로 받은 View를 고쳐도 다시 가면 저장된 View 그대로입니다"],"H18":["history.test.ts","todo","선택 사항: 용량 제한은 구현하지 않음 (Lark 69행 선택)"],"P1":["patch.test.ts","pass","TEXT는 글자 노드의 글자를 바꿉니다"],"P2":["patch.test.ts","pass","TEXT는 글자를 HTML로 해석하지 않고 같은 글자 노드에 씁니다"],"P3":["patch.test.ts","pass","REPLACE는 그 위치의 노드를 Patch의 node로 바꿉니다"],"P4":["patch.test.ts","pass","REPLACE는 글자 노드를 요소로 바꿉니다"],"P5":["patch.test.ts","pass","PROPS의 set은 속성을 새 값으로 씁니다"],"P6":["patch.test.ts","pass","PROPS의 remove는 속성을 지웁니다"],"P7":["patch.test.ts","pass","INSERT는 path의 번호에 새 노드를 끼워 넣습니다"],"P8":["patch.test.ts","pass","INSERT는 속성과 자식을 가진 요소를 만듭니다"],"P9":["patch.test.ts","pass","REMOVE는 그 위치의 노드를 지웁니다"],"P29":["patch.test.ts","pass","INSERT [0]은 첫 자식 앞에 끼워 넣고 원래 자식을 남깁니다"],"P30":["patch.test.ts","pass","PROPS의 빈 값은 속성을 남기고, remove만 속성을 지웁니다"],"P10":["patch.test.ts","pass","TEXT 옆의 형제 요소는 같은 객체로 남습니다"],"P11":["patch.test.ts","pass","PROPS는 요소를 바꾸지 않고 적지 않은 속성을 남깁니다"],"P12":["patch.test.ts","pass","REPLACE, INSERT, REMOVE 뒤에도 형제 요소는 같은 객체로 남습니다"],"P13":["patch.test.ts","pass","빈 목록은 DOM을 바꾸지 않습니다"],"P14":["patch.test.ts","pass","글자 하나를 바꾸면 그 글자 노드의 변경 1건만 일어납니다"],"P31":["patch.test.ts","pass","set과 remove가 모두 빈 PROPS는 DOM을 바꾸지 않습니다"],"P15":["patch.test.ts","pass","path []는 View 자신을 가리키고, container는 그대로 둡니다"],"P16":["patch.test.ts","pass","깊은 path의 글자 노드를 찾습니다"],"P17":["patch.test.ts","pass","노드를 찾을 때 주석을 세지 않습니다"],"P18":["patch.test.ts","pass","INSERT의 번호에도 주석을 세지 않습니다"],"P19":["patch.test.ts","pass","공백만 있는 글자 노드도 번호에 셉니다"],"P32":["patch.test.ts","pass","빈 글자 노드와 공백은 세고 주석은 세지 않으며, 대상 밖 노드는 같은 객체로 남습니다"],"P33":["patch.test.ts","pass","주석 양옆의 글자 노드는 따로 세므로, [1]은 주석 뒤의 글자 노드입니다"],"P20":["patch.test.ts","pass","받은 순서대로 적용하므로 앞에서부터 INSERT하면 차례로 쌓입니다"],"P21":["patch.test.ts","pass","path는 앞의 Patch를 적용한 뒤의 트리를 기준으로 합니다"],"P22":["patch.test.ts","pass","번호가 같은 자식끼리 바꾼 뒤 끝의 자식을 지웁니다"],"P23":["patch.test.ts","pass","PROPS의 value는 입력칸의 .value에 씁니다"],"P24":["patch.test.ts","pass","사용자가 친 글자가 있어도 PROPS의 value가 .value를 바꿉니다"],"P34":["patch.test.ts","pass","사용자가 친 글자가 있어도 PROPS의 빈 value가 같은 입력칸의 .value를 비웁니다"],"P25":["patch.test.ts","pass","patches를 바꾸지 않습니다"],"P26":["patch.test.ts","pass","없는 path는 그 path를 적은 Error를 던집니다"],"P27":["patch.test.ts","pass","TEXT의 path가 요소를 가리키면 Error를 던집니다"],"P28":["patch.test.ts","pass","Error 앞에 적용한 Patch는 되돌리지 않습니다"],"P35":["patch.test.ts","pass","PROPS의 path가 글자 노드를 가리키면 path를 적은 Error를 던지고 DOM을 바꾸지 않습니다"],"P36":["patch.test.ts","pass","INSERT의 번호가 자식 수보다 크면 path를 적은 Error를 던지고 끼워 넣지 않습니다"],"P37":["patch.test.ts","pass","INSERT path []는 끼워 넣을 자리가 없으므로 Error를 던지고 DOM을 바꾸지 않습니다"],"P38":["patch.test.ts","pass","file 입력칸을 글자 입력칸으로 바꾸는 PROPS도 오류 없이 적용합니다"],"R1":["round-trip.test.ts","pass","태그, 속성, 섞인 자식이 있는 View가 처음과 같은 내용으로 돌아옵니다"],"T34":["round-trip.test.ts","pass","내용이 없는 자식 요소가 그대로 돌아옵니다"],"T35":["round-trip.test.ts","pass","글자와 요소가 섞인 한글 문장이 그대로 돌아옵니다"],"T36":["round-trip.test.ts","pass","공백, 한글, 특수문자가 그대로 돌아옵니다"],"T37":["round-trip.test.ts","pass","친 글자가 .value로 돌아옵니다"],"R2":["round-trip.test.ts","pass","value 속성과 친 글자가 다르면 친 글자가 .value로 돌아옵니다"],"R3":["round-trip.test.ts","pass","모두 지운 입력칸은 빈 .value로 돌아옵니다"],"R4":["round-trip.test.ts","pass","아무것도 치지 않은 입력칸은 두 번 왕복해도 같은 VNode로 읽힙니다"],"R5":["round-trip.test.ts","pass","주석은 결과에서만 빠지고, 양옆 글자는 따로 남고, 원본 주석은 그대로입니다"],"T1":["vnode.test.ts","pass","요소 노드를 객체로 읽습니다"],"T2":["vnode.test.ts","pass","글자 노드를 문자열로 읽습니다"],"T3":["vnode.test.ts","pass","주석 노드를 버립니다"],"T4":["vnode.test.ts","pass","여러 깊이의 주석을 모두 버립니다"],"T5":["vnode.test.ts","pass","읽은 뒤에도 입력 DOM을 바꾸지 않습니다"],"T6":["vnode.test.ts","pass","주석 양옆의 글자를 합치지 않습니다"],"T39":["vnode.test.ts","pass","주석만 있는 요소는 빈 children으로 읽습니다"],"T40":["vnode.test.ts","pass","대문자로 적은 태그를 소문자 type으로 읽습니다"],"T7":["vnode.test.ts","pass","속성 하나를 읽습니다"],"T8":["vnode.test.ts","pass","여러 속성을 빠짐없이 읽습니다"],"T9":["vnode.test.ts","pass","값이 빈 속성을 버리지 않습니다"],"T41":["vnode.test.ts","pass","입력칸의 값 없는 속성도 빈 값으로 읽고 value를 함께 넣습니다"],"T10":["vnode.test.ts","pass","자식의 자식까지 읽습니다"],"T11":["vnode.test.ts","pass","글자와 요소가 섞인 자식을 DOM 순서대로 읽습니다"],"T12":["vnode.test.ts","pass","내용이 없는 자식 요소를 버리지 않습니다"],"T42":["vnode.test.ts","pass","형제 요소를 DOM 순서대로 읽습니다"],"T43":["vnode.test.ts","pass","500단계로 겹친 div를 오류 없이 끝까지 읽습니다"],"T13":["vnode.test.ts","pass","공백만 있는 글자 노드를 버리지 않습니다"],"T14":["vnode.test.ts","pass","엔티티를 해석된 글자로 읽고 앞뒤 공백을 다듬지 않습니다"],"T15":["vnode.test.ts","pass","빈 글자 노드를 버리지 않습니다"],"T44":["vnode.test.ts","pass","줄바꿈과 들여쓰기만 있는 글자 노드도 버리지 않습니다"],"T45":["vnode.test.ts","pass","pre 안의 들여쓰기와 줄바꿈을 그대로 읽습니다"],"T16":["vnode.test.ts","pass","입력칸이 아닌 요소의 .value를 읽지 않습니다"],"T17":["vnode.test.ts","pass","아무것도 치지 않은 입력칸의 처음 값을 읽습니다"],"T18":["vnode.test.ts","pass","value 속성이 없어도 친 글자를 읽습니다"],"T19":["vnode.test.ts","pass","value 속성보다 친 글자를 우선합니다"],"T20":["vnode.test.ts","pass","모두 지운 입력칸을 빈 값으로 읽습니다"],"T21":["vnode.test.ts","pass","아무것도 치지 않은 빈 입력칸에도 value를 넣습니다"],"T46":["vnode.test.ts","pass","입력칸이 아닌 요소에 적힌 value 속성은 속성 그대로 읽습니다"],"T47":["vnode.test.ts","pass","읽은 뒤에도 자식 노드, 글자, 주석, 속성, 친 글자를 바꾸지 않습니다"],"T22":["vnode.test.ts","pass","요소를 만듭니다"],"T23":["vnode.test.ts","pass","문자열로 글자 노드를 만듭니다"],"T24":["vnode.test.ts","pass","속성 하나를 만듭니다"],"T25":["vnode.test.ts","pass","여러 속성을 빠짐없이 만듭니다"],"T26":["vnode.test.ts","pass","값이 빈 속성을 만듭니다"],"T27":["vnode.test.ts","pass","자식의 자식까지 만듭니다"],"T28":["vnode.test.ts","pass","자식을 순서대로 모두 만듭니다"],"T29":["vnode.test.ts","pass","내용이 없는 자식 요소를 만듭니다"],"T30":["vnode.test.ts","pass","공백만 있는 문자열도 글자 노드로 만듭니다"],"T31":["vnode.test.ts","pass","문자열을 HTML로 해석하지 않고 글자로만 만듭니다"],"T32":["vnode.test.ts","pass","빈 문자열도 글자 노드로 만듭니다"],"T33":["vnode.test.ts","pass","props.value를 입력칸의 .value로 보이게 합니다"],"T48":["vnode.test.ts","pass","형제 요소를 적힌 순서대로 만듭니다"],"T49":["vnode.test.ts","pass","만든 뒤에도 입력 VNode를 바꾸지 않습니다"],"T50":["vnode.test.ts","pass","같은 VNode로 두 번 만들면 서로 다른 노드를 돌려줍니다"],"T51":["vnode.test.ts","pass","type이 없거나 text인 input은 입력칸입니다"],"T52":["vnode.test.ts","pass","checkbox, radio, file은 입력칸이 아닙니다"],"T53":["vnode.test.ts","pass",".value가 있어도 input이 아닌 li와 button은 입력칸이 아닙니다"],"HR-N01":["test-pages/history-restore.test.ts","pass","처음 View를 한 번 저장하고, 첫 Patch 뒤 한 번 뒤로 가면 처음 View로 돌아옵니다"],"HR-N02":["test-pages/history-restore.test.ts","pass","A, B, C 사이를 두 번 오가도 두 영역과 현재 View가 같고 이력이 늘지 않습니다"],"HR-N03":["test-pages/history-restore.test.ts","pass","입력칸의 현재 값은 value 속성이 아니라 .value로 저장되고 복원됩니다"],"HR-N04":["test-pages/history-restore.test.ts","pass","FLOW-N03 B로 돌아가 D를 Patch하면 이력은 처음, A, B, D이고 C로 갈 수 없습니다"],"HR-N05a":["test-pages/history-restore.test.ts","pass","처음 상태에서 고치지 않고 Patch하면 이력이 늘지 않습니다"],"HR-N05b":["test-pages/history-restore.test.ts","pass","과거 위치에서 빈 입력과 최상위 둘을 거절하면 현재 View, 앞쪽 기록, 실제 영역이 모두 남습니다"],"DEC-09a":["test-pages/history-restore.test.ts","pass","그대로 Patch하면 실제 영역이 바뀌지 않고 앞으로 C에 갈 수 있습니다"],"DEC-09b":["test-pages/history-restore.test.ts","pass","주석만 더해 View가 같으면 바뀐 것이 없는 Patch로 봅니다"],"HR-N06a":["test-pages/history-restore.test.ts","pass","뒤로가기는 편집 X를 버리고 두 영역을 A로 바꿉니다"],"HR-N06b":["test-pages/history-restore.test.ts","pass","앞으로가기는 편집 X를 버리고 두 영역을 C로 바꿉니다"],"FLOW-N02":["test-pages/history-restore.test.ts","pass","저장한 B는 뒤의 편집과 새 Patch로 바뀌지 않습니다"],"HR-N07":["test-pages/history-restore.test.ts","pass","글자 사이의 \u003c!--x-->를 지운 View로 돌아가 그대로 Patch하면 이력이 늘지 않습니다"],"HR-N07#2":["test-pages/history-restore.test.ts","pass","글자 사이의 \u003cscript>1\u003c/script>를 지운 View로 돌아가 그대로 Patch하면 이력이 늘지 않습니다"],"HR-N07#3":["test-pages/history-restore.test.ts","pass","글자 사이의 \u003ciframe>\u003c/iframe>를 지운 View로 돌아가 그대로 Patch하면 이력이 늘지 않습니다"],"HR-N08":["test-pages/history-restore.test.ts","pass","처음 실제 영역의 주석도 지우고 글자를 합친 뒤 처음 View로 저장합니다"],"V70":["test-pages/verification-page.test.ts","pass","verify-layout 실제 영역, 테스트 영역, 세 버튼, 안내, Patch 목록이 있습니다"],"V71":["test-pages/verification-page.test.ts","pass","verify-load 처음 두 영역은 같은 샘플 View를 보여 줍니다"],"V71a":["test-pages/verification-page.test.ts","pass","실제 영역에는 View 요소 하나만 남고 앞뒤 공백은 지워집니다"],"V72":["test-pages/verification-page.test.ts","pass","verify-load-buttons 처음에는 뒤로가기와 앞으로가기가 꺼져 있습니다"],"V73":["test-pages/verification-page.test.ts","pass","PAGE-N01 verify-edit-no-apply 테스트 영역만 고치면 실제 영역은 바뀌지 않습니다"],"V73a":["test-pages/verification-page.test.ts","pass","PAGE-N01 실제 영역을 직접 바꿔도 테스트 영역은 바뀌지 않습니다"],"V74":["test-pages/verification-page.test.ts","pass","verify-patch-apply 글자를 고치고 Patch를 누르면 실제 영역에 보입니다"],"V75":["test-pages/verification-page.test.ts","pass","verify-patch-partial 한 곳만 고치면 그 글자 노드만 바뀌고 요소는 같은 요소로 남습니다"],"V76":["test-pages/verification-page.test.ts","pass","verify-patch-history Patch 뒤에는 뒤로가기만 켜집니다"],"V77":["test-pages/verification-page.test.ts","pass","verify-attr-edit class를 바꾸고 style을 더하면 그 요소에만 적용됩니다"],"V78":["test-pages/verification-page.test.ts","pass","verify-delete-node 마지막 항목을 지우면 그 항목만 사라집니다"],"V79":["test-pages/verification-page.test.ts","pass","PAGE-N04 verify-many-tags 표, 목록, 입력칸, 링크, 이미지, 겹친 div가 같은 구조로 나타납니다"],"V80":["test-pages/verification-page.test.ts","pass","PAGE-N02 verify-patch-nochange 그대로 Patch하면 DOM 변경이 없고 이력도 쌓이지 않습니다"],"V85":["test-pages/verification-page.test.ts","pass","verify-empty-input 빈 입력은 반영하지 않고 안내를 보여 줍니다"],"V86":["test-pages/verification-page.test.ts","pass","verify-multi-top 최상위 요소가 둘이면 반영하지 않고 안내를 보여 줍니다"],"V86a":["test-pages/verification-page.test.ts","pass","최상위가 글자뿐이거나 요소 옆에 글자가 있으면 거절합니다"],"V86b":["test-pages/verification-page.test.ts","pass","최상위의 공백과 주석은 세지 않습니다"],"V86c":["test-pages/verification-page.test.ts","pass","거절 뒤에 올바른 입력을 Patch하면 안내가 지워집니다"],"V87":["test-pages/verification-page.test.ts","pass","verify-invalid-html 닫히지 않은 태그는 브라우저가 고친 구조대로 반영됩니다"],"V88":["test-pages/verification-page.test.ts","pass","verify-no-script-exec 입력의 스크립트는 실행되지 않고 실제 영역에 script와 on 속성이 없습니다"],"V88a":["test-pages/verification-page.test.ts","pass","다른 문서를 열거나 페이지를 옮기는 요소와 javascript: URL과 srcdoc을 지웁니다"],"V88b":["test-pages/verification-page.test.ts","pass","값 중간에 든 javascript: URL도 지웁니다"],"V89":["test-pages/verification-page.test.ts","pass","FLOW-N05 verify-rapid-click 정해진 빠른 조작 뒤에 오류가 없고 두 영역이 D로 끝납니다"],"V91":["test-pages/verification-page.test.ts","pass","verify-patch-log 이번에 적용한 Patch의 종류와 path를 목록에 보여 줍니다"],"V91a":["test-pages/verification-page.test.ts","pass","뒤로가기와 앞으로가기도 적용한 Patch를 목록에 보여 줍니다"],"V93":["test-pages/verification-page.test.ts","pass","Patch를 적용하다 실패하면 실제 영역을 현재 View로 다시 만들고 오류를 보여 주며 이력을 늘리지 않습니다"],"V92":["test-pages/verification-page.test.ts","todo","verify-highlight 바뀐 요소를 잠시 강조합니다. 선택 사례이며 구현하지 않았습니다. 강조 속성이 실제 영역을 바꾸면 V75의 MutationObserver 검사에서 뺄 규칙도 함께 정해야 합니다"],"V81":["test-pages/verification-page.test.ts","pass","verify-back Patch 두 번 뒤 뒤로가기는 두 영역을 첫 Patch 직후로 돌립니다"],"V82":["test-pages/verification-page.test.ts","pass","verify-forward 앞으로가기는 두 영역을 두 번째 Patch 직후로 돌리고 앞으로가기를 끕니다"],"V83":["test-pages/verification-page.test.ts","pass","verify-back-to-start 끝까지 뒤로 가면 처음 상태가 되고 뒤로가기가 꺼집니다"],"V84":["test-pages/verification-page.test.ts","pass","verify-back-then-patch 뒤로 간 뒤 새로 Patch하면 앞쪽 기록이 사라집니다"],"V90":["test-pages/verification-page.test.ts","pass","verify-back-partial 뒤로가기도 다른 글자 노드만 바꿉니다"],"V94":["test-pages/verification-page.test.ts","pass","이동 중 Patch가 실패하면 실제 영역을 옮겨 간 View로 다시 만들고 오류를 보여 줍니다"],"V95":["test-pages/verification-page.test.ts","pass","실제 영역의 입력칸에 친 값은 다음 Patch에서 테스트 영역의 값으로 바뀝니다"],"V95a":["test-pages/verification-page.test.ts","pass","실제 영역의 입력칸만 다르면 입력칸을 되돌리고 이력은 늘리지 않습니다"],"FLOW-N01":["test-pages/verification-page.test.ts","pass","글자, 속성, 추가, 삭제, 태그 교체를 한 번에 Patch하고 다시 고친 뒤 앞뒤로 이동합니다"]};
+
+// Decisions in decisions.html. key = anchor id there.
+const DEC = {
+  "dec-01": ["DEC-01 공백", "공백만 있는 글자 노드도 유지 · Lark 9행을 fromdom-keep-whitespace로 고침"],
+  "dec-02": ["DEC-02 루트 입력", "createVNodeFromDom(element: Element) 유지 · Lark 3·12행(루트가 글자·주석)은 자식 사례로 검사"],
+  "dec-03": ["DEC-03 입력칸", ".value를 읽고 빈 값도 넣음 · checkbox, radio, file은 입력칸이 아님 (ADR 0005)"],
+  "dec-04": ["DEC-04 번호 세는 법", "글자와 요소만 셈 · 주석 제외 · 공백과 빈 글자 포함"],
+  "dec-05": ["DEC-05 path 기준", "앞의 Patch를 적용한 뒤의 트리"],
+  "create-insert": ["CREATE → INSERT", "이름 변경 · 동사 표의 create(새로 만들어 돌려줌)와 뜻이 섞임"],
+  "order": ["순서 책임", "diffViews가 정함: 같은 번호끼리 → INSERT 앞부터 → REMOVE 뒤부터 · 한 요소의 PROPS가 자식보다 먼저"],
+  "root-path": ["path: []", "View 자신 · container는 그대로"],
+  "text-path": ["TEXT의 path", "글자 노드 자체"],
+  "fail": ["실패", "path를 적은 Error · 앞에 적용한 Patch는 되돌리지 않음"],
+  "diff-arg": ["diffViews 인자 검사", "두 인자가 null이나 undefined일 때만 TypeError · 자식 안까지는 검사 안 함"],
+  "dec-13": ["DEC-13 빈 PROPS", "DOM을 바꾸지 않음 (현재 동작 유지)"],
+  "idempotence": ["DEC-13 같은 Patch 재적용", "멱등성 요구하지 않음 · 계약 없음"],
+  "value-remove": ["입력칸 value 삭제 PROPS", "정하지 않음 · 지금은 속성만 지움 · DOM에서 읽은 View끼리는 생기지 않음"],
+  "text-compare": ["글자 비교", "다듬지 않고 그대로 · ADR 0005의 공백 유지와 같은 규칙"],
+  "dec-06": ["DEC-06 History API", "push, current, back, forward, canBack, canForward, size"],
+  "history-edge": ["빈 이력과 경계 이동", "null을 돌려주고 현재 위치 유지"],
+  "dec-07": ["DEC-07 같은 내용 저장", "push는 늘 저장 · 거르는 일은 페이지가 diffViews 결과로"],
+  "dec-08": ["DEC-08 격리", "저장과 반환 모두 structuredClone 사본"],
+  "history-max": ["최대 개수", "구현 안 함 (it.todo) · Lark 69행이 선택"],
+  "dec-11": ["DEC-11 테스트 영역", "HTML 원문을 쓰는 textarea"],
+  "top-node": ["최상위 노드", "요소 정확히 하나 · 공백 글자와 주석은 세지 않음"],
+  "dec-12": ["DEC-12 입력 읽기", "<template>로 읽고 script, iframe, object, embed, meta, base, link, on* 속성, srcdoc, 값 어디에든 든 javascript:를 지움 · 주석도 지우고 인접 글자를 합침"],
+  "dec-15": ["DEC-15 Patch의 비교 기준", "실제 영역을 다시 읽어 비교하고 적용 · 이력에는 현재 View와 다를 때만 쌓음"],
+  "apply-error": ["적용 중 오류", "보여야 할 View로 실제 영역을 다시 그리고 #message에 오류 표시 · Patch면 이력에 안 쌓음"],
+  "review": ["독립 리뷰", "14건 중 결함 3건 재현 후 고침 (89bdc1a, a261c83)"],
+  "page-noop": ["바뀐 것 없는 Patch", "아무것도 안 함 · 이력도 안 쌓음"],
+  "dec-09": ["DEC-09 과거 위치의 no-op", "앞쪽 기록(redo) 유지"],
+  "dec-10": ["DEC-10 저장 안 한 편집 후 이동", "편집을 버리고 이력의 View를 보여 줌"],
+  "nav": ["뒤로·앞으로", "실제 영역을 다시 읽어 diffViews + applyPatchesToDom"],
+  "patch-log": ["Patch 로그", "마지막으로 적용한 Patch(이동 포함)의 종류와 path 표시 · Lark 91행(선택)이지만 구현이 간단해서 포함"],
+  "real-root": ["실제 영역", "루트 요소 하나만 둠 · 앞에 공백 글자가 있으면 path []가 그 공백을 가리킴"],
+  "entry": ["입구 함수", "startVerificationPage(document)"],
+  "dec-14": ["DEC-14 기능 테스트", "jsdom으로 페이지 코드 직접 조작 + Aside 브라우저로 실제 확인"],
+  "lark-changes": ["Lark 문구 수정 제안", "3, 8, 12, 51행 문구 · 9행과 CREATE 행의 이름 변경"],
+  "browser-check": ["실제 브라우저 확인", "Aside, 2026-11-09 · 콘솔 오류 0건 · 한글 IME 조합은 미확인"]
+};
+
+const range = (prefix, from, to) => Array.from({length: to - from + 1}, (_, i) => prefix + (from + i));
+
+// Branch fields: n name, p property, lark [[row, larkId, [localIds], note?]], larkNote,
+// add [[localId, candidateId?, note?]], skip [[text, decKey?]], dec [decKeys], decNote, err.
+const TARGETS = [
+{ id: "U-FROM", level: "단위", title: "createVNodeFromDom",
+  sig: "createVNodeFromDom(element: Element): VNode",
+  resp: "지원하는 DOM을 합의한 VNode 표현으로 읽음 · 입력 DOM은 바꾸지 않음",
+  io: ["Element", "VNode (글자는 문자열, 주석은 뺌, 입력칸은 현재 .value)"],
+  where: "vnode.test.ts › createVNodeFromDom",
+  own: [...range("T", 1, 21), ...range("T", 39, 47)],
+  branches: [
+  { n: "노드 표현과 입력 범위", p: "빈 요소와 지원 노드 종류를 정해진 형태로 반환",
+    lark: [[2, "fromdom-elem", ["T1"]], [3, "fromdom-text", ["T2"], "루트 글자 대신 <p> 안의 글자로 검사"], [7, "fromdom-empty", ["T1"]], [12, "fromdom-comment-node", ["T39"], "루트 주석 대신 주석만 있는 <div>로 검사"], [13, "fromdom-tag-lowercase", ["T40"]]],
+    add: [], skip: [["CONV-N021 루트 글자와 주석 입력(Node 입력, null 반환)", "dec-02"]],
+    dec: ["dec-02", "lark-changes"],
+    err: "빈 요소의 children이 null로 나오거나 대문자 태그 이름이 그대로 type이 되는 오류" },
+  { n: "속성의 존재와 값", p: "여러 문자열 속성과 빈 값 속성을 빠뜨리지 않음",
+    lark: [[4, "fromdom-attrs", ["T8"]], [8, "fromdom-bool-attr", ["T41"], "기대값은 { disabled: '', value: '' }"]],
+    add: [["T7"], ["T9"], ["T46", "CONV-N012", "입력칸이 아닌 요소의 value 속성은 속성 그대로"]],
+    dec: ["lark-changes"], decNote: "속성 순서는 검사하지 않음",
+    err: "값 없이 이름만 있는 속성(disabled, hidden)이 사라지거나 여러 속성 중 일부를 빠뜨리는 오류" },
+  { n: "자식 구조와 경계", p: "중첩, 순서, 빈 요소, 합의한 글자 노드 경계 유지",
+    lark: [[5, "fromdom-nested", ["T42"]], [6, "fromdom-mixed-children", ["T11"]], [15, "fromdom-deep", ["T43"], "CONV-N022: 깊이 500"]],
+    add: [["T10"], ["T12", "CONV-N001"], ["T6", "CONV-N003"], ["T15", "CONV-N005"]],
+    dec: ["dec-01", "dec-04"],
+    err: "빈 자식이나 빈 글자 노드가 빠지거나 주석 양옆 글자가 합쳐져 뒤 자식의 번호가 어긋나는 오류" },
+  { n: "글자와 공백 정책", p: "엔티티를 해석한 글자를 읽고 합의한 공백 정책 적용",
+    lark: [[9, "fromdom-keep-whitespace", ["T44"], "이전 이름 fromdom-skip-whitespace · 기대를 공백 유지로 바꿈"], [10, "fromdom-keep-pre-space", ["T45"], "CONV-N022"], [14, "fromdom-special-chars", ["T14"], "CONV-N006: 앞뒤 공백도 다듬지 않음"]],
+    add: [["T13", "CONV-N004", "단어 사이 공백 하나"]],
+    dec: ["dec-01"],
+    err: "단어 사이 공백을 지워 \"a b\"가 \"ab\"가 되거나 엔티티를 두 번 해석하는 오류" },
+  { n: "주석 제외", p: "주석은 VNode에서 빼되 입력 DOM에서는 지우지 않음",
+    lark: [[11, "fromdom-skip-comment", ["T3"]]],
+    add: [["T4", "CONV-N002"], ["T47", "CONV-N013", "원본 주석이 그대로인지 확인"]],
+    dec: ["dec-02"], decNote: "루트 주석의 반환은 DEC-02로 분리",
+    err: "안쪽 주석이 데이터로 섞이거나 주석을 빼면서 원본 DOM까지 바꾸는 오류" },
+  { n: "현재 입력값", p: "초기 속성이 아니라 입력칸의 현재 .value를 읽음",
+    lark: [], larkNote: "Lark에 직접 사례 없음",
+    add: [["T17", "CONV-N007"], ["T18", "CONV-N008"], ["T19", "CONV-N009"], ["T20", "CONV-N010"], ["T21", "CONV-N011"], ["T16", "CONV-N012"], ["T46", "CONV-N012"]],
+    dec: ["dec-03"],
+    err: "사용자가 친 글자가 View에 들어가지 않거나, 지운 값을 속성 삭제로 오해해 옛 값이 남는 오류" },
+  { n: "입력 DOM 보존", p: "읽기 전후 구조, 참조, 입력칸 현재 값이 그대로",
+    lark: [[16, "fromdom-no-mutate", ["T5"]]],
+    add: [["T47", "CONV-N013"]],
+    decNote: "outerHTML 비교만으로는 참조와 .value 불변을 보장하지 못해 T47이 따로 확인",
+    err: "읽기만 했는데 자식 참조, 글자, 입력칸 .value가 바뀌는 오류" }
+  ] },
+
+{ id: "U-TO", level: "단위", title: "createDomFromVNode",
+  sig: "createDomFromVNode(vnode: VNode): Node",
+  resp: "VNode의 구조와 값을 새 DOM으로 만듦 · 문자열은 HTML로 해석하지 않음 · 입력 VNode는 그대로",
+  io: ["문자열 또는 요소 VNode", "새 Text 또는 Element"],
+  where: "vnode.test.ts › createDomFromVNode",
+  own: [...range("T", 22, 33), "T48", "T49", "T50"],
+  branches: [
+  { n: "노드 생성", p: "문자열은 글자 노드, 요소는 그 태그의 새 노드",
+    lark: [[17, "todom-elem", ["T22"]], [18, "todom-text", ["T23"]]],
+    add: [["T50", "CONV-N020"]],
+    err: "같은 VNode로 두 번 만든 결과가 노드를 공유해 한쪽 수정이 다른 쪽으로 번지는 오류" },
+  { n: "속성 반영", p: "속성값뿐 아니라 빈 속성의 존재도 반영",
+    lark: [[19, "todom-attrs", ["T25"]]],
+    add: [["T24"], ["T26", "CONV-N014"]],
+    decNote: "범위: Phase 1의 문자열 props만",
+    err: "hidden 같은 빈 값 속성의 존재가 사라지는 오류" },
+  { n: "자식 구조와 순서", p: "중첩, 섞인 자식, 빈 자식을 적힌 순서대로 만듦",
+    lark: [[20, "todom-nested", ["T48"]]],
+    add: [["T27"], ["T28", "CONV-N015"], ["T29", "CONV-N015"], ["T30", "CONV-N016"], ["T32", "CONV-N017"]],
+    dec: ["dec-01", "dec-04"],
+    err: "문장 순서가 바뀌거나 빈 자리와 띄어쓰기가 사라져 번호가 어긋나는 오류" },
+  { n: "문자열은 글자", p: "HTML 모양과 엔티티 표기도 문자열 그대로",
+    lark: [[21, "todom-text-escape", ["T31"], "CONV-N018: 앞뒤 공백, &amp;, img 태그 모양을 함께 넣은 입력"]],
+    add: [],
+    decNote: "스크립트 실행 대신 노드 종류와 글자로 판정",
+    err: "문자열을 HTML로 해석해 요소가 생기거나 엔티티를 두 번 해석하는 오류" },
+  { n: "입력 표시값", p: "props.value가 새 입력칸의 .value로 보임",
+    lark: [[22, "todom-value-prop", ["T33"]]],
+    add: [], addNote: "이미 친 입력칸을 고치는 일은 U-PATCH의 P24, P34",
+    err: "value가 속성으로만 붙고 입력칸에 값이 보이지 않는 오류" },
+  { n: "입력 보존과 새 결과", p: "VNode를 바꾸지 않고 서로 독립된 새 DOM을 돌려줌",
+    lark: [[23, "todom-no-mutate", ["T49"], "CONV-N019: 중첩 props와 children까지 비교"]],
+    add: [["T50", "CONV-N020"]],
+    decNote: "Patch의 노드 보존과는 반대 방향의 책임",
+    err: "만드는 중에 VNode가 바뀌어 History의 기준 View가 오염되는 오류" }
+  ] },
+
+{ id: "U-INPUT", level: "단위", title: "isTextInput",
+  sig: "isTextInput(element: Element): element is HTMLInputElement",
+  resp: "reader와 Patch가 현재 .value를 다룰 입력칸을 같은 규칙으로 가림",
+  io: ["Element", "boolean (타입 가드)"],
+  where: "vnode.test.ts › isTextInput",
+  own: ["T51", "T52", "T53"],
+  branches: [
+  { n: "기본 입력칸", p: "type이 없거나 text인 input은 입력칸",
+    lark: [], larkNote: "Lark에 직접 사례 없음",
+    add: [["T51", "U-INPUT-N001"]], dec: ["dec-03"],
+    err: "reader가 친 글자를 놓치거나 Patch가 value를 속성으로만 쓰는 오류" },
+  { n: "checked 계열과 file 제외", p: "checkbox, radio, file을 value 상태 대상으로 오인하지 않음",
+    lark: [], larkNote: "Lark에 직접 사례 없음",
+    add: [["T52", "U-INPUT-N002"]], dec: ["dec-03"],
+    decNote: "checkbox와 radio의 상태 복원은 범위 밖 · file은 독립 리뷰에서 추가",
+    err: "checked가 상태인 컨트롤에 .value 규칙을 잘못 적용하거나, file 입력칸의 .value에 글자를 써서 InvalidStateError가 나는 오류" },
+  { n: "비입력 요소 제외", p: ".value가 있는 li와 button을 입력칸으로 오인하지 않음",
+    lark: [], larkNote: "Lark에 직접 사례 없음",
+    add: [["T53", "U-INPUT-N003"]], dec: ["dec-03"],
+    err: "li나 button의 .value를 입력 상태로 읽어 없는 props를 만드는 오류" }
+  ] },
+
+{ id: "U-DIFF", level: "단위", title: "diffViews",
+  sig: "diffViews(currentView: VNode, newView: VNode): Patch[]",
+  resp: "두 View의 차이를 Patch 목록으로 돌려줌 · 입력 View와 DOM은 바꾸지 않음 · key 없이 같은 번호끼리 비교",
+  io: ["이전 View, 새 View", "Patch[] (TEXT, REPLACE, PROPS, INSERT, REMOVE)"],
+  where: "diff.test.ts",
+  own: range("D", 1, 39),
+  branches: [
+  { n: "변경 없음", p: "내용이 같으면 참조나 속성 순서가 달라도 Patch 없음",
+    lark: [[24, "diff-same", ["D1"]]],
+    add: [["D2", "DIFF-N01"], ["D3", "DIFF-N01"], ["D4", "DIFF-N01"]],
+    decNote: "전체 최소 Patch 수는 요구하지 않음",
+    err: "같은 내용인데 객체가 다르거나 속성 순서만 달라서 Patch를 만드는 오류" },
+  { n: "노드 종류와 태그", p: "종류나 태그가 바뀌면 그 범위만 REPLACE, 안쪽 Patch는 내지 않음",
+    lark: [[26, "diff-tag", ["D5"]], [27, "diff-text-to-elem", ["D6"]]],
+    add: [["D7", "DIFF-N02"], ["D8"], ["D9", "DIFF-N02"]],
+    dec: ["create-insert", "dec-05"],
+    err: "교체한 노드 안쪽에 TEXT나 PROPS를 또 내는 오류" },
+  { n: "문자열 내용", p: "빈 글자와 공백까지 새 문자열을 그대로 전달",
+    lark: [[25, "diff-text", ["D10"]]],
+    add: [["D11", "DIFF-N03"], ["D12", "DIFF-N03"], ["D13", "DIFF-N03"], ["D14", "DIFF-N03"], ["D15"]],
+    dec: ["text-compare", "text-path"],
+    err: "빈 글자나 공백 차이를 다듬어 놓치는 오류" },
+  { n: "속성의 존재와 값", p: "속성 없음과 빈 값을 구별하고 추가, 변경, 삭제를 빠뜨리지 않음",
+    lark: [[28, "diff-attr-change", ["D16"]], [29, "diff-attr-add", ["D17"]], [30, "diff-attr-remove", ["D18"]]],
+    add: [["D19", "DIFF-N04"], ["D20", "DIFF-N04"], ["D21"], ["D22"], ["D23", "DIFF-N06"]],
+    skip: [["DIFF-N06 일부: 입력칸 value가 빈 값 그대로인 사례는 따로 없음. D20이 일반 빈 값 속성으로 같은 조건을 확인"]],
+    dec: ["dec-03"],
+    err: "빈 값을 속성 없음으로 다루거나 여러 속성 중 일부를 빠뜨리는 오류" },
+  { n: "자식 개수와 위치", p: "자식의 추가, 삭제와 남은 위치의 변경을 함께 찾음",
+    lark: [[31, "diff-child-add", ["D24"]], [32, "diff-child-remove", ["D25"]], [33, "diff-child-insert-middle", ["D26"]], [36, "diff-remove-all", ["D29"]], [37, "diff-from-empty", ["D30"]]],
+    add: [["D27", null, "맨 앞 삽입"], ["D28", null, "맨 앞과 가운데 삭제"], ["D31"]],
+    dec: ["order", "create-insert"],
+    err: "INSERT와 REMOVE의 순서가 틀려 뒤 자식의 번호가 밀리는 오류" },
+  { n: "중첩 위치와 변경 조합", p: "여러 가지의 변경을 서로 부딪히지 않는 path로 표현",
+    lark: [[34, "diff-deep", ["D32"]], [35, "diff-multi", ["D33"]]],
+    add: [["D34"], ["D35"], ["D39", "DIFF-N05"]],
+    dec: ["dec-05", "order"],
+    err: "한 가지의 변경 때문에 다른 가지의 path가 어긋나거나 path 배열을 공유해 덮어쓰는 오류" },
+  { n: "입력 보존과 호출 독립성", p: "입력을 바꾸지 않고, 호출끼리 결과가 섞이지 않음",
+    lark: [[38, "diff-no-mutate", ["D36"], "DIFF-N07: 얼린 입력과 안쪽 객체의 참조까지 확인"], [39, "diff-invalid-arg", ["D38"]]],
+    add: [["D37", "DIFF-N08"]],
+    dec: ["diff-arg"],
+    err: "비교 중에 입력 View를 바꾸거나 앞 호출의 Patch 배열이 다음 호출에 쌓이는 오류" }
+  ] },
+
+{ id: "U-PATCH", level: "단위", title: "applyPatchesToDom",
+  sig: "applyPatchesToDom(container: Element, patches: Patch[]): void",
+  resp: "Patch를 container 안의 View에 차례로 적용 · 대상 밖의 노드와 container는 그대로",
+  io: ["container, Patch[]", "DOM과 입력칸 .value 변경 (반환 없음)"],
+  where: "patch.test.ts",
+  own: range("P", 1, 38),
+  branches: [
+  { n: "변경 범위와 노드 보존", p: "TEXT와 PROPS는 대상과 이웃 노드를 같은 객체로 남김",
+    lark: [[40, "patch-text", ["P1", "P10"]], [42, "patch-props-set", ["P5", "P11"]], [50, "patch-mutation-count", ["P14"], "PATCH-N04: 변경 기록의 target이 그 글자 노드인지까지 확인"]],
+    add: [["P2", "PATCH-N04"]],
+    dec: ["text-path"],
+    err: "글자 하나를 바꾸는데 요소나 이웃 노드를 새로 만드는 오류" },
+  { n: "구조와 루트", p: "삽입, 삭제, 교체는 정확한 구조를 만들고 container는 그대로",
+    lark: [[41, "patch-replace", ["P3"]], [44, "patch-insert", ["P7"], "이전 ID patch-create"], [45, "patch-remove", ["P9"]], [46, "patch-view-replace", ["P15"]]],
+    add: [["P4"], ["P8"], ["P12"], ["P29"], ["P21", "PATCH-N06"], ["P22", "PATCH-N06"]],
+    dec: ["create-insert", "root-path", "dec-05"],
+    err: "교체나 삽입 뒤 container까지 바뀌거나 남은 형제를 새로 만드는 오류" },
+  { n: "VNode와 DOM의 위치 대응", p: "주석은 빼고 합의한 글자 노드를 세어 의도한 노드를 고침",
+    lark: [], larkNote: "Lark에 직접 사례 없음",
+    add: [["P16", null, "34행 diff-deep의 Patch 쪽"], ["P17", "PATCH-N01"], ["P18", "PATCH-N01"], ["P19", "PATCH-N02"], ["P32", "PATCH-N02"], ["P33", "PATCH-N02"]],
+    dec: ["dec-04", "dec-01"],
+    err: "주석을 세거나 공백, 빈 글자 노드를 빼서 엉뚱한 노드를 고치는 오류" },
+  { n: "글자, 속성, 현재 입력값", p: "빈 속성과 입력칸의 빈 .value를 구별해 반영",
+    lark: [[43, "patch-props-remove", ["P6"]], [48, "patch-value-prop", ["P23"]]],
+    add: [["P24", "PATCH-N03"], ["P34", "PATCH-N03"], ["P30", "PATCH-N05"], ["P31", "PATCH-N05"], ["P38", null, "독립 리뷰 지적: file 입력칸"]],
+    skip: [["입력칸 value를 remove하는 PROPS의 .value 처리: 정하지 않음, 지금은 속성만 지움", "value-remove"]],
+    dec: ["dec-03", "dec-13"],
+    err: "빈 값을 속성 삭제로 처리하거나 사용자가 친 글자가 있는 입력칸의 .value를 못 바꾸는 오류" },
+  { n: "무변경, 순차 적용, 실패", p: "빈 목록은 DOM을 바꾸지 않고, 순차 적용과 실패는 정한 약속을 따름",
+    lark: [[47, "patch-empty", ["P13"]], [49, "patch-invalid-path", ["P26"]]],
+    add: [["P20"], ["P25"], ["P27"], ["P28", "PATCH-N08"], ["P35"], ["P36"], ["P37"]],
+    skip: [["PATCH-N07 같은 Patch 목록 재적용(멱등성)", "idempotence"]],
+    dec: ["fail", "dec-05"],
+    err: "잘못된 path를 조용히 넘기거나 엉뚱한 노드를 고치는 오류" }
+  ] },
+
+{ id: "U-HISTORY", level: "단위", title: "StateHistory",
+  sig: "class StateHistory { push · current · back · forward · canBack · canForward · size }",
+  resp: "View의 저장 순서와 현재 위치를 관리 · 저장, 조회, 이동, 격리의 약속",
+  io: ["View와 저장, 이동 호출", "현재 View, 이동 결과(없으면 null), 개수, 이동 가능 여부"],
+  where: "history.test.ts",
+  own: range("H", 1, 18),
+  branches: [
+  { n: "초기와 현재 조회", p: "빈 상태와 첫 저장 뒤의 현재, 개수, 이동 가능 여부가 일치",
+    lark: [[60, "hist-empty", ["H1"]], [61, "hist-push-one", ["H2"]]],
+    add: [["H3", "HIST-N01"]],
+    dec: ["dec-06", "history-edge"],
+    err: "빈 이력에서 이동하면 위치가 음수가 되어 다음 저장이 어긋나는 오류" },
+  { n: "이동과 경계", p: "앞뒤 이동은 정확한 View를 고르고 경계에서는 현재 유지",
+    lark: [[62, "hist-back", ["H4"]], [63, "hist-forward", ["H5"]], [64, "hist-back-at-start", ["H6"]], [65, "hist-forward-at-end", ["H7"]]],
+    add: [["H8", "HIST-N01"], ["H9", "HIST-N01"], ["H10", "HIST-N02"]],
+    dec: ["history-edge"],
+    err: "경계에서 더 누르면 위치가 범위를 벗어나 반대 방향 이동이 틀리는 오류" },
+  { n: "새 저장과 분기", p: "과거에서 새로 저장하면 앞쪽 기록을 버리고 이전 기록은 유지",
+    lark: [[66, "hist-push-truncates", ["H11"]]],
+    add: [["H12", "HIST-N03"], ["H13", "HIST-N05"], ["H14", "HIST-N05"]],
+    dec: ["dec-07"],
+    err: "분기 뒤 지운 앞쪽 기록이 다시 나타나는 오류" },
+  { n: "스냅샷 격리", p: "원본이나 돌려받은 View를 고쳐도 저장한 내용은 그대로",
+    lark: [[67, "hist-isolation-input", ["H15"], "HIST-N04: 안쪽 props와 children까지 고침"], [68, "hist-isolation-output", ["H16"]]],
+    add: [["H17", "HIST-N04", "back과 forward의 반환값"]],
+    dec: ["dec-08"],
+    err: "원본이나 돌려받은 View를 고치면 저장한 기록까지 바뀌는 오류" },
+  { n: "선택: 용량 제한", p: "상한을 넘으면 오래된 기록부터 지움 (선택)",
+    lark: [[69, "hist-max-size", ["H18"], "선택 · it.todo"]],
+    add: [], skip: [["용량 제한 구현", "history-max"]],
+    dec: ["history-max"],
+    err: "상한을 넘은 뒤 이동 위치나 개수가 어긋나는 오류 (구현하지 않아 검사 안 함)" }
+  ] },
+
+{ id: "I-ROUND", level: "통합", title: "변환 왕복",
+  sig: "createDomFromVNode ↔ createVNodeFromDom",
+  resp: "두 변환을 이어도 정규형의 구조와 입력칸 현재 값이 보존됨",
+  io: ["정규형 VNode 또는 지원 DOM", "다시 읽은 VNode 또는 새 DOM"],
+  where: "round-trip.test.ts",
+  own: [...range("R", 1, 5), ...range("T", 34, 37)],
+  branches: [
+  { n: "VNode → DOM → VNode", p: "정규형 VNode를 만들고 다시 읽으면 같은 내용",
+    lark: [[51, "int-render-roundtrip", ["R1"], "ROUND-N001"]],
+    add: [],
+    dec: ["dec-02", "dec-03", "lark-changes"],
+    err: "두 변환의 표현 규칙이 서로 맞지 않는 오류" },
+  { n: "DOM → VNode → DOM", p: "지원 DOM의 구조와 글자가 정규화 뒤에도 그대로",
+    lark: [], larkNote: "Lark 51행은 반대 방향",
+    add: [["T34", "ROUND-N002"], ["T35", "ROUND-N003"], ["T36", "ROUND-N003"]],
+    decNote: "원본 노드의 참조 보존은 요구하지 않음",
+    err: "History 복원 때 빈 자리, 한글, 특수문자가 바뀌는 오류" },
+  { n: "입력 상태와 의도한 정보 손실", p: "입력칸 현재 값은 보존하고, 주석 제외 같은 예외는 따로 검사",
+    lark: [], larkNote: "Lark에 직접 사례 없음",
+    add: [["T37", "ROUND-N004"], ["R2", "ROUND-N004"], ["R3", "ROUND-N004"], ["R4", "ROUND-N005"], ["R5", "ROUND-N006"]],
+    dec: ["dec-03", "dec-04"],
+    err: "복원한 입력칸이 옛 초기값으로 돌아가거나, 왕복할 때마다 표현이 바뀌어 가짜 Diff가 생기는 오류" }
+  ] },
+
+{ id: "I-DP", level: "통합", title: "Diff → Patch",
+  sig: "diffViews → applyPatchesToDom",
+  resp: "이전 DOM에 두 View의 차이를 적용하면 새 View의 상태 · 바뀌지 않은 노드는 같은 객체",
+  io: ["이전 View, 새 View, 이전 DOM", "새 View의 내용, 남은 노드의 참조"],
+  where: "diff-patch.test.ts › diffViews → applyPatchesToDom",
+  own: range("I", 1, 10),
+  branches: [
+  { n: "새 View에 도달", p: "글자, 속성, 자식, 교체를 이어서 적용하면 새 View의 구조",
+    lark: [[52, "int-roundtrip-text", ["I1"]], [53, "int-roundtrip-attr", ["I2"]], [54, "int-roundtrip-children", ["I3"]], [55, "int-roundtrip-replace", ["I4"], "DP-N02: 바깥 노드가 같은 객체로 남는지도 확인"], [56, "int-roundtrip-view-replace", ["I5"]]],
+    add: [["I9", "DP-N04", "섞인 변경 한 번에"]],
+    dec: ["dec-05", "root-path"],
+    err: "diff와 Patch가 각자는 맞아도 path를 다르게 해석해 다른 화면이 되는 오류" },
+  { n: "불필요한 변경 없음", p: "변경이 없거나 한 곳만 바뀌면 나머지 노드는 같은 객체",
+    lark: [[58, "int-preserve-identity", ["I7"]]],
+    add: [["I8", "DP-N01"], ["I9", "DP-N04"]],
+    err: "결과 화면은 같아도 바뀌지 않은 노드를 새로 만드는 오류" },
+  { n: "연속 변경과 재현성", p: "단계마다 새로 diff해도 내용, .value, 남는 노드가 맞음",
+    lark: [[57, "int-roundtrip-sequence", ["I6"], "DP-N06: 단계마다 .value와 빈 글자까지 확인"], [59, "int-roundtrip-fuzz", ["I10"], "고정 시드 500쌍 · 실패하면 시드와 두 View 출력"]],
+    add: [],
+    decNote: "같은 Patch 목록의 재적용과는 다른 요구",
+    err: "단계마다 기준 View가 갱신되지 않아 마지막 단계만 맞는 오류" }
+  ] },
+
+{ id: "I-READDP", level: "통합", title: "DOM 읽기 → Diff → Patch",
+  sig: "createVNodeFromDom → diffViews → applyPatchesToDom",
+  resp: "DOM에서 읽은 구조와 입력칸 값을 diff와 Patch가 같은 뜻으로 해석해 정확한 노드를 고침",
+  io: ["실제 DOM에서 읽은 두 View", "정확한 노드와 .value의 갱신"],
+  where: "diff-patch.test.ts › createVNodeFromDom → diffViews → applyPatchesToDom",
+  own: ["I11", "I12"],
+  branches: [
+  { n: "주석, 공백, 빈 글자 노드의 경로", p: "reader가 만든 children 번호와 Patch의 노드 찾기가 일치",
+    lark: [], larkNote: "Lark에 직접 사례 없음 · 52~59행을 바탕으로 보완",
+    add: [["I11", "DP-N05"], ["I12", null, "주석이 있는 목록"]],
+    dec: ["dec-04", "dec-01"],
+    err: "읽기와 Patch가 노드 번호를 다르게 세어 엉뚱한 노드를 고치는 오류" },
+  { n: "입력칸 현재 값의 빈 값", p: "현재 .value를 읽고 비교해 지운 빈 값까지 같은 입력칸에 반영",
+    lark: [], larkNote: "Lark에 직접 사례 없음 · 48행 patch-value-prop은 단위 근거",
+    add: [["I11", "DP-N03", "친 글자를 비운 입력칸"], ["I12", null, "새 입력칸에 친 글자"]],
+    dec: ["dec-03"],
+    err: "사용자가 지운 값이 빈 값으로 전달되지 않아 옛 값이 남는 오류" }
+  ] },
+
+{ id: "I-HR", level: "통합", title: "History → 화면 복원",
+  sig: "StateHistory + startVerificationPage",
+  resp: "반영한 View를 저장하고 고른 기록을 두 영역에 복원 · 이력과 화면의 현재가 일치",
+  io: ["초기화, Patch, 이동 경로", "현재 View, 이력, 두 영역의 상태"],
+  where: "test-pages/history-restore.test.ts",
+  own: ["HR-N01", "HR-N02", "HR-N03", "HR-N04", "HR-N05a", "HR-N05b", "DEC-09a", "DEC-09b", "HR-N06a", "HR-N06b", "FLOW-N02", "HR-N07", "HR-N07#2", "HR-N07#3", "HR-N08"],
+  branches: [
+  { n: "초기 저장과 첫 Patch", p: "처음 상태를 한 번 저장하고, 첫 변경 뒤에도 처음으로 돌아갈 수 있음",
+    lark: [[72, "verify-load-buttons", ["V72"]], [76, "verify-patch-history", ["V76"]], [83, "verify-back-to-start", ["V83"]]],
+    add: [["HR-N01"], ["HR-N08", null, "독립 리뷰 지적: 처음 실제 영역의 주석"]],
+    dec: ["dec-06", "entry", "dec-12"],
+    err: "초기화 때 처음 View를 두 번 저장하거나 첫 변경 뒤 처음 상태를 잃는 오류" },
+  { n: "두 영역과 현재의 일치", p: "앞뒤 이동을 반복해도 두 영역과 현재 View가 고른 기록과 같음",
+    lark: [[81, "verify-back", ["V81"]], [82, "verify-forward", ["V82"]]],
+    add: [["HR-N02"], ["HR-N03", null, "입력칸 .value"], ["FLOW-N02", null, "저장 뒤의 편집이 과거를 바꾸지 않음"]],
+    dec: ["nav", "dec-08"],
+    err: "복원하면서 다시 저장하거나 한 영역만 바꾸고, 입력칸을 속성값으로 복원하는 오류" },
+  { n: "분기, no-op, 거절 입력", p: "새 분기는 앞쪽 기록을 지우고, no-op과 거절 입력은 이력을 만들지 않음",
+    lark: [[84, "verify-back-then-patch", ["V84"]], [80, "verify-patch-nochange", ["V80"]], [85, "verify-empty-input", ["V85"]], [86, "verify-multi-top", ["V86"]]],
+    add: [["HR-N04", "FLOW-N03"], ["HR-N05a"], ["HR-N05b"], ["DEC-09a", "FLOW-N04"], ["DEC-09b"], ["HR-N07", null, "독립 리뷰 지적: HTML을 거치며 글자 두 개가 하나로 합쳐짐"], ["HR-N07#2"], ["HR-N07#3"], ["HR-N06a"], ["HR-N06b"]],
+    dec: ["page-noop", "dec-09", "dec-10", "dec-07", "dec-12"],
+    err: "no-op이나 거절한 입력이 이력을 쌓거나 앞쪽 기록을 지우는 오류" }
+  ] },
+
+{ id: "F-INIT", level: "기능", title: "최초 표시",
+  sig: "startVerificationPage(document) · 페이지 로드",
+  resp: "로드 때 실제 영역의 샘플을 테스트 영역에 표시 · 초기 이력과 버튼 준비",
+  io: ["페이지 로드", "두 영역, 세 버튼, 초기 이력 1개"],
+  where: "test-pages/verification-page.test.ts › F-INIT",
+  func: true,
+  own: ["V70", "V71", "V71a", "V72", "V73", "V73a"],
+  branches: [
+  { n: "필수 UI와 초기 내용", p: "두 영역과 세 버튼이 있고 두 영역의 View가 처음 샘플과 같음",
+    lark: [[70, "verify-layout", ["V70"]], [71, "verify-load", ["V71"]]],
+    add: [["V71a"]],
+    dec: ["dec-11", "real-root"],
+    err: "실제 영역 앞뒤의 공백 글자 때문에 path []가 View 대신 공백을 가리키는 오류" },
+  { n: "복사 독립성과 미적용 편집", p: "테스트 영역만 고쳐도 실제 영역과 이력은 그대로",
+    lark: [[73, "verify-edit-no-apply", ["V73"], "PAGE-N01"]],
+    add: [["V73a", "PAGE-N01", "반대 방향"]],
+    dec: ["dec-11"],
+    err: "두 영역이 노드를 공유해 한쪽 편집이 Patch 전에 다른 쪽으로 번지는 오류" },
+  { n: "초기 이력과 버튼", p: "처음 기록 하나에서 뒤로가기와 앞으로가기가 꺼져 있음",
+    lark: [[72, "verify-load-buttons", ["V72"]]],
+    add: [["HR-N01", null, "첫 Patch 뒤 한 번 뒤로 가면 처음 View"]],
+    dec: ["dec-06"],
+    err: "처음부터 이동 버튼이 켜져 있거나 처음 View가 저장되지 않는 오류" }
+  ] },
+
+{ id: "F-PATCH", level: "기능", title: "Patch 버튼",
+  sig: "Patch 버튼 클릭",
+  resp: "테스트 영역의 현재 편집을 읽어 바뀐 곳만 실제 영역에 반영 · 새 View 저장",
+  io: ["테스트 영역 편집, Patch 클릭", "실제 영역, 이력, 버튼, 안내"],
+  where: "test-pages/verification-page.test.ts › F-PATCH, DEC-15, FLOW-N01",
+  func: true,
+  own: [...range("V", 74, 80), "V85", "V86", "V86a", "V86b", "V86c", "V87", "V88", "V88a", "V88b", "V89", "V91", "V91a", "V92", "V93", "V95", "V95a", "FLOW-N01"],
+  extra: [[91, "verify-patch-log", ["V91", "V91a"], "patch-log"], [92, "verify-highlight", ["V92"], null]],
+  branches: [
+  { n: "현재 편집과 반복 반영", p: "매번 테스트 영역의 현재 HTML을 읽어 글자, 속성, 구조를 반영",
+    lark: [[74, "verify-patch-apply", ["V74"]], [77, "verify-attr-edit", ["V77"]], [78, "verify-delete-node", ["V78"]], [79, "verify-many-tags", ["V79"], "PAGE-N04"]],
+    add: [["FLOW-N01", null, "섞인 변경을 Patch하고 다시 고친 뒤 앞뒤로 이동"]],
+    dec: ["dec-11"],
+    err: "Patch 때 현재 편집 대신 오래된 View를 읽거나, 섞인 변경을 이어서 반영할 때 번호가 밀리는 오류" },
+  { n: "부분 갱신과 no-op", p: "한 곳만 고치면 그곳만 바뀌고, 바뀐 것이 없으면 DOM과 이력이 그대로",
+    lark: [[75, "verify-patch-partial", ["V75"]], [80, "verify-patch-nochange", ["V80"], "PAGE-N02"]],
+    add: [["V95", null, "독립 리뷰 지적: Patch와 이동의 비교 기준"], ["V95a"]],
+    dec: ["page-noop", "dec-15"],
+    err: "한 곳만 고쳤는데 다른 노드까지 새로 만들거나 no-op에 이력을 쌓는 오류" },
+  { n: "반영과 이력 저장", p: "변경을 마친 상태를 복원할 수 있는 새 기록으로 저장",
+    lark: [[76, "verify-patch-history", ["V76"]]],
+    add: [["FLOW-N02", null, "저장한 B는 뒤의 편집과 새 Patch로 바뀌지 않음"], ["V93", null, "독립 리뷰 지적: 적용 중 오류"]],
+    dec: ["dec-10", "dec-08", "apply-error"],
+    err: "저장한 View가 뒤의 편집으로 오염되거나, 적용 중 오류 뒤 이력, 화면, 버튼이 어긋나는 오류" },
+  { n: "유효성, 브라우저 파싱, 안전", p: "빈 입력과 최상위 둘은 거절, 브라우저가 고친 구조는 반영, 실행 경로는 지움",
+    lark: [[85, "verify-empty-input", ["V85"]], [86, "verify-multi-top", ["V86"]], [87, "verify-invalid-html", ["V87"]], [88, "verify-no-script-exec", ["V88"]]],
+    add: [["V86a"], ["V86b"], ["V86c"], ["V88a", null, "DEC-12의 넓힌 범위"], ["V88b", null, "값 중간의 javascript:"], ["HR-N05b", null, "거절 뒤 이력과 앞쪽 기록 유지"]],
+    dec: ["top-node", "dec-12"],
+    err: "입력의 스크립트나 on 속성이 실행되거나, 거절할 입력이 실제 영역과 이력을 바꾸는 오류" },
+  { n: "실제 입력과 조합", p: "실제 키 입력의 완성 값이 Patch와 이동 뒤에도 맞게 보임",
+    lark: [], larkNote: "Lark에 직접 사례 없음",
+    add: [["HR-N03", null, "jsdom에서 .value 저장과 복원"]],
+    skip: [["PAGE-N03 한글 IME 조합 중 Patch, 포커스와 커서 유지: 자동화로 OS IME를 재현할 수 없어 CJG가 직접 확인할 일", "dec-14"]],
+    dec: ["dec-14", "browser-check"],
+    err: "실제 키 입력이나 IME 조합의 완성 값이 Patch와 이동 뒤에 다르게 보이는 오류" },
+  { n: "빠른 조작의 재현성", p: "정해진 빠른 조작 뒤 두 영역이 기대한 최종 상태이고 오류가 없음",
+    lark: [[89, "verify-rapid-click", ["V89"], "FLOW-N05: B Patch → 뒤 → 앞 → 뒤 → D Patch → 앞"]],
+    add: [],
+    decNote: "시간 제한이나 비동기 정책은 더하지 않음",
+    err: "두 영역이 서로 같지만 둘 다 틀린 상태로 끝나는 오류" }
+  ] },
+
+{ id: "F-NAV", level: "기능", title: "뒤로가기 · 앞으로가기",
+  sig: "뒤로가기, 앞으로가기 버튼 클릭",
+  resp: "고른 기록으로 실제 영역과 테스트 영역을 함께 바꿈 · 버튼 상태와 분기 일치",
+  io: ["이동 버튼 클릭", "두 영역, 버튼, 이력 재생 결과"],
+  where: "test-pages/verification-page.test.ts › F-NAV",
+  func: true,
+  own: ["V81", "V82", "V83", "V84", "V90", "V94"],
+  branches: [
+  { n: "두 영역 동기화", p: "뒤로와 앞으로 이동하면 두 영역이 그 기록을 보여 줌",
+    lark: [[81, "verify-back", ["V81"]], [82, "verify-forward", ["V82"]]],
+    add: [["HR-N02"], ["HR-N03"], ["FLOW-N02"], ["V94", null, "독립 리뷰 지적: 이동 중 적용 오류"]],
+    dec: ["nav", "dec-10", "apply-error"],
+    err: "이동할 때 한 영역만 바뀌거나 저장 뒤의 편집이 과거 기록을 바꾸는 오류" },
+  { n: "시작, 끝과 버튼", p: "처음까지 돌아갈 수 있고 버튼 상태가 이동 가능 여부와 같음",
+    lark: [[72, "verify-load-buttons", ["V72"]], [83, "verify-back-to-start", ["V83"]], [82, "verify-forward", ["V82"]]],
+    add: [],
+    skip: [["페이지에서 경계를 여러 번 누른 뒤의 이동: 같은 조건을 단위 H9가 확인"]],
+    dec: ["history-edge"],
+    err: "처음까지 돌아가지 못하거나 버튼 상태가 실제 이동 가능 여부와 다른 오류" },
+  { n: "분기 후 재생", p: "과거에서 새로 Patch하면 지운 앞쪽 기록이 다시 나오지 않음",
+    lark: [[84, "verify-back-then-patch", ["V84"]]],
+    add: [["HR-N04", "FLOW-N03"], ["DEC-09a"], ["DEC-09b"]],
+    dec: ["dec-09"],
+    err: "분기 뒤 지운 기록이 앞으로가기로 다시 나타나는 오류" },
+  { n: "저장 안 한 편집과 선택 복원", p: "저장 안 한 편집 뒤 이동의 결과를 정한 정책으로 고정",
+    lark: [[90, "verify-back-partial", ["V90"], "선택 · 뒤로가기도 바뀐 글자 노드만 고침"]],
+    add: [["HR-N06a"], ["HR-N06b"], ["FLOW-N02"]],
+    dec: ["dec-10", "nav"],
+    err: "저장 안 한 편집이 이동 뒤에도 테스트 영역에 남아 화면과 이력이 어긋나는 오류" }
+  ] }
+];
+
+const LEVELS = ["단위", "통합", "기능"];
+const M1 = new Set(range("T", 1, 37));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;"}[c]));
+const slug = (id) => id.toLowerCase();
+const pad = (n) => String(n).padStart(2, "0");
+
+function fileOf(target) {
+  return new Set(target.own.map((id) => TESTS[id][0]));
+}
+
+function testLine(id, target, cand, note) {
+  const t = TESTS[id];
+  if (!t) return "<code>" + esc(id) + "</code> (코드에 없음)";
+  const tags = [];
+  if (cand) tags.push('<span class="cand">' + esc(cand) + "</span>");
+  if (M1.has(id)) tags.push('<span class="tag">M1</span>');
+  if (!fileOf(target).has(t[0])) tags.push('<span class="tag">' + esc(t[0].replace("test-pages/", "")) + "</span>");
+  if (t[1] === "todo") tags.push('<span class="tag">todo</span>');
+  return "<code>" + esc(id.split("#")[0]) + "</code> " + tags.join(" ") +
+    '<span class="tn">' + esc(t[2]) + "</span>" +
+    (note ? '<span class="note">' + esc(note) + "</span>" : "");
+}
+
+function decLine(key) {
+  const d = DEC[key];
+  return '<a href="mini-react-phase1-decisions.html#' + key + '">' + esc(d[0]) + "</a> → " + esc(d[1]);
+}
+
+function counts(ids) {
+  let pass = 0, todo = 0;
+  for (const id of ids) (TESTS[id][1] === "todo" ? todo++ : pass++);
+  return [pass, todo];
+}
+
+let state = {target: TARGETS[0], branch: 0};
+
+function renderNav() {
+  const nav = document.getElementById("targets");
+  nav.innerHTML = LEVELS.map((level) =>
+    "<h2>" + level + "</h2><ul>" +
+    TARGETS.filter((t) => t.level === level).map((t) =>
+      '<li><a href="#' + slug(t.id) + '"' + (t === state.target ? ' aria-current="page"' : "") + ">" +
+      '<span class="tid">' + esc(t.id) + '</span><span class="tname">' + esc(t.title) + "</span></a></li>"
+    ).join("") + "</ul>"
+  ).join("");
+}
+
+function renderView() {
+  const t = state.target;
+  const [pass, todo] = counts(t.own);
+  const extras = (t.extra || []).map((x) =>
+    "<span>갈래 밖 선택 사례: Lark " + x[0] + " <code>" + esc(x[1]) + "</code> → " + x[2].map((id) => "<code>" + esc(id) + "</code>").join(", ") + " " +
+    (x[2].every((id) => TESTS[id][1] === "todo") ? "todo, 구현 안 함" : "작성") +
+    (x[3] ? ' · <a href="mini-react-phase1-decisions.html#' + x[3] + '">' + esc(DEC[x[3]][0]) + "</a>" : "") + "</span>"
+  ).join("");
+  const func = t.func ? '<span>기능 테스트 방법: jsdom으로 페이지 코드 직접 조작, 실제 브라우저는 Aside로 확인 · <a href="mini-react-phase1-decisions.html#dec-14">DEC-14</a></span>' : "";
+  const html =
+    '<section class="target" aria-labelledby="target-title">' +
+      '<p class="tid">' + esc(t.id) + " · " + esc(t.level) + " · " + esc(t.title) + "</p>" +
+      '<h2 id="target-title">' + esc(t.sig) + "</h2>" +
+      "<p>" + esc(t.resp) + "</p>" +
+      '<p class="io"><b>입력</b> ' + esc(t.io[0]) + " → <b>결과</b> " + esc(t.io[1]) + "</p>" +
+      '<div class="status"><span><code>' + esc(t.where) + '</code> · <span class="num">' + pass + " passed · " + todo + " todo</span></span>" + func + extras + "</div>" +
+    "</section>" +
+    '<ol class="tree" aria-label="검증 갈래">' +
+      t.branches.map((b, i) => {
+        const nl = b.lark.length, na = b.add.length, ns = (b.skip || []).length;
+        return '<li class="' + (i < state.branch ? "on" : i === state.branch ? "sel" : "") + '">' +
+          '<button type="button" class="branch" data-i="' + i + '" aria-pressed="' + (i === state.branch) + '" aria-controls="detail">' +
+          '<span class="bnum">' + pad(i + 1) + '</span><span class="bn">' + esc(b.n) + "</span>" +
+          '<span class="bc">기존 ' + nl + " · 추가 " + na + (ns ? ' · <span class="miss">미작성 ' + ns + "</span>" : "") + "</span>" +
+          '<span class="bp">' + esc(b.p) + "</span></button></li>";
+      }).join("") +
+    "</ol>" +
+    '<section class="detail" id="detail" aria-labelledby="detail-title">' + renderDetail(t, t.branches[state.branch], state.branch) + "</section>";
+  document.getElementById("view").innerHTML = html;
+}
+
+function renderDetail(t, b, i) {
+  const lark = b.lark.length
+    ? b.lark.map((r) =>
+        "<li><code>" + r[0] + "</code> <code>" + esc(r[1]) + "</code> → " +
+        r[2].map((id) => testLine(id, t)).join("") +
+        (r[3] ? '<span class="note">' + esc(r[3]) + "</span>" : "") + "</li>").join("")
+    : "";
+  const larkNote = b.larkNote ? '<li class="none">' + esc(b.larkNote) + "</li>" : "";
+  const add = b.add.map((a) => "<li>" + testLine(a[0], t, a[1], a[2]) + "</li>").join("");
+  const addNote = b.addNote ? '<li class="none">' + esc(b.addNote) + "</li>" : "";
+  const skip = (b.skip || []).map((s) =>
+    '<li class="skip">작성 안 함: ' + esc(s[0]) + (s[1] ? ' · <a href="mini-react-phase1-decisions.html#' + s[1] + '">' + esc(DEC[s[1]][0]) + "</a>" : "") + "</li>").join("");
+  const noAdd = !add && !addNote && !skip ? '<li class="none">추가 없음</li>' : "";
+  const dec = (b.dec || []).map((k) => "<li>" + decLine(k) + "</li>").join("");
+  const decNote = b.decNote ? "<li>" + (dec ? "" : "결정 필요 없음 · ") + esc(b.decNote) + "</li>" : "";
+  const noDec = !dec && !decNote ? '<li class="none">결정 필요 없음</li>' : "";
+  return "<h3 id=\"detail-title\">" + pad(i + 1) + " " + esc(b.n) + "</h3>" +
+    '<p class="prop"><b>검증 성질</b> ' + esc(b.p) + "</p>" +
+    '<div class="cols">' +
+      "<div><h4>기존 테스트 (Lark 행 → 코드)</h4><ul>" + lark + larkNote + "</ul></div>" +
+      '<div><h4 class="h-add">이번에 추가한 테스트</h4><ul>' + add + addNote + skip + noAdd + "</ul></div>" +
+      '<div><h4 class="h-dec">[결정 필요] → 어떻게 정했는지</h4><ul>' + dec + decNote + noDec + "</ul></div>" +
+    "</div>" +
+    '<p class="err"><b>잡으려는 오류</b> ' + esc(b.err) + "</p>";
+}
+
+function route() {
+  const [id, n] = decodeURIComponent(location.hash.slice(1)).split("/");
+  const target = TARGETS.find((t) => slug(t.id) === id) || TARGETS[0];
+  const branch = Math.min(Math.max((parseInt(n, 10) || 1) - 1, 0), target.branches.length - 1);
+  state = {target, branch};
+  document.title = target.id + " " + target.title + " · mini-react Phase 1 테스트 지도";
+  renderNav();
+  renderView();
+}
+
+document.getElementById("view").addEventListener("click", (event) => {
+  const button = event.target.closest("button.branch");
+  if (!button) return;
+  state.branch = Number(button.dataset.i);
+  const hash = "#" + slug(state.target.id) + "/" + (state.branch + 1);
+  try { history.replaceState(null, "", hash); } catch (_) { /* file:// may refuse; the view still updates */ }
+  renderView();
+  const again = document.querySelector('button.branch[data-i="' + state.branch + '"]');
+  if (again) again.focus();
+  const detail = document.getElementById("detail");
+  if (detail.getBoundingClientRect().top > window.innerHeight - 80) detail.scrollIntoView({block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+});
+
+window.addEventListener("hashchange", route);
+route();
+})();
+</script>
+</body>
+</html>

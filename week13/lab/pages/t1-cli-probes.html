@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSAPP 11장 대신 손으로 따라간 요청 하나</title>
+<link rel="stylesheet" href="https://benjohnbill.github.io/assets/site.css">
+<style>
+/* type and boxes follow DESIGN.md (reference: study/week07/debug-panic-exit.html) */
+html { font-size: 19px; }
+body { font-size: 1rem; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-family: var(--font-head); font-size: 1.95rem; line-height: 1.25; margin: 12px 0 4px; }
+h2 { font-family: var(--font-head); font-size: 1.56rem; line-height: 1.35; margin: 56px 0 10px; }
+h3 { font-family: var(--font-head); font-size: 1.25rem; line-height: 1.4; margin: 0 0 4px; }
+.sub { color: var(--ink-2); margin: 0 0 16px; }
+.lead { font-size: 1.1rem; line-height: 1.75; margin: 0 0 8px; }
+p { margin: 8px 0 0; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; line-height: 1.6; border: 1px solid var(--line); margin-top: 12px; }
+th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+.scroll { overflow-x: auto; }
+.flow td:first-child { font-family: var(--font-code); font-weight: 600; width: 2em; }
+pre.fig { border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; margin: 12px 0 0; font-size: 14px; line-height: 1.6; overflow-x: auto; }
+pre.fig .cm { color: var(--muted); }
+pre.fig .key { font-weight: 600; }
+/* probe cards: one outer line each; the command block is the one fill level inside */
+.probes { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
+.probe { border: 1px solid var(--line); border-radius: 4px; padding: 16px; }
+.probe .no { font-family: var(--font-code); font-weight: 400; margin-right: .5em; }
+.probe pre { background: var(--surface-2); border-radius: 4px; padding: 10px 12px; margin: 10px 0 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.probe pre .cm { color: var(--muted); }
+.probe dl { margin: 12px 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; line-height: 1.7; }
+.probe dt { font-weight: 600; }
+.probe dd { margin: 0; }
+@media (max-width: 620px) { .probe dl { grid-template-columns: 1fr; } .probe dd { margin-bottom: 6px; } }
+</style>
+</head>
+<body>
+<main class="wrap">
+<a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
+
+<h1>CSAPP 11장 대신 손으로 따라간 요청 하나</h1>
+<p class="sub">13주차 첫날, 책을 읽기 전에 CLI 도구로 직접 관찰 · DNS부터 시스템콜까지 다섯 프로브</p>
+
+<h2>1. 이렇게 시작한 이유</h2>
+<p class="lead">읽고 나서 만들기 대신 겪고 나서 만들기 → 관찰에서 생긴 질문을 팀 프로토타입으로</p>
+
+<p>웹 서버 주차의 출발점을 책 대신 명령으로 정함. curl, telnet, nc, strace로 요청 하나를 직접 따라가고, 다음 트랙부터는 작은 C 코드를 손으로 따라 침. 각 프로브의 끝은 힌트 없이 혼자 하는 변경 과제 하나.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>트랙</th><th>겪어 볼 것</th><th>상태</th></tr></thead>
+<tbody>
+<tr><td>T1 CLI</td><td>이름 → IP, HTTP의 모양, socket → bind → listen → accept</td><td>이 페이지</td></tr>
+<tr><td>T2 socket C</td><td>echo 서버 따라치기, 두 번째 클라이언트가 멈추는 이유</td><td>다음</td></tr>
+<tr><td>T3 TCP</td><td>SO_REUSEADDR, TIME_WAIT, handshake, SIGPIPE</td><td></td></tr>
+<tr><td>T4 HTTP</td><td>정적 GET, MIME, 404, keep-alive, 깨진 요청</td><td></td></tr>
+<tr><td>T5 concurrency</td><td>fork, pthread, epoll을 wrk로 비교</td><td></td></tr>
+<tr><td>T6 proxy</td><td>Reverse Proxy, 중계, C Forward Proxy</td><td></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>2. 요청 하나의 흐름</h2>
+<p class="lead">다섯 단계 · 단계마다 본 프로브와 출력의 자리가 다름</p>
+
+<div class="scroll">
+<table class="flow">
+<thead><tr><th></th><th>오가는 것</th><th>누가 → 누구에게</th><th>본 곳</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>IP 주소는? → IP 목록</td><td>curl과 DNS 서버</td><td>01 · curl의 <code>*</code> 줄</td></tr>
+<tr><td>2</td><td>TCP 연결</td><td>내 커널과 서버 커널</td><td>05 · connect, accept</td></tr>
+<tr><td>3</td><td><code>GET / HTTP/1.1</code>, 헤더, 빈 줄</td><td>curl → 서버 프로그램</td><td>02 03 · <code>&gt;</code> 줄</td></tr>
+<tr><td>4</td><td><code>HTTP/1.1 200 OK</code>, 헤더, 빈 줄</td><td>서버 프로그램 → curl</td><td>02 03 · <code>&lt;</code> 줄</td></tr>
+<tr><td>5</td><td>body (HTML)</td><td>서버 프로그램 → curl</td><td>04 · 브라우저가 받는 대로 그림</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>웹 서버를 만든다 = 3을 읽고 4와 5를 쓰는 일 · 1은 클라이언트, 2는 커널이 처리 (서버는 listen과 accept로 준비만).</p>
+
+<h2>3. 프로브 다섯</h2>
+<p class="lead">명령 · 하는 일 · 본 것</p>
+
+<div class="probes">
+
+<section class="probe">
+<h3><span class="no">01</span>DNS: 이름 → IP</h3>
+<pre>ip -br addr                    <span class="cm"># 내 PC의 인터페이스와 IP</span>
+getent ahosts example.com      <span class="cm"># /etc/hosts 다음 DNS까지, OS 방식으로</span>
+dig A example.com +short       <span class="cm"># DNS 서버에 직접: IPv4</span>
+dig AAAA example.com +short    <span class="cm"># IPv6</span>
+cat /etc/hosts /etc/resolv.conf</pre>
+<dl>
+<dt>하는 일</dt><dd>이름이 IP로 바뀌는 곳 확인. /etc/hosts가 먼저, 없으면 resolv.conf의 DNS 서버</dd>
+<dt>본 것</dt><dd>example.com 하나 → IP 넷 · localhost는 DNS 없이 /etc/hosts에서 · 포트는 DNS가 아니라 URL이 정함</dd>
+<dt>더 보기</dt><dd><a href="https://benjohnbill.github.io/study/week13/address-map.html">내 PC의 주소 지도</a> · 인터페이스, 이름, Host, NAT</dd>
+</dl>
+</section>
+
+<section class="probe">
+<h3><span class="no">02</span>curl: HTTP의 모양</h3>
+<pre>curl -sv http://example.com/ -o /dev/null 2&gt;&amp;1 | bat -l http
+curl -sv http://example.com/nothing -o /dev/null 2&gt;&amp;1 | bat -l http
+curl -sv http://localhost/ -o /dev/null 2&gt;&amp;1 | bat -l http</pre>
+<dl>
+<dt>하는 일</dt><dd>-v = 연결 과정과 헤더를 stderr로 · -o /dev/null = body 버림 · 2&gt;&amp;1 = 둘을 합쳐 bat으로</dd>
+<dt>본 것</dt><dd><code>*</code> curl의 기록 · <code>&gt;</code> 보낸 것 · <code>&lt;</code> 받은 것 · <code>{</code> 받은 body 크기. 내 쪽 포트는 실행마다 바뀜(커널이 고른 임시 포트) · /nothing = 연결은 같고 상태 줄만 404 → 판단은 서버 프로그램</dd>
+</dl>
+</section>
+
+<section class="probe">
+<h3><span class="no">03</span>telnet: HTTP를 손으로</h3>
+<pre>telnet localhost 80
+<span class="cm"># 연결되면 직접 치고 Enter 두 번</span>
+GET / HTTP/1.1
+Host: localhost
+
+nc localhost 80                <span class="cm"># 줄 끝 \n만 (nc -C면 \r\n)</span></pre>
+<dl>
+<dt>하는 일</dt><dd>curl이 대신 쳐 주던 요청 텍스트를 직접 입력. telnet은 HTTP를 모름 → 바이트를 그대로 보여 줌</dd>
+<dt>본 것</dt><dd>빈 줄 전까지 서버는 다음 헤더를 기다림 = 요청의 끝은 빈 줄 · 1.0은 응답 후 연결 닫힘, 1.1은 유지(keep-alive)</dd>
+</dl>
+<div class="scroll">
+<table>
+<thead><tr><th>바꾼 요청</th><th>응답 · 연결</th><th>판단 시점</th></tr></thead>
+<tbody>
+<tr><td>요청 줄 앞 공백, <code>HTTP1.1</code></td><td>400 · close</td><td>요청 줄을 읽자마자 (문법)</td></tr>
+<tr><td>HTTP/1.1에서 Host 없음</td><td>400 · close</td><td>헤더를 다 읽은 뒤</td></tr>
+<tr><td>메서드 <code>GOT</code></td><td>405 · keep-alive</td><td>문법 통과 후 (의미)</td></tr>
+<tr><td>줄 끝 <code>\n</code>만</td><td>200 · keep-alive</td><td>받아 줌: 읽을 때 너그럽게, 쓸 때 엄격하게</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section class="probe">
+<h3><span class="no">04</span>nc: 내가 서버</h3>
+<pre>nc -l 8080
+<span class="cm"># Windows 브라우저에서 http://localhost:8080/hello → 요청이 찍히면 직접 응답</span>
+HTTP/1.0 200 OK
+Content-Type: text/html
+
+&lt;h1&gt;hello from nc&lt;/h1&gt;</pre>
+<dl>
+<dt>하는 일</dt><dd>역할 바꾸기: 브라우저가 클라이언트, 내가 서버</dd>
+<dt>본 것</dt><dd>브라우저 요청 = curl보다 헤더가 훨씬 많음(언어, 압축, prefetch) · 친 줄마다 바로 렌더링 · Content-Length 없으면 연결이 끊길 때까지 로딩 · <code>Content-Length: 5</code>면 5바이트만 → <code>&lt;h1&gt;H</code>만 그림 · 경로는 nc가 안 읽음 → 어느 경로든 같은 화면 · nc -l은 한 번만 받음 → 새로고침 = 연결 거부</dd>
+</dl>
+</section>
+
+<section class="probe">
+<h3><span class="no">05</span>strace: 서버가 커널에 부탁하는 순서</h3>
+<pre>strace -f -e trace=network nc -l 8080        <span class="cm"># 터미널 1</span>
+nc localhost 8080                            <span class="cm"># 터미널 2</span>
+ss -tanp 'sport = :8080'                     <span class="cm"># 터미널 3</span>
+strace -f -e trace=network curl -s http://example.com/ -o /dev/null</pre>
+<dl>
+<dt>하는 일</dt><dd>프로그램이 커널에 들어간 네트워크 시스템콜만 순서대로 보기</dd>
+<dt>본 것</dt><dd>socket → bind → listen 다음 accept4에서 멈춤 · listen 소켓 fd 3, 연결 소켓 fd 4 · curl은 DNS(:53) → connect(:80) → 요청 텍스트 sendto</dd>
+<dt>더 보기</dt><dd><a href="https://benjohnbill.github.io/study/week13/strace-syscalls.html">서버가 커널에 부탁하는 순서</a> · 실제 출력과 fd 표</dd>
+</dl>
+</section>
+
+</div>
+
+<h2>4. 다음 트랙으로 미룬 것</h2>
+<div class="scroll">
+<table>
+<thead><tr><th>질문</th><th>갈 곳</th></tr></thead>
+<tbody>
+<tr><td>디스크도 안 쓰는데 소켓에 read와 write를 쓰는 이유</td><td>T2 · 소켓도 fd</td></tr>
+<tr><td>커널이 들어온 패킷을 어느 소켓에 줄지 고르는 방법</td><td>T2~T3 · 주소 네 개</td></tr>
+<tr><td>너그러운 파싱의 한계 (request smuggling)</td><td>T6 · proxy</td></tr>
+</tbody>
+</table>
+</div>
+
+</main>
+</body>
+</html>

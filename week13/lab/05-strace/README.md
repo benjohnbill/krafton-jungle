@@ -20,8 +20,10 @@ nc localhost 8080
 그다음 클라이언트 쪽을 본다.
 
 ```bash
-strace -e trace=network curl -s http://example.com/ -o /dev/null 2>&1 | bat -l log
+strace -f -e trace=network curl -s http://example.com/ -o /dev/null 2>&1 | bat -l log
 ```
+
+`-f`가 있어야 DNS 조회가 보인다. curl은 DNS 조회를 별도 스레드에서 한다.
 
 서버 쪽 `strace`(터미널 1)와 `nc`는 직접 입력하거나 스스로 끝나지 않으니 `bat`에 보내지 않는다.
 

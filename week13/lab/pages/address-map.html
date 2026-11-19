@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>내 PC의 주소 지도</title>
+<link rel="stylesheet" href="https://benjohnbill.github.io/assets/site.css">
+<style>
+/* type and boxes follow DESIGN.md (reference: study/week07/debug-panic-exit.html) */
+html { font-size: 19px; }
+body { font-size: 1rem; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-family: var(--font-head); font-size: 1.95rem; line-height: 1.25; margin: 12px 0 4px; }
+h2 { font-family: var(--font-head); font-size: 1.56rem; line-height: 1.35; margin: 56px 0 10px; }
+h3 { font-family: var(--font-head); font-size: 1.25rem; line-height: 1.4; margin: 28px 0 8px; }
+.sub { color: var(--ink-2); margin: 0 0 16px; }
+.lead { font-size: 1.1rem; line-height: 1.75; margin: 0 0 8px; }
+p { margin: 8px 0 0; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; line-height: 1.6; border: 1px solid var(--line); margin-top: 12px; }
+th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+td code { overflow-wrap: anywhere; }
+.scroll { overflow-x: auto; }
+/* figures are drawn in monospace text: the columns carry the meaning */
+pre.fig { border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; margin: 12px 0 0; font-size: 14px; line-height: 1.6; overflow-x: auto; }
+pre.fig .cm { color: var(--muted); }
+pre.fig .key { font-weight: 600; }
+pre.fig .pub { background: var(--s2-soft); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.two pre.fig { margin-top: 4px; }
+.two h3 { margin-top: 16px; }
+@media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+details.fold { border: 1px solid var(--line); border-radius: 4px; margin: 16px 0 0; }
+details.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: .6em; padding: 12px 16px; font-weight: 600; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: ""; flex: none; width: .5em; height: .5em; border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); transform: rotate(-45deg); transition: transform .15s; align-self: center; }
+details.fold[open] > summary::before { transform: rotate(45deg); }
+details.fold > summary::after { content: "펼치기"; margin-left: auto; flex: none; font: 400 .75rem var(--font-code); color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; }
+details.fold[open] > summary::after { content: "접기"; }
+details.fold > summary:hover { background: var(--surface-2); }
+details.fold > summary:focus-visible { outline: 2px solid var(--s3); outline-offset: -2px; }
+details.fold[open] > summary { border-bottom: 1px solid var(--line); }
+details.fold > .in { padding: 4px 16px 16px; }
+details.fold pre { background: var(--surface-2); border-radius: 4px; padding: 12px 14px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; margin: 12px 0 0; }
+details.fold .cm { color: var(--muted); }
+</style>
+</head>
+<body>
+<main class="wrap">
+<a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
+
+<h1>IP는 컴퓨터 번호도, 사이트 번호도 아님</h1>
+<p class="sub">내 PC(WSL)에서 조회한 실제 값으로 그린 주소 지도 · IP는 인터페이스에, 이름은 바깥 명부에, 사이트는 Host 줄에</p>
+
+<h2>1. 컴퓨터 → 인터페이스 → IP</h2>
+<p class="lead">여기까지는 트리 · IP는 컴퓨터가 아니라 인터페이스(연결 지점)에 붙음</p>
+
+<pre class="fig"><span class="key">내 PC (WSL)</span>
+├─ <span class="key">lo</span>  루프백, 밖으로 안 나감
+│   ├─ 127.0.0.1/8
+│   ├─ 10.255.255.254
+│   └─ ::1
+├─ <span class="key">eth0</span>  WSL 가상 네트워크
+│   ├─ 172.25.165.29
+│   └─ fe80::…
+└─ <span class="key">tailscale0</span>  Tailscale VPN
+    ├─ 100.x.x.x
+    └─ fd7a:…</pre>
+
+<p>인터페이스 하나에 IP 여럿 · 컴퓨터 하나에 인터페이스 여럿 · <code>/8</code> = 127.x.x.x 전체가 lo · <code>fe80::</code> = 같은 링크 안에서만 쓰는 IPv6.</p>
+
+<h2>2. 이름 → IP</h2>
+<p class="lead">트리가 아니라 명부 · 이름은 컴퓨터 안이 아니라 /etc/hosts와 DNS에 적힘</p>
+
+<table>
+<thead><tr><th>명부</th><th>이름</th><th>IP</th></tr></thead>
+<tbody>
+<tr><td>/etc/hosts</td><td><code>localhost</code></td><td><code>127.0.0.1</code></td></tr>
+<tr><td>/etc/hosts</td><td>PC 이름</td><td><code>127.0.1.1</code> (이것도 lo)</td></tr>
+<tr><td>DNS</td><td><code>example.com</code></td><td><code>172.66.147.243</code> · <code>104.20.23.154</code> · IPv6 둘</td></tr>
+</tbody>
+</table>
+
+<p>이름 하나 → IP 여럿(example.com) · IP 하나 → 이름 여럿도 가능 → 그물. DNS에 묻는 것은 IP뿐, 포트는 URL이 정함.</p>
+
+<h2>3. 문은 여럿, nginx는 하나</h2>
+<p class="lead">nginx가 0.0.0.0:80에서 listen → 모든 인터페이스의 모든 IPv4 주소로 같은 nginx에 도착</p>
+
+<pre class="fig">127.0.0.1:80       <span class="cm">lo</span>
+172.25.165.29:80   <span class="cm">eth0</span>
+100.x.x.x:80       <span class="cm">tailscale0</span>
+       │
+       ▼
+<span class="key">nginx 프로세스 하나</span>
+listen 0.0.0.0:80 · [::]:80</pre>
+
+<table>
+<thead><tr><th>보낸 요청</th><th>도착한 IP</th><th>결과</th></tr></thead>
+<tbody>
+<tr><td><code>curl http://127.0.0.1/</code></td><td>127.0.0.1</td><td>200</td></tr>
+<tr><td><code>curl http://172.25.165.29/</code></td><td>172.25.165.29</td><td>200</td></tr>
+<tr><td><code>curl http://100.x.x.x/</code></td><td>100.x.x.x</td><td>200</td></tr>
+</tbody>
+</table>
+
+<h2>4. IP는 어느 문, Host는 어느 사이트</h2>
+<p class="lead">IP는 연결할 때 이미 씀 · 사이트 이름은 요청 텍스트 안의 Host 줄로 따로</p>
+
+<div class="two">
+<div>
+<h3>TCP 연결</h3>
+<pre class="fig">connect(<span class="key">127.0.0.1</span>:80)
+<span class="cm"># 어느 컴퓨터의 어느 문</span></pre>
+</div>
+<div>
+<h3>HTTP 요청 텍스트</h3>
+<pre class="fig">GET / HTTP/1.1
+Host: <span class="key">blog.test</span>
+<span class="cm"># 그 문 안의 어느 사이트</span></pre>
+</div>
+</div>
+
+<table>
+<thead><tr><th>보낸 요청</th><th>Host 줄</th><th>결과</th></tr></thead>
+<tbody>
+<tr><td><code>curl http://127.0.0.1/</code></td><td><code>127.0.0.1</code></td><td>200</td></tr>
+<tr><td><code>curl -H 'Host: blog.test' http://127.0.0.1/</code></td><td><code>blog.test</code></td><td>200</td></tr>
+</tbody>
+</table>
+
+<p>지금 설정은 <code>server_name _;</code> 하나 = 어떤 Host든 같은 사이트 → blog.test도 200. Host별 server 블록을 더 두면 127.0.0.1 하나에 사이트 여럿. HTTP/1.1에서 Host 줄이 빠지면 400.</p>
+
+<h2>5. 공인 IP와 NAT</h2>
+<p class="lead">내 IP는 전부 사설 · 원인은 도메인 없음이 아니라 NAT 뒤 사설망</p>
+
+<pre class="fig">172.25.165.29    WSL eth0
+  │ <span class="cm">Windows가 주소를 바꿈 (NAT)</span>
+172.21.69.42     Windows Wi-Fi
+  │ <span class="cm">게이트웨이가 다시 바꿈 (NAT)</span>
+<span class="pub">공인 IP 하나</span>     망 전체가 나눠 씀
+  │ <span class="cm">인터넷</span>
+<span class="pub">172.66.147.243</span>   example.com</pre>
+
+<div class="scroll">
+<table>
+<thead><tr><th></th><th>내 PC의 nginx</th><th>example.com 서버</th></tr></thead>
+<tbody>
+<tr><td>listen하는 IP</td><td>사설 IP만</td><td>공인 IP</td></tr>
+<tr><td>연결할 수 있는 쪽</td><td>내 PC, Windows, Tailscale 기기</td><td>인터넷의 누구나</td></tr>
+<tr><td>밖에서 먼저 연결</td><td>NAT가 버림 (기록에 없는 연결)</td><td>바로 도착</td></tr>
+<tr><td>도메인</td><td>/etc/hosts 이름만</td><td>DNS에 등록</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>게이트웨이 = 172.21.68.1 (공유기 또는 학교망). 사설 범위 = 10.x · 172.16 ~ 172.31 · 192.168.x → 172.25와 172.21은 사설, 172.66은 공인. 100.64 ~ 100.127 = Tailscale이 쓰는 공유 범위.</p>
+
+<h2>6. NAT와 프록시</h2>
+<p class="lead">NAT = 패킷 겉봉의 주소만 바꿈 · 프록시 = 요청을 받아 읽고, 새 연결로 다시 보냄</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th></th><th>NAT (공유기)</th><th>프록시</th></tr></thead>
+<tbody>
+<tr><td>TCP 연결</td><td>1개 (내 PC부터 서버까지)</td><td>2개 (클라이언트와 프록시, 프록시와 서버)</td></tr>
+<tr><td>보는 것</td><td>IP와 포트</td><td>HTTP 요청 줄과 헤더</td></tr>
+<tr><td>클라이언트가 아는지</td><td>모름</td><td>앎, 프록시 주소로 연결</td></tr>
+<tr><td>계층</td><td>네트워크·전송 (커널, 장비)</td><td>애플리케이션 (사용자 프로그램)</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>T6에서 만들 proxy = 오른쪽 열. accept → read → connect → write.</p>
+
+<details class="fold">
+<summary><span>조회에 쓴 명령</span></summary>
+<div class="in">
+<pre><span class="cm"># 인터페이스와 IP</span>
+ip -br addr
+<span class="cm"># 이름 → IP 명부</span>
+cat /etc/hosts
+grep nameserver /etc/resolv.conf
+getent ahosts example.com
+<span class="cm"># 누가 80에서 listen하나, 설정의 server_name</span>
+ss -tlnH '( sport = :80 )'
+grep -E 'listen|server_name' /etc/nginx/sites-enabled/default
+<span class="cm"># 다른 IP, 다른 Host로 같은 nginx에</span>
+curl -s -o /dev/null -w '%{remote_ip} %{http_code}\n' http://172.25.165.29/
+curl -s -o /dev/null -w '%{remote_ip} %{http_code}\n' -H 'Host: blog.test' http://127.0.0.1/
+<span class="cm"># Windows 쪽 주소와 게이트웨이</span>
+ip route
+ipconfig.exe</pre>
+</div>
+</details>
+
+</main>
+</body>
+</html>

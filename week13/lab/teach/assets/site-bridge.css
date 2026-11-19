@@ -1,0 +1,35 @@
+:root {
+  /* the lesson scripts use these names; they point at site tokens */
+  --rule: var(--line);
+  --paper: var(--bg);
+  --hi: var(--s4-soft);
+  --mono: var(--font-code);
+  --read: var(--s2);
+  --write: var(--s1);
+  --read-soft: var(--s2-soft);
+  --write-soft: var(--s1-soft);
+}
+.wrap { max-width: 920px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; display: flex; flex-direction: column; }
+.wrap > * { min-width: 0; }
+.home { margin-bottom: 1rem; }
+h1 { font-family: var(--font-head); font-size: 1.9rem; font-weight: 700; margin: 0 0 .3rem; line-height: 1.35; }
+h2 { font-family: var(--font-head); font-size: 1.25rem; font-weight: 700; margin: 2.4rem 0 .6rem; border-bottom: 1px solid var(--line); padding-bottom: .2rem; }
+.sub { color: var(--muted); margin: 0 0 1.5rem; }
+pre { background: var(--surface-2); padding: .9rem 1rem; overflow-x: auto; border-radius: 3px; line-height: 1.5; font-size: 14px; }
+pre code { background: none; padding: 0; }
+.tag { display: inline-block; font: 600 .75rem var(--font-code); padding: .05rem .45rem; border-radius: 3px; border: 1px solid var(--line); }
+.tag.read { color: var(--s2); background: var(--s2-soft); border-color: var(--s2-rail); }
+.tag.write { color: var(--s1); background: var(--s1-soft); border-color: var(--s1-rail); }
+.tag.render { color: var(--muted); background: var(--surface-2); }
+.callout { border: 1px solid var(--s2-rail); border-radius: 3px; padding: .5rem 1rem; margin: 1rem 0; }
+.callout.write { border-color: var(--s1-rail); }
+table { border-collapse: collapse; width: 100%; margin: .8rem 0; font-size: .95rem; }
+th, td { border-bottom: 1px solid var(--line); padding: .35rem .5rem; text-align: left; vertical-align: top; }
+th { font-weight: 600; }
+.ask { margin-top: 2.5rem; padding: .8rem 1rem; border: 1px dashed var(--line); color: var(--muted); }
+nav.links { margin-top: 1.5rem; font-size: .95rem; }
+@media print { .wrap { max-width: none; padding: 0; } .stepper .controls, .quiz button { display: none; } }
+/* phones: table cells may break long code names; a scrolling pre gets a cue line before it */
+th, td { overflow-wrap: anywhere; }
+.scroll-hint { font-size: .85rem; margin: .6rem 0 -.4rem; }
+@media (min-width: 640px) { .scroll-hint { display: none; } }

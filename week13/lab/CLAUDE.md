@@ -1,5 +1,7 @@
 Mode: transcription, light. This mode applies inside `week13/lab/` only. It replaces the AI-together mode of `../CLAUDE.md` in this folder. The team repository `../mini-webserver/` keeps AI-together.
 
+`teach/` is the `/teach` workspace for the request-flow lessons (L1 to L4). The `/teach` skill rules apply there, not transcription mode. Each lesson sits right before the track it predicts.
+
 # CLAUDE.md — week13 lab (hands-on probes)
 
 He does not read CSAPP chapter 11. He builds base knowledge for the web server week by direct experience: CLI tools first, then small C programs that he types. The questions from the lab feed the team prototype. Settled by grilling, 2026-11-19 (user said).
@@ -9,7 +11,8 @@ He does not read CSAPP chapter 11. He builds base knowledge for the web server w
 Source: `../../docs/transcription-mode.md` Part 1, with these parts only:
 
 - The agent writes the probe. He types C code one hunk at a time and asks questions. A short function goes whole.
-- Each probe ends with a change task that he does alone, with no hint. A prediction before the run is optional, one line.
+- Each probe ends with a change task that he does alone, with no hint.
+- If he pastes a lesson copy block (from `teach/`), write its predictions and wrong quiz picks into the probe README, section 볼 것. Before the run, ask him each one. After the run, compare with the output. Do not give the answer first. With no block, a prediction before the run is optional, one line.
 - He writes code comments, and only a comment that meets both conditions in `transcription-mode.md` § The sheet: the code alone does not show it, and the reason is not obvious.
 - Breaks: when he asks to break something, make the broken version, and he follows its flow.
 - No stage sheet and no D or I rows. Open questions go to `QUESTIONS.md`, one line each, with the probe number.

@@ -3,13 +3,20 @@
 ## 실행할 명령
 
 ```bash
+ip -br addr
 getent hosts example.com
-dig example.com
+getent ahosts example.com
+dig example.com 2>&1 | bat -l log
+dig AAAA example.com +short
+dig A example.com +short
 dig +short google.com
-ping -c 3 example.com
-cat /etc/hosts
-cat /etc/resolv.conf
+dig google.com | grep SERVER
+ping -c 3 example.com 2>&1 | bat -l log
+bat /etc/hosts
+bat /etc/resolv.conf
 ```
+
+`ip -br addr`은 내 컴퓨터의 번호, 나머지는 상대 서버의 번호를 본다.
 
 ## 볼 것
 

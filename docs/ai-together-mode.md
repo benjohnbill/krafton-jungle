@@ -90,6 +90,7 @@ concrete to abstract. A week file names the study plan of each project.
 ### Observations
 
 - 2026-11-07, first `mini-react` run, steps 0 to 4a (agent inferred). Wrong predictions or wrong reasons: five (`getAttribute` after typing, `defaultValue`, the empty notice on add, the count of `createDom` calls, missing storage as the cause of the lost cursor). He often asked before he predicted, and asked many mechanism questions, more than the block flow expects. He stalled once, when a block held `vdom.ts` and `main.ts` together; narrowing to one object fixed it. Each React explanation landed better after he compared it with his vanilla code. Next-morning recall: not recorded yet. One run; not a rule.
+- 2026-11-14, `mini-redis` M2 code study (agent inferred from user said "너무 재미없는데?"). A "decision card" method (answer Why, Instead, and Leans on before reading the spec; code shown without comments) stalled on the first card: one abstract question needed two re-framings and still felt dull. He asked to switch to typing code and asking questions. One run; not a rule.
 
 ## From the other modes
 

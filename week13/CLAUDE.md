@@ -32,6 +32,10 @@ Verify: TBD. He uses personal checks on `CJG`; none go to `main` yet. The course
 
 Board: 8
 
+## Lab
+
+`lab/` holds his hands-on probes in place of reading CSAPP chapter 11. It has its own `CLAUDE.md` and its own mode (transcription, light). Settled 2026-11-19.
+
 ## Do not touch
 
 No upstream or scaffolding exists. The agent changes the ruleset and team-tracked files only when he asks.

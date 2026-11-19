@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>syscall과 네 칸 한눈에 보기</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/flow-lanes.js"></script>
+</head>
+<body>
+
+<h1>syscall과 네 칸 한눈에 보기</h1>
+<p class="sub">reference · lesson이 끝날 때마다 줄이 늘어난다 · 지금: L1</p>
+
+<flow-lanes active="c-app c-kern s-kern s-app"></flow-lanes>
+
+<h2>연결 준비 (L1)</h2>
+<table>
+  <tr><th>syscall</th><th>부르는 칸</th><th>커널이 하는 일</th><th>돌려주는 것</th><th>잠드는가</th></tr>
+  <tr><td><code>socket</code></td><td>양쪽 앱</td><td>소켓을 만든다</td><td>새 fd</td><td>아니요</td></tr>
+  <tr><td><code>bind</code></td><td>서버 앱</td><td>소켓에 IP와 포트를 붙인다</td><td>0 또는 -1</td><td>아니요</td></tr>
+  <tr><td><code>listen</code></td><td>서버 앱</td><td>이후 handshake를 혼자 하고, 끝난 연결을 accept 대기열에 쌓는다</td><td>0 또는 -1</td><td>아니요</td></tr>
+  <tr><td><code>connect</code></td><td>클라 앱</td><td>SYN을 보내고 handshake를 끝낸다</td><td>0 또는 -1</td><td>handshake가 끝날 때까지</td></tr>
+  <tr><td><code>accept</code></td><td>서버 앱</td><td>대기열 맨 앞 연결을 꺼내 새 소켓으로</td><td>새 fd</td><td>대기열이 빌 때</td></tr>
+</table>
+<p>출처: <a href="https://man7.org/linux/man-pages/man2/listen.2.html">listen(2)</a>, <a href="https://man7.org/linux/man-pages/man2/accept.2.html">accept(2)</a>, <a href="https://man7.org/linux/man-pages/man2/socket.2.html">socket(2)</a>.</p>
+
+<h2><code>ss</code>의 두 열</h2>
+<table>
+  <tr><th>소켓</th><th>Recv-Q</th><th>Send-Q</th></tr>
+  <tr><td>LISTEN</td><td>accept 대기열에 쌓인 연결 수</td><td>backlog</td></tr>
+  <tr><td>ESTAB</td><td colspan="2">L2에서 채운다</td></tr>
+</table>
+<p>출처: 커널 <a href="https://github.com/torvalds/linux/blob/master/net/ipv4/tcp_diag.c"><code>tcp_diag.c</code></a>. 이 PC(WSL)에서 backlog 2에 연결 3개가 대기열에 들어갔다 (2026-11-20).</p>
+
+<h2>용어</h2>
+<table>
+  <tr><th>말</th><th>뜻</th></tr>
+  <tr><td>fd</td><td>프로세스가 커널 안 물건(파일, 소켓)을 가리키는 번호. 프로세스마다 0부터 따로 센다</td></tr>
+  <tr><td>listen 소켓</td><td><code>listen</code>을 부른 소켓. 새 연결만 받는다 (<code>listen_fd</code>)</td></tr>
+  <tr><td>연결 소켓</td><td><code>accept</code>가 손님마다 만든 소켓. 대화는 여기로 (<code>conn_fd</code>)</td></tr>
+  <tr><td>accept 대기열</td><td>handshake가 끝났지만 아직 <code>accept</code>로 꺼내지 않은 연결의 줄</td></tr>
+  <tr><td>backlog</td><td><code>listen</code>의 둘째 인자. accept 대기열의 길이 상한</td></tr>
+</table>
+
+<nav class="links">레슨: <a href="../lessons/0001-connection-setup-and-fd.html">L1 연결 준비와 fd</a></nav>
+</body>
+</html>

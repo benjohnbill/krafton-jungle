@@ -16,7 +16,11 @@ body {
   background: var(--paper);
   color: var(--ink);
   font: 17px/1.7 "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
+details { margin: .6rem 0 1rem; }
+summary { cursor: pointer; color: var(--read); }
 h1 { font-size: 1.9rem; font-weight: 600; margin: 0 0 .3rem; }
 h2 { font-size: 1.25rem; font-weight: 600; margin: 2.4rem 0 .6rem; border-bottom: 1px solid var(--rule); padding-bottom: .2rem; }
 .sub { color: var(--muted); margin: 0 0 1.5rem; }

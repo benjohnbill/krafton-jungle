@@ -43,3 +43,6 @@
 [submodule "week11-12/mini-dbms"]
 	path = week11-12/mini-dbms
 	url = git@github.com:benjohnbill/mini-dbms.git
+[submodule "week13/mini-webserver"]
+	path = week13/mini-webserver
+	url = git@github.com:benjohnbill/mini-webserver.git

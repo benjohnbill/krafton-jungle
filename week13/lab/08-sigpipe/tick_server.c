@@ -76,6 +76,7 @@ static struct sockaddr_in create_socket_addr(void)
 int main(void)
 
 {
+    signal(SIGPIPE, SIG_IGN);
     int listen_fd = open_listen_fd();
 
     for (;;) {

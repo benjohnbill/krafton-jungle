@@ -12,8 +12,8 @@
 // blank  lane names hidden, for the recall drill at the start of a lesson
 // <step>   one arrow, in time order; from/to = c-app c-kern s-kern s-app dns
 const LANES = [
-  ["c-app", "클라 앱", "app"],
-  ["c-kern", "클라 커널", "kernel"],
+  ["c-app", "client 앱", "app"],
+  ["c-kern", "client 커널", "kernel"],
   ["s-kern", "서버 커널", "kernel"],
   ["s-app", "서버 앱", "app"],
 ];
@@ -50,7 +50,7 @@ class FlowLanes extends HTMLElement {
       .join("");
 
     const note = loopback
-      ? `<p class="note">점선 = localhost(lo)라서 두 커널 칸이 같은 커널 하나예요.</p>`
+      ? `<p class="note">점선 = localhost(lo)라서 두 커널 칸이 같은 커널 하나다.</p>`
       : "";
 
     this.innerHTML =

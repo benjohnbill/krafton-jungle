@@ -17,8 +17,12 @@ SITE_CSS = '<link rel="stylesheet" href="https://benjohnbill.github.io/assets/si
 
 # source file (relative to TEACH) -> published slug
 PAGES = {
-    # "lessons/0001-<name>.html": "<site-slug>.html",
+    "lessons/0001-connection-setup-and-fd.html": "l1-connection-setup.html",
+    "lessons/0002-socket-lookup-and-receive-buffer.html": "l2-receive-buffer.html",
+    "lessons/0003-close-and-failure.html": "l3-close-and-failure.html",
+    "reference/syscall-lanes.html": "syscall-lanes.html",
 }
+SITE_WEEK = "https://benjohnbill.github.io/study/week13/"
 
 
 def rewrite_links(html: str) -> str:
@@ -27,6 +31,8 @@ def rewrite_links(html: str) -> str:
         folder = Path(source).parent.name
         html = html.replace(f'href="../{folder}/{name}"', f'href="{slug}"')
         html = html.replace(f'href="{name}"', f'href="{slug}"')
+    # lab notes (week13/lab/pages/) are copied to the site under the same name
+    html = html.replace('href="../../pages/', f'href="{SITE_WEEK}')
     return html
 
 

@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L3 close와 실패: 끊는 쪽, 남는 쪽, 죽는 쪽</title>
+<link rel="stylesheet" href="https://benjohnbill.github.io/assets/site.css">
+<style>
+:root {
+  /* the lesson scripts use these names; they point at site tokens */
+  --rule: var(--line);
+  --paper: var(--bg);
+  --hi: var(--s4-soft);
+  --mono: var(--font-code);
+  --read: var(--s2);
+  --write: var(--s1);
+  --read-soft: var(--s2-soft);
+  --write-soft: var(--s1-soft);
+}
+.wrap { max-width: 920px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; display: flex; flex-direction: column; }
+.wrap > * { min-width: 0; }
+.home { margin-bottom: 1rem; }
+h1 { font-family: var(--font-head); font-size: 1.9rem; font-weight: 700; margin: 0 0 .3rem; line-height: 1.35; }
+h2 { font-family: var(--font-head); font-size: 1.25rem; font-weight: 700; margin: 2.4rem 0 .6rem; border-bottom: 1px solid var(--line); padding-bottom: .2rem; }
+.sub { color: var(--muted); margin: 0 0 1.5rem; }
+pre { background: var(--surface-2); padding: .9rem 1rem; overflow-x: auto; border-radius: 3px; line-height: 1.5; font-size: 14px; }
+pre code { background: none; padding: 0; }
+.tag { display: inline-block; font: 600 .75rem var(--font-code); padding: .05rem .45rem; border-radius: 3px; border: 1px solid var(--line); }
+.tag.read { color: var(--s2); background: var(--s2-soft); border-color: var(--s2-rail); }
+.tag.write { color: var(--s1); background: var(--s1-soft); border-color: var(--s1-rail); }
+.tag.render { color: var(--muted); background: var(--surface-2); }
+.callout { border: 1px solid var(--s2-rail); border-radius: 3px; padding: .5rem 1rem; margin: 1rem 0; }
+.callout.write { border-color: var(--s1-rail); }
+table { border-collapse: collapse; width: 100%; margin: .8rem 0; font-size: .95rem; }
+th, td { border-bottom: 1px solid var(--line); padding: .35rem .5rem; text-align: left; vertical-align: top; }
+th { font-weight: 600; }
+.ask { margin-top: 2.5rem; padding: .8rem 1rem; border: 1px dashed var(--line); color: var(--muted); }
+nav.links { margin-top: 1.5rem; font-size: .95rem; }
+@media print { .wrap { max-width: none; padding: 0; } .stepper .controls, .quiz button { display: none; } }
+/* phones: table cells may break long code names; a scrolling pre gets a cue line before it */
+th, td { overflow-wrap: anywhere; }
+.scroll-hint { font-size: .85rem; margin: .6rem 0 -.4rem; }
+@media (min-width: 640px) { .scroll-hint { display: none; } }
+/* DESIGN.md "Spacing and numbered items": air between blocks */
+p { margin: 14px 0 0; }
+h2 { margin: 64px 0 14px; }
+.sub { margin: 4px 0 16px; }
+.callout { padding: 18px 22px; margin: 20px 0; }
+.callout + p, flow-lanes + p, table + p { margin-top: 16px; }
+th, td { padding: 10px 12px; }
+nav.links { line-height: 2; }
+</style>
+<script>
+// The four lanes of one request: client app, client kernel, server kernel,
+// server app. Every lesson uses this element, so all lessons draw the same
+// picture.
+//
+// <flow-lanes active="c-app c-kern s-kern" loopback>
+//   <step from="c-app" to="c-kern">connect()</step>
+//   <step from="c-kern" to="s-kern">SYN</step>
+// </flow-lanes>
+//
+// active   lanes that act in this lesson; the others are dim
+// loopback both kernel lanes are one kernel (localhost); drawn dashed
+// blank  lane names hidden, for the recall drill at the start of a lesson
+// <step>   one arrow, in time order; from/to = c-app c-kern s-kern s-app dns
+const LANES = [
+  ["c-app", "client 앱", "app"],
+  ["c-kern", "client 커널", "kernel"],
+  ["s-kern", "서버 커널", "kernel"],
+  ["s-app", "서버 앱", "app"],
+];
+
+const LANE_NAME = Object.fromEntries(LANES.map(([id, name]) => [id, name]));
+LANE_NAME.dns = "DNS";
+
+class FlowLanes extends HTMLElement {
+  connectedCallback() {
+    if (this.dataset.drawn) return;
+    this.dataset.drawn = "1";
+    const active = (this.getAttribute("active") || "").split(/\s+/);
+    const loopback = this.hasAttribute("loopback");
+    const blank = this.hasAttribute("blank");
+    const steps = [...this.querySelectorAll("step")].map((s) => ({
+      from: s.getAttribute("from"),
+      to: s.getAttribute("to"),
+      html: s.innerHTML,
+    }));
+
+    const lanes = LANES.map(([id, name, kind]) => {
+      const cls = ["ln", kind];
+      if (active.includes(id)) cls.push("on");
+      if (loopback && kind === "kernel") cls.push("one");
+      return `<div class="${cls.join(" ")}"><b>${blank ? "?" : name}</b></div>`;
+    }).join("");
+
+    const rows = steps
+      .map(
+        (s, n) =>
+          `<li><span class="n">${n + 1}</span>${LANE_NAME[s.from] || s.from} → ` +
+          `${LANE_NAME[s.to] || s.to}: ${s.html}</li>`,
+      )
+      .join("");
+
+    const note = loopback
+      ? `<p class="note">점선 = localhost(lo)라서 두 커널 칸이 같은 커널 하나다.</p>`
+      : "";
+
+    this.innerHTML =
+      `<div class="fl-row">${lanes}</div>` +
+      `<div class="fl-bd"><span>│ syscall</span><span></span><span></span><span>syscall │</span></div>` +
+      (rows ? `<ol class="fl-steps">${rows}</ol>` : "") +
+      note;
+  }
+}
+
+if (!document.getElementById("flow-lanes-css")) {
+  const s = document.createElement("style");
+  s.id = "flow-lanes-css";
+  s.textContent = `
+    flow-lanes { display: block; margin: 1.2rem 0; }
+    flow-lanes .fl-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; }
+    flow-lanes .ln { border: 1.5px solid var(--rule); border-radius: 6px; padding: .5rem .3rem; text-align: center; color: var(--muted); }
+    flow-lanes .ln.on { border-color: var(--write); color: var(--ink); background: var(--write-soft, #fbf1ee); }
+    flow-lanes .ln.one { border-style: dashed; }
+    flow-lanes .fl-bd { display: grid; grid-template-columns: repeat(4, 1fr); font-size: .8rem; color: var(--muted); margin-top: .2rem; }
+    flow-lanes .fl-bd span:last-child { text-align: right; }
+    flow-lanes .fl-steps { list-style: none; padding: 0; margin: .8rem 0 0; border-top: 1px solid var(--rule); padding-top: .5rem; }
+    flow-lanes .fl-steps li { padding: .15rem 0; }
+    flow-lanes .n { display: inline-block; width: 1.4rem; color: var(--write); font-weight: 600; }
+    flow-lanes .note { font-size: .9rem; color: var(--muted); margin: .5rem 0 0; }
+  `;
+  document.head.append(s);
+}
+
+customElements.define("flow-lanes", FlowLanes);
+</script>
+<script>
+// Reusable quiz with immediate feedback, plus predictions and one copy block.
+// Base: week11-12/lab/teach/assets/quiz.js.
+//
+// mountQuiz(root, items, lesson?)
+//   items:  [{ q, options: [..], answer: index, why }]
+//   lesson: { id, title, next, record, predictions: [question, ..] }
+// With `lesson`, the page keeps picks and prediction text in this browser
+// (localStorage) and shows a button that copies them as markdown for a
+// Claude session. The first pick locks a question.
+function mountQuiz(root, items, lesson) {
+  if (!document.getElementById("quiz-css")) {
+    const s = document.createElement("style");
+    s.id = "quiz-css";
+    s.textContent = `
+      .quiz .item { margin: 1.2rem 0; }
+      .quiz .q { font-weight: 600; margin-bottom: .4rem; }
+      .quiz button.opt { display: block; width: 100%; text-align: left; font: inherit; margin: .25rem 0; padding: .4rem .8rem; border: 1px solid var(--rule); background: transparent; color: inherit; border-radius: 4px; cursor: pointer; }
+      .quiz button.right { border-color: var(--read); background: var(--read-soft, #e8f3f6); }
+      .quiz button.wrong { border-color: var(--write); background: var(--write-soft, #fbf1ee); }
+      .quiz .why { color: var(--muted); font-size: .95rem; margin-top: .3rem; }
+      .quiz .score { font-weight: 600; margin-top: 1rem; }
+      .quiz textarea { display: block; width: 100%; box-sizing: border-box; min-height: 3.2rem; font: inherit; padding: .4rem .6rem; border: 1px solid var(--rule); border-radius: 4px; background: transparent; color: inherit; }
+      .quiz .copy { margin-top: 1.2rem; text-align: right; }
+      .quiz .copy button { font: inherit; font-weight: 600; padding: .45rem 1rem; border-radius: 6px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; }
+      .quiz .copy small { color: var(--muted); margin-right: .6rem; }
+      .quiz .copy textarea { margin-top: .6rem; }
+    `;
+    document.head.append(s);
+  }
+
+  const key = lesson ? "teach:" + lesson.id : null;
+  const state = load();
+
+  function load() {
+    const empty = { picks: {}, notes: {} };
+    if (!key) return empty;
+    try {
+      return JSON.parse(localStorage.getItem(key)) || empty;
+    } catch {
+      return empty;
+    }
+  }
+
+  function save() {
+    if (!key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(state));
+    } catch {}
+  }
+
+  root.classList.add("quiz");
+  let done = 0;
+  let right = 0;
+  const score = document.createElement("div");
+  score.className = "score";
+
+  function showScore() {
+    if (done === items.length) score.textContent = `${items.length}문제 중 ${right}개 맞음`;
+  }
+
+  items.forEach((it, n) => {
+    const box = document.createElement("div");
+    box.className = "item";
+    box.innerHTML = `<div class="q">${n + 1}. ${it.q}</div>`;
+    const why = document.createElement("div");
+    why.className = "why";
+    const buttons = [];
+
+    function pick(k, restoring) {
+      if (box.dataset.done) return;
+      box.dataset.done = "1";
+      done++;
+      if (k === it.answer) right++;
+      buttons[k].classList.add(k === it.answer ? "right" : "wrong");
+      buttons[it.answer].classList.add("right");
+      why.innerHTML = it.why;
+      if (!restoring) {
+        state.picks[n] = k;
+        save();
+      }
+      showScore();
+    }
+
+    it.options.forEach((opt, k) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "opt";
+      b.innerHTML = opt;
+      b.addEventListener("click", () => pick(k, false));
+      buttons.push(b);
+      box.append(b);
+    });
+    box.append(why);
+    root.append(box);
+    if (state.picks[n] !== undefined) pick(state.picks[n], true);
+  });
+  root.append(score);
+
+  if (!lesson) return;
+
+  (lesson.predictions || []).forEach((q, n) => {
+    const box = document.createElement("div");
+    box.className = "item";
+    box.innerHTML = `<div class="q">예측 ${n + 1}. ${q}</div>`;
+    const ta = document.createElement("textarea");
+    ta.value = state.notes[n] || "";
+    ta.addEventListener("input", () => {
+      state.notes[n] = ta.value;
+      save();
+    });
+    box.append(ta);
+    root.append(box);
+  });
+
+  const bar = document.createElement("div");
+  bar.className = "copy";
+  const msg = document.createElement("small");
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = "답안 복사";
+  btn.addEventListener("click", async () => {
+    const md = toMarkdown();
+    try {
+      await navigator.clipboard.writeText(md);
+      msg.textContent = "복사했어요. Claude 세션에 붙여 넣으세요.";
+    } catch {
+      // Fallback: show the text so it can be selected and copied by hand.
+      let ta = bar.querySelector("textarea");
+      if (!ta) {
+        ta = document.createElement("textarea");
+        ta.readOnly = true;
+        bar.append(ta);
+      }
+      ta.value = md;
+      ta.style.minHeight = "12rem";
+      ta.select();
+      msg.textContent = "자동 복사가 막혔어요. 아래 글을 직접 복사하세요.";
+    }
+  });
+  bar.prepend(msg, btn);
+  root.append(bar);
+
+  function plain(html) {
+    const d = document.createElement("div");
+    d.innerHTML = html;
+    return d.textContent.trim();
+  }
+
+  function toMarkdown() {
+    const lines = [`# ${lesson.title || lesson.id} · 답안`];
+    if (lesson.next) lines.push(`- 다음 probe: ${lesson.next}`);
+    if (lesson.record) lines.push(`- 문답 정리: ${lesson.record}`);
+    lines.push("", "## 퀴즈");
+    items.forEach((it, n) => {
+      const k = state.picks[n];
+      const q = `${n + 1}. ${plain(it.q)} → `;
+      if (k === undefined) lines.push(q + "(안 풂)");
+      else if (k === it.answer) lines.push(q + `${plain(it.options[k])} ✓`);
+      else lines.push(q + `${plain(it.options[k])} ✗ (정답: ${plain(it.options[it.answer])})`);
+    });
+    if ((lesson.predictions || []).length) {
+      lines.push("", "## 예측");
+      lesson.predictions.forEach((q, n) => {
+        const a = (state.notes[n] || "").trim() || "(비어 있음)";
+        lines.push(`${n + 1}. ${plain(q)} → ${a}`);
+      });
+    }
+    return lines.join("\n") + "\n";
+  }
+}
+</script>
+</head>
+<body>
+<div class="wrap">
+<a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
+
+<h1><code>close</code>와 실패: 끊는 쪽, 남는 쪽, 죽는 쪽</h1>
+<p class="sub">사전 학습 L3, T3 바로 앞, 약 8분<br>목표: 연결이 끝나거나 실패할 때 각 칸에 무엇이 남고 앱이 무엇을 받는지 말하기</p>
+
+<h2>0. L2 복습</h2>
+<p>답을 먼저 말하고 연다. 앱이 <code>read</code>하기 전 바이트는 어느 칸에 있고, <code>ss</code>의 어느 열에 보이나?</p>
+<details>
+<summary>답 열기</summary>
+<p>서버 커널, 그 연결 소켓의 Receive Buffer에 있다. ESTAB 줄의 Recv-Q가 그 바이트 수다. 06-echo에서 B의 <code>hello</code> 두 번이 Recv-Q 12로 보였다.</p>
+</details>
+
+<h2>1. 상대가 끊으면 <code>read</code>는 0을 돌려준다</h2>
+<div class="callout write"><strong>한 문장.</strong> 한쪽 앱이 <code>close</code>하면 그 커널이 상대 커널에 FIN을 보낸다. 상대 앱의 <code>read</code>는 버퍼에 남은 바이트를 다 꺼낸 뒤 0을 돌려준다. 0이 "client가 떠났다"는 뜻이다.</div>
+<flow-lanes active="c-app c-kern s-kern s-app" loopback>
+  <step from="c-app" to="c-kern"><code>close()</code> (06에서 A를 <code>Ctrl-C</code>)</step>
+  <step from="c-kern" to="s-kern">FIN</step>
+  <step from="s-app" to="s-kern"><code>read()</code> → 0. 서버 앱이 비로소 앎</step>
+</flow-lanes>
+<p>06-echo의 <code>while ((length = read(...)) > 0)</code>가 이 0에서 끝났고, 그래서 <code>closed</code>가 찍혔다. read(2): "zero indicates end of file" (<a href="https://man7.org/linux/man-pages/man2/read.2.html">read(2)</a>). 웹서버는 이 0을 보고 그 client의 연결을 닫는다.</p>
+
+<h2>2. 먼저 끊은 쪽에 <code>TIME-WAIT</code>이 남는다</h2>
+<p>06에서 직접 봤다. A를 끊었을 때는 client 쪽(40270)에, 서버를 먼저 끈 뒤에는 서버 쪽(<code>127.0.0.1:8080</code>)에 <code>TIME-WAIT</code> 한 줄이 남았다. 먼저 <code>close</code>한 쪽의 커널이 연결 하나를 약 60초 더 붙들고 있는 상태다. 앱은 이미 <code>close</code>했으니 fd도 없다.</p>
+
+<h2>3. 그 <code>TIME-WAIT</code>이 서버의 재시작을 막는다</h2>
+<p>서버 쪽 <code>TIME-WAIT</code> 줄은 포트 8080을 쥐고 있다. 그래서 바로 다시 켠 서버의 <code>bind</code>가 <code>Address already in use</code>로 실패했다. 웹서버는 고치고 다시 켜는 일이 잦으니 매번 1분을 기다릴 수 없다. 해결책은 소켓 옵션 <code>SO_REUSEADDR</code>이고, T3에서 직접 넣는다. 한 가지 조건이 있다. socket(7): "only with the SO_REUSEADDR option when this option was set both in the previous program ... and in the program that wants to reuse the port" (<a href="https://man7.org/linux/man-pages/man7/socket.7.html">socket(7)</a>). 이 PC에서도 새 서버만 옵션을 켜면 실패하고, 옛 서버와 새 서버 둘 다 켜야 성공했다 (2026-11-20).</p>
+
+<h2>4. 아무도 듣지 않는 포트는 바로 RST를 받는다</h2>
+<p>06 과제에서 4번째 <code>nc</code>는 Accept Queue가 꽉 찬 서버에 답을 못 받고 약 2분 동안 다시 보내다 조용히 끝났다. 포트에 listen 소켓이 <em>아예 없으면</em> 다르다. 서버 커널이 바로 RST를 돌려보내고, client 앱의 <code>connect</code>는 즉시 <code>Connection refused</code>로 실패한다. 이 PC에서 0.000초였다.</p>
+<table>
+  <tr><th>서버 쪽 상황</th><th>서버 커널</th><th>client 앱이 겪는 일</th></tr>
+  <tr><td>listen 소켓 없음 (서버 꺼짐)</td><td>바로 RST</td><td>즉시 <code>Connection refused</code></td></tr>
+  <tr><td>Accept Queue 꽉 참 (06 과제)</td><td>답 없이 버림</td><td>약 2분 멈췄다가 실패</td></tr>
+</table>
+<p>웹서버로 치면 proxy가 꺼진 backend에 붙을 때 받는 오류가 첫 줄이다.</p>
+
+<h2>5. 끊긴 client에게 <code>write</code>하면 서버가 죽는다</h2>
+<div class="callout write"><strong>한 문장.</strong> 상대가 이미 끊은 연결에 <code>write</code>하면, 첫 번째는 성공한 것처럼 돌아오고 두 번째에서 커널이 서버 프로세스에 signal <code>SIGPIPE</code>를 보낸다. 기본 동작은 프로세스 종료다.</div>
+<p>write(2): "EPIPE ... the writing process will also receive a SIGPIPE signal" (<a href="https://man7.org/linux/man-pages/man2/write.2.html">write(2)</a>). 이 PC에서 작은 C 프로그램이 첫 <code>write</code>는 3을 돌려받고, 둘째 <code>write</code>에서 exit code 141(128 + SIGPIPE 13)로 죽었다. client가 응답 도중에 브라우저를 닫는 일은 흔하다. client 하나 때문에 서버 전체가 죽으면 안 되니, T3에서 이걸 막는 법을 본다. 06의 <code>echo_server.c</code>는 <code>write</code>의 반환값을 보지 않는다.</p>
+
+<h2>6. 직접 본다 (퀴즈를 먼저 고르고)</h2>
+<p>4절의 즉시 RST. 9999 포트에는 아무것도 듣지 않는다.</p>
+<p class="scroll-hint" data-scroll-hint>옆으로 밀어 보기 →</p>
+<pre># 아무도 듣지 않는 포트. 얼마나 빨리 끝나나
+time curl http://localhost:9999/</pre>
+<p>curl은 <code>connect</code>의 <code>ECONNREFUSED</code>를 자기 문장으로 바꿔 찍는다. 이 PC의 curl은 <code>curl: (7) Failed to connect to localhost port 9999 after 3 ms: Could not connect to server</code>였다 (2026-11-20). 출력을 세션에 붙여 넣는다. 1~3절은 06에서 이미 봤고, 5절은 T3에서 직접 만든다.</p>
+
+<h2>7. 퀴즈와 T3 예측</h2>
+<div id="quiz"></div>
+
+<h2>주 자료</h2>
+<p><a href="https://man7.org/linux/man-pages/man7/socket.7.html">socket(7)</a>의 <code>SO_REUSEADDR</code> 항목과, 맨 아래 BUGS 위의 "Linux will allow port reuse" 한 문단.</p>
+
+<nav class="links">
+  이전: <a href="l2-receive-buffer.html">L2 Receive Buffer</a><br>
+  다음: T3 TCP 동작 probe, 그 뒤 L4 두 커널과 가운데 앱 (T6 앞)<br>
+  참고: <a href="syscall-lanes.html">syscall과 네 칸 한눈에 보기 (reference)</a>
+</nav>
+
+<div class="ask">막히는 곳이 있으면 절 번호와 함께 에이전트에게 물어보자. 예: "#5에서 첫 write는 왜 성공해?"</div>
+
+<script>
+mountQuiz(document.getElementById("quiz"), [
+  { q: "06-echo에서 서버를 <code>Ctrl-C</code>로 먼저 껐다. <code>TIME-WAIT</code> 줄은 어느 칸에 남나?",
+    options: ["client 커널", "서버 커널", "client 앱"],
+    answer: 1,
+    why: "먼저 <code>close</code>한 쪽의 커널에 남는다. 앱은 이미 끝났으니 앱 칸에는 아무것도 없다." },
+  { q: "client가 연결을 끊은 뒤, 버퍼가 빈 상태에서 서버 앱이 <code>read</code>를 부르면?",
+    options: ["0을 돌려준다", "-1을 돌려준다", "계속 멈춰 있다"],
+    answer: 0,
+    why: "0이 \"상대가 끊었다\"는 뜻이다. 06-echo의 <code>while</code>이 이 0에서 끝나 <code>closed</code>를 찍었다." },
+  { q: "listen 소켓이 없는 포트에 <code>connect</code>하면 client 앱은?",
+    options: ["2분 뒤에 실패", "성공 후에 끊김", "바로 실패한다"],
+    answer: 2,
+    why: "서버 커널이 바로 RST를 보내서 <code>Connection refused</code>가 즉시 온다. 2분은 Accept Queue가 꽉 찬 서버(06 과제)의 경우다." },
+  { q: "client가 이미 끊은 연결에 서버 앱이 <code>write</code>를 두 번 한다. <code>SIGPIPE</code>를 따로 다루지 않으면?",
+    options: ["첫 write에 죽음", "둘째 write에 죽음", "둘 다 성공한다"],
+    answer: 1,
+    why: "첫 <code>write</code>는 커널이 받아 주고 성공한 것처럼 돌아온다. 그 뒤 상대 커널이 RST를 보내면 둘째 <code>write</code>에서 <code>SIGPIPE</code>로 종료된다 (이 PC에서 2026-11-20 확인)." },
+  { q: "옛 서버는 <code>SO_REUSEADDR</code> 없이 돌다가 <code>TIME-WAIT</code>을 남겼다. 옵션을 넣은 새 서버를 바로 켜면 <code>bind</code>는?",
+    options: ["바로 실패한다", "바로 성공한다", "1분 뒤 성공한다"],
+    answer: 0,
+    why: "socket(7): 옛 프로그램과 새 프로그램 둘 다 옵션을 켰어야 한다. 새 서버만 켜면 실패한다. 다만 기다리면 <code>TIME-WAIT</code>이 사라지니 결국 켜지기는 한다." },
+], {
+  id: "w13-l3",
+  title: "L3 close와 실패",
+  next: "T3 (SO_REUSEADDR, SIGPIPE)",
+  record: "teach/learning-records/0004-close-and-failure.md",
+  predictions: [
+    "T3에서 <code>SO_REUSEADDR</code>를 넣은 echo_server를, client가 붙은 채로 끄고 바로 다시 켜면 <code>bind</code>는 성공할까? <code>ss</code>에 <code>TIME-WAIT</code> 줄은 남아 있을까?",
+    "echo_server가 client에게 응답을 쓰는 도중 client가 끊으면, 서버 프로세스는 어떻게 될까? 그다음 client는 서비스를 받을까?",
+  ],
+});
+</script>
+</div>
+</body>
+</html>

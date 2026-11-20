@@ -33,3 +33,11 @@ nav.links { margin-top: 1.5rem; font-size: .95rem; }
 th, td { overflow-wrap: anywhere; }
 .scroll-hint { font-size: .85rem; margin: .6rem 0 -.4rem; }
 @media (min-width: 640px) { .scroll-hint { display: none; } }
+/* DESIGN.md "Spacing and numbered items": air between blocks */
+p { margin: 14px 0 0; }
+h2 { margin: 64px 0 14px; }
+.sub { margin: 4px 0 16px; }
+.callout { padding: 18px 22px; margin: 20px 0; }
+.callout + p, flow-lanes + p, table + p { margin-top: 16px; }
+th, td { padding: 10px 12px; }
+nav.links { line-height: 2; }

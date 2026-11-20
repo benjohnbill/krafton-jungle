@@ -5,4 +5,5 @@
 - 그는 CSAPP 11장을 읽지 않는다. 주 자료는 man page와 커널 소스를 우선한다.
 - 레슨은 답안 복사 블록을 받으면 `learning-records/`에 기록하고, 예측은 다음 probe README의 볼 것에 넣는다 (`../CLAUDE.md`).
 - 레슨은 T1 노트를 `../../pages/`로 링크한다. `publish/build.py`는 `../`가 남으면 멈추므로, 사이트에 올릴 때 이 링크를 사이트 주소로 바꾸는 규칙을 build.py에 더해야 한다.
+- 2026-11-20 그가 고름: lesson 내용은 mini-webserver를 만드는 데 필요한 것만 남긴다. TCP 내부(ACK, tcpdump 플래그)와 커널 소스는 lesson 본문에 넣지 않는다. 근거가 필요하면 RESOURCES에만 둔다. 각 절에 "웹서버의 어디에 쓰이나"를 답할 수 없으면 뺀다.
 - 2026-11-20 확인: OpenBSD netcat, backlog 2에 연결 3개가 accept 대기열에 들어감 (Recv-Q 3, Send-Q 2).

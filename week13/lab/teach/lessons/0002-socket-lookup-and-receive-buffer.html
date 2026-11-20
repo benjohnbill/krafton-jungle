@@ -2,15 +2,15 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<title>L2 · 포트로 소켓 찾기와 수신 버퍼: ACK는 "앱이 읽었다"가 아니다</title>
+<title>L2 · 수신 버퍼: read 전까지 바이트는 커널에 있다</title>
 <link rel="stylesheet" href="../assets/style.css">
 <script src="../assets/flow-lanes.js"></script>
 <script src="../assets/quiz.js"></script>
 </head>
 <body>
 
-<h1>포트로 소켓 찾기와 수신 버퍼: ACK는 "앱이 읽었다"가 아니다</h1>
-<p class="sub">레슨 L2 · T2(06-echo) 바로 앞 · 약 10분 · 목표: 앱이 <code>read</code>하기 전에 바이트가 어느 칸에 있는지 말하기</p>
+<h1>수신 버퍼: <code>read</code> 전까지 바이트는 커널에 있다</h1>
+<p class="sub">레슨 L2 · T2(06-echo) 바로 앞 · 약 7분 · 목표: 앱이 <code>read</code>하기 전에 바이트가 어느 칸에 있는지 말하기</p>
 
 <h2>0. L1 복습</h2>
 <p>답을 먼저 말하고 연다. 대기열에 쌓이는 것은 무엇이고, fd는 언제 생기나?</p>
@@ -18,58 +18,39 @@
 <summary>답 열기</summary>
 <p>대기열에는 handshake가 끝난 <strong>연결</strong>이 쌓인다. fd는 <code>accept</code>가 그 연결을 꺼낼 때 만든다. 연결은 <code>close</code>까지 이어지고, 그동안 같은 <code>conn_fd</code>로 <code>read</code>와 <code>write</code>를 몇 번이든 한다.</p>
 </details>
-<p>L1에서 오라버니가 붙인 tcpdump 줄이 이번 lesson의 출발점이다. 그때 서버 앱은 <code>accept</code>조차 부르지 않았다.</p>
-<pre>127.0.0.1.8080 &gt; 127.0.0.1.49954: Flags [.], ack 67, ..., length 0</pre>
-<p>퀴즈 1번이 이 줄을 묻는다. 아래를 읽기 전에 먼저 골라도 된다.</p>
 
-<h2>1. 커널은 주소 네 개로 소켓을 찾는다</h2>
-<p><a href="../../pages/strace-syscalls.html">서버가 커널에 부탁하는 순서</a> §3에서 포트 8080에 소켓이 둘 있었다: LISTEN 줄(상대 <code>*</code>)과 ESTAB 줄(상대 <code>127.0.0.1:48196</code>). 패킷이 도착하면 서버 커널은 둘 중 하나를 골라야 한다.</p>
-<div class="callout"><strong>한 문장.</strong> 커널은 먼저 주소 네 개(상대 IP, 상대 포트, 내 IP, 내 포트)가 모두 맞는 연결 소켓을 찾고, 없을 때만 내 포트가 맞는 listen 소켓으로 보낸다.</div>
-<p>근거: Linux 커널 <a href="https://github.com/torvalds/linux/blob/master/include/net/inet_hashtables.h"><code>inet_hashtables.h</code></a>의 <code>__inet_lookup</code>은 <code>__inet_lookup_established(net, saddr, sport, daddr, hnum, ...)</code>를 먼저 부르고, 결과가 없으면 <code>__inet_lookup_listener</code>를 부른다.</p>
-<table>
-  <tr><th>도착한 패킷</th><th>네 주소가 맞는 연결 소켓</th><th>받는 소켓</th></tr>
-  <tr><td>새 손님의 SYN</td><td>없음</td><td>listen 소켓 → handshake 후 accept 대기열 (L1)</td></tr>
-  <tr><td>연결된 손님의 데이터</td><td>있음</td><td>그 연결 소켓의 수신 버퍼 (아래)</td></tr>
-</table>
+<h2>1. 바이트는 그 연결의 소켓으로 간다</h2>
+<p><a href="../../pages/strace-syscalls.html">서버가 커널에 부탁하는 순서</a> §3에서 포트 8080에 소켓이 둘 있었다: LISTEN 줄(상대 <code>*</code>)과 ESTAB 줄(상대 <code>127.0.0.1:48196</code>). 연결된 손님이 보낸 바이트는 주소 네 개(상대 IP, 상대 포트, 내 IP, 내 포트)가 맞는 연결 소켓으로 간다. 그래서 포트 하나로 손님 여럿을 받아도 바이트가 섞이지 않는다.</p>
 
-<h2>2. ACK는 "커널이 받았다"는 뜻이다</h2>
-<div class="callout write"><strong>한 문장.</strong> 데이터가 오면 서버 커널은 그 소켓의 수신 버퍼에 넣고 바로 ACK를 보낸다. 서버 앱의 <code>read</code>는 나중에 수신 버퍼에서 바이트를 꺼내 갈 뿐이다.</div>
+<h2>2. 커널이 받아 두고, <code>read</code>가 꺼낸다</h2>
+<div class="callout write"><strong>한 문장.</strong> 바이트가 오면 서버 커널이 그 소켓의 수신 버퍼에 넣어 둔다. 서버 앱의 <code>read</code>는 나중에 수신 버퍼에서 꺼내 갈 뿐이다. 앱이 <code>read</code>하지 않으면 바이트는 커널에서 기다린다.</div>
 <flow-lanes active="c-app c-kern s-kern s-app" loopback>
-  <step from="c-app" to="c-kern"><code>write("hello\n")</code>, 클라 커널의 송신 버퍼로</step>
-  <step from="c-kern" to="s-kern">데이터 6바이트</step>
-  <step from="s-kern" to="c-kern">ACK. 바이트는 서버 커널의 수신 버퍼에 있음 (앱은 아직 모름)</step>
+  <step from="c-app" to="c-kern"><code>write("hello\n")</code></step>
+  <step from="c-kern" to="s-kern">6바이트 → 서버 커널이 수신 버퍼에 넣어 둠 (앱은 아직 모름)</step>
   <step from="s-app" to="s-kern"><code>read()</code>, 수신 버퍼에서 꺼내 앱 메모리로. 이때 비로소 앱이 앎</step>
 </flow-lanes>
-<p>tcp(7)은 이 버퍼를 "The socket receive buffer space is shared between the application and kernel."이라고 쓰고, 아직 안 읽은 양을 "the amount of queued unread data in the receive buffer"라고 부른다 (<a href="https://man7.org/linux/man-pages/man7/tcp.7.html">tcp(7)</a>, SIOCINQ). 버퍼 크기의 상한은 <code>SO_RCVBUF</code>다: "Sets or gets the maximum socket receive buffer in bytes." (<a href="https://man7.org/linux/man-pages/man7/socket.7.html">socket(7)</a>)</p>
+<p>tcp(7)은 이 버퍼에 남은 양을 "the amount of queued unread data in the receive buffer"라고 부른다 (<a href="https://man7.org/linux/man-pages/man7/tcp.7.html">tcp(7)</a>, SIOCINQ).</p>
 
-<h2>3. <code>ss</code>의 두 열, 연결 소켓에서</h2>
-<p>L1에서 LISTEN 줄의 Recv-Q는 대기열의 연결 수였다. 연결 소켓(ESTAB)에서는 바이트 수다. 커널 <a href="https://github.com/torvalds/linux/blob/master/net/ipv4/tcp_diag.c"><code>tcp_diag.c</code></a>:</p>
-<table>
-  <tr><th>열</th><th>커널 계산</th><th>뜻</th></tr>
-  <tr><td>Recv-Q</td><td><code>rcv_nxt - copied_seq</code></td><td>커널이 받았지만 앱이 아직 <code>read</code>하지 않은 바이트</td></tr>
-  <tr><td>Send-Q</td><td><code>write_seq - snd_una</code></td><td>앱이 <code>write</code>했지만 상대 커널이 아직 ACK하지 않은 바이트</td></tr>
-</table>
+<h2>3. <code>ss</code>의 Recv-Q, 연결 소켓에서</h2>
+<p>L1에서 LISTEN 줄의 Recv-Q는 대기열의 연결 수였다. 연결 소켓(ESTAB) 줄에서는 <strong>커널이 받았지만 앱이 아직 <code>read</code>하지 않은 바이트 수</strong>다.</p>
 
-<h2>4. 직접 본다 (퀴즈 4–5번을 먼저 고르고)</h2>
+<h2>4. 직접 본다 (퀴즈를 먼저 고르고)</h2>
 <p><code>tools/no_read.py</code>는 <code>accept</code>를 한 번 하고 <code>read</code>는 부르지 않는다. <code>week13/lab/teach/</code>에서:</p>
 <pre># 터미널 1: read 안 하는 서버
 python3 tools/no_read.py
 
-# 터미널 2 (선택, sudo): 데이터와 ACK 보기. 터미널 3보다 먼저 켠다
-sudo tcpdump -i lo -n port 8080
-
-# 터미널 3: 클라이언트. hello 를 치고 엔터
+# 터미널 2: 클라이언트. hello 를 치고 엔터
 nc localhost 8080
 
-# 터미널 4: 연결 소켓의 두 열
+# 터미널 3: 연결 소켓의 Recv-Q
 ss -tan 'sport = :8080 or dport = :8080'</pre>
-<p>출력을 세션에 붙여 넣는다. 그다음 터미널 3에서 몇 줄 더 치고 <code>ss</code>를 다시 본다. 어느 줄의 어느 숫자가 커지는지 본다.</p>
+<p>출력을 세션에 붙여 넣는다. 그다음 터미널 2에서 몇 줄 더 치고 <code>ss</code>를 다시 본다.</p>
 
 <h2>5. 퀴즈와 06-echo 예측</h2>
 <div id="quiz"></div>
 
 <h2>주 자료</h2>
-<p><a href="https://man7.org/linux/man-pages/man7/tcp.7.html">tcp(7)</a>의 Ioctls 절(SIOCINQ, SIOCOUTQ). 그리고 <a href="https://github.com/torvalds/linux/blob/master/include/net/inet_hashtables.h"><code>inet_hashtables.h</code></a>에서 <code>__inet_lookup</code> 함수 하나. 열 줄 남짓이다.</p>
+<p><a href="https://man7.org/linux/man-pages/man7/tcp.7.html">tcp(7)</a>의 Ioctls 절, SIOCINQ 항목 한 문단.</p>
 
 <nav class="links">
   이전: <a href="0001-connection-setup-and-fd.html">L1 연결 준비와 fd</a> ·
@@ -77,35 +58,31 @@ ss -tan 'sport = :8080 or dport = :8080'</pre>
   참고: <a href="../reference/syscall-lanes.html">syscall과 네 칸 한눈에 보기 (reference)</a>
 </nav>
 
-<div class="ask">막히는 곳이 있으면 단계 번호와 함께 에이전트에게 물어보자. 예: "#3에서 ACK를 보냈는데 앱이 죽으면 그 바이트는 어떻게 돼?"</div>
+<div class="ask">막히는 곳이 있으면 단계 번호와 함께 에이전트에게 물어보자. 예: "#2에서 수신 버퍼가 꽉 차면 어떻게 돼?"</div>
 
 <script>
 mountQuiz(document.getElementById("quiz"), [
-  { q: "L1의 tcpdump 줄 <code>127.0.0.1.8080 &gt; 127.0.0.1.49954: ... ack 67</code>을 보낸 칸은?",
-    options: ["클라 커널", "서버 앱", "서버 커널"],
-    answer: 2,
-    why: "출발지가 포트 8080, 곧 서버 쪽이다. 그때 서버 앱은 <code>accept</code>도 안 했으니 ACK를 보낸 것은 서버 커널이다. L1의 SYN-ACK도 같은 방향, 같은 칸에서 나간다." },
-  { q: "연결된 손님의 데이터가 도착하면 서버 커널이 먼저 찾는 소켓은?",
-    options: ["포트만 맞는 listen 소켓", "네 주소가 맞는 연결 소켓", "fd가 가장 작은 소켓"],
+  { q: "서버 앱이 <code>read</code>하기 전, 클라이언트가 보낸 바이트는 어느 칸에 있나?",
+    options: ["클라 커널", "서버 커널", "서버 앱"],
     answer: 1,
-    why: "<code>__inet_lookup</code>은 established 쪽(주소 네 개)을 먼저 보고, 없을 때만 listener로 간다. 그래서 같은 포트 8080이어도 데이터는 연결 소켓으로 간다." },
-  { q: "그 줄의 <code>ack 67</code>이 뜻하는 것은?",
-    options: ["서버 커널이 66바이트를 받았다", "서버 앱이 66바이트를 읽었다", "클라 커널이 66바이트를 다시 보낸다"],
+    why: "서버 커널이 그 연결 소켓의 수신 버퍼에 넣어 둔다. 서버 앱은 <code>read</code>로 꺼내야 비로소 안다." },
+  { q: "포트 8080에 LISTEN 소켓과 연결 소켓이 있다. 연결된 손님이 보낸 바이트는 어디로 가나?",
+    options: ["그 손님의 연결 소켓", "LISTEN 소켓", "fd가 가장 작은 소켓"],
     answer: 0,
-    why: "tcpdump는 순서 번호를 1부터 센다. ack 67 = \"66번째 바이트까지 받았으니 67번째를 보내라\". 받은 것은 커널이다. 앱은 <code>read</code>는커녕 <code>accept</code>도 안 했다." },
+    why: "커널은 주소 네 개가 맞는 연결 소켓을 찾는다. LISTEN 소켓은 새 연결만 받는다 (L1)." },
   { q: "<code>no_read.py</code>에 <code>nc</code>로 <code>hello</code>와 엔터를 치면, 서버 쪽 ESTAB 줄의 Recv-Q는?",
     options: ["0", "5", "6"],
     answer: 2,
     why: "<code>hello</code> 5바이트에 줄바꿈 <code>\\n</code> 1바이트. 커널이 받았고 앱이 안 읽었으니 6이 남는다 (이 PC에서 2026-11-20 확인)." },
-  { q: "그때 클라이언트 쪽 ESTAB 줄의 Send-Q는?",
-    options: ["0", "6", "12"],
-    answer: 0,
-    why: "Send-Q는 상대 커널이 아직 ACK하지 않은 바이트다. 서버 커널이 바로 ACK했으니 0이다. 서버 앱이 안 읽어도 클라이언트 입장에서는 \"보냈고, 받았다고 들었다\"." },
+  { q: "서버 앱이 그 6바이트를 <code>read</code>로 꺼내면 Recv-Q는?",
+    options: ["6 그대로", "0으로", "12로"],
+    answer: 1,
+    why: "<code>read</code>가 수신 버퍼에서 꺼내 가면 남은 바이트가 없다. Recv-Q는 \"아직 안 꺼낸 양\"이다." },
 ], {
-  id: "w13-l2",
-  title: "L2 포트로 소켓 찾기와 수신 버퍼",
+  id: "w13-l2-v2",
+  title: "L2 수신 버퍼",
   next: "06-echo",
-  record: "teach/learning-records/0003-socket-lookup-and-receive-buffer.md",
+  record: "teach/learning-records/0003-receive-buffer.md",
   predictions: [
     "06-echo에서 A가 연결된 동안 B가 <code>hello</code>와 엔터를 치면, <code>ss -tan</code>에서 서버 쪽 B 연결 줄의 Recv-Q는 몇일까? 이유도 한 줄.",
     "그다음 A가 끊으면, B는 아까 친 <code>hello</code>의 echo를 받을까? B가 다시 칠 필요가 있을까?",

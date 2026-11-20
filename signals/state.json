@@ -1,5 +1,5 @@
 {
- "last_report": "2026-11-07",
+ "last_report": "2026-11-21",
  "history": [
   {
    "date": "2026-10-22",
@@ -26,6 +26,31 @@
     "probe": {
      "candidates": 11,
      "judged": 11,
+     "violations": 0
+    }
+   }
+  },
+  {
+   "date": "2026-11-21",
+   "counts": {
+    "numbered": {
+     "candidates": 27,
+     "judged": 10,
+     "violations": 8
+    },
+    "stall": {
+     "candidates": 27,
+     "judged": 27,
+     "violations": 0
+    },
+    "walkthrough": {
+     "candidates": 5,
+     "judged": 5,
+     "violations": 0
+    },
+    "probe": {
+     "candidates": 31,
+     "judged": 31,
      "violations": 0
     }
    }
@@ -67,6 +92,18 @@
     "week11-12 bec75bd2 2026-11-06T17:36: \"제가 한 번에 너무 많이 드렸어요.\""
    ],
    "proposed_diff": "New bullet, Overload stop: \"지금 너무 정보가 많네\", \"한 번에 이해가 안 돼\": stop adding. Answer only the piece he names, or give the smallest first piece, and hold the rest until he asks. If he stalled on a value, ask the storage question about that piece."
+  },
+  {
+   "id": "numbered-headings-still-numbered",
+   "kind": "verified_violation",
+   "status": "pending",
+   "count": 8,
+   "evidence": [
+    "a29dfe11 2026-11-20T13:48: \"**1. 쪽 제목에 probe 번호 붙이기**\" / \"1. 오라버니가 각 레슨의 **답안 복사** 버튼으로 블록 세 개를 붙여 주기\"",
+    "bcd64367 2026-11-19T03:53: \"1번하고 2번이 무슨 말인 지를.\" / \"지난 답에 번호 목록이 두 개 있었어요.\"",
+    "24be11a7 2026-11-19T08:27: \"1. 레포 `benjohnbill/mini-webserver`를 PUBLIC으로 만들었어요.\" / \"1. CLAUDE.md 초안을 확인하고 복사해 주세요.\""
+   ],
+   "proposed_diff": "Numbered negotiation: append \"Headings and answers to his numbered points are lists too: label them with a bold word (**쪽 제목**, **Q1**), never `1.` or `**1. …**`.\""
   }
  ]
 }

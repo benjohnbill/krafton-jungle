@@ -22,8 +22,8 @@ th { color: var(--muted); font-weight: 600; }
 .scroll { overflow-x: auto; }
 /* summary box at the top: one outer line, no fill (box rule 1); the verdict column is a glyph, not a color */
 .summary { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
-.summary .one { font-size: 1.1rem; line-height: 1.75; margin: 0; }
-.summary td.v { font-family: var(--font-code); width: 2.5em; text-align: center; }
+.summary table { margin-top: 0; }
+.summary td:first-child { width: 34%; }
 .story { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
 .story pre { background: var(--surface-2); border-radius: 4px; padding: 12px 14px; margin: 16px 0 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .story pre .cm { color: var(--muted); }
@@ -44,16 +44,12 @@ th { color: var(--muted); font-weight: 600; }
 <p class="sub">C로 만든 작은 서버로 겪은 문제 둘 · 끈 서버가 바로 다시 안 켜짐, client 하나가 떠나자 서버가 통째로 죽음</p>
 
 <div class="summary">
-<p class="one">끄고 바로 켠 서버가 포트를 못 잡음 → 소켓 옵션 하나를 포트를 잡기 전에 켜서 해결 · 응답 도중 client가 떠나면 서버가 통째로 죽음 → 두 줄을 더해 그 client만 정리하고 서버는 계속</p>
 <div class="scroll">
 <table>
-<thead><tr><th>실험 전 내 예측</th><th></th><th>실제</th></tr></thead>
+<thead><tr><th>문제</th><th>한 줄 요약</th></tr></thead>
 <tbody>
-<tr><td>옵션을 켜면 client가 붙은 채 끄고 바로 켜도 다시 켜짐</td><td class="v">✓</td><td>다시 켜짐</td></tr>
-<tr><td>새로 켠 서버가 old connection을 이어받음</td><td class="v">✗</td><td>old connection은 따로 남았다가 사라짐 · 새 client는 새 연결</td></tr>
-<tr><td>client가 떠난 뒤 서버의 첫 쓰기는 성공, 다음 쓰기에서 오류</td><td class="v">✓</td><td>시점은 맞음 · 다만 오류가 돌아온 게 아니라 다음 쓰기에서 서버가 죽음</td></tr>
-<tr><td>떠난 client 쪽에 끝난 연결의 흔적이 남음</td><td class="v">✗</td><td>양쪽 어디에도 남지 않음</td></tr>
-<tr><td>client 쪽이 "더 보내지 마"라고 알려 줌</td><td class="v">✓</td><td>client 쪽 커널이 RST를 보냄</td></tr>
+<tr><td><a href="#s2">서버를 끄고 바로 다시 켜면 (07)</a></td><td>old connection이 8080을 쥐고 있어 <code>bind</code> 실패 → <code>bind</code> 앞에서 <code>SO_REUSEADDR</code>를 켜면 바로 재시작, old connection은 그대로 남음</td></tr>
+<tr><td><a href="#s3">client가 응답 도중에 떠나면 (08)</a></td><td>떠난 client에게 두 번째 <code>write</code>를 하는 순간 <code>SIGPIPE</code>로 서버가 죽음 → <code>signal(SIGPIPE, SIG_IGN)</code>과 <code>write</code> 검사로 그 client만 닫고 서버는 계속</td></tr>
 </tbody>
 </table>
 </div>
@@ -82,7 +78,7 @@ th { color: var(--muted); font-weight: 600; }
 </table>
 </div>
 
-<h2>2. 서버를 끄고 바로 다시 켜면 (07)</h2>
+<h2 id="s2">2. 서버를 끄고 바로 다시 켜면 (07)</h2>
 <p class="lead">old connection이 포트를 쥐고 있음 → <code>bind</code> 앞에서 <code>SO_REUSEADDR</code>를 켜서 비켜 감</p>
 
 <section class="story">
@@ -110,7 +106,7 @@ CLOSE-WAIT  0  0   127.0.0.1:53358   127.0.0.1:8080     <span class="cm"># old c
 </dl>
 </section>
 
-<h2>3. client가 응답 도중에 떠나면 (08)</h2>
+<h2 id="s3">3. client가 응답 도중에 떠나면 (08)</h2>
 <p class="lead">떠난 client에게 쓰면 커널이 <code>SIGPIPE</code>로 서버를 죽임 → signal을 끄고, <code>write</code>의 실패를 보고 그 client만 닫음</p>
 
 <section class="story">

@@ -22,8 +22,8 @@ th { color: var(--muted); font-weight: 600; }
 .scroll { overflow-x: auto; }
 /* summary box at the top: one outer line, no fill (box rule 1); the verdict column is a glyph, not a color */
 .summary { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
-.summary .one { font-size: 1.1rem; line-height: 1.75; margin: 0; }
-.summary td.v { font-family: var(--font-code); width: 2.5em; text-align: center; }
+.summary table { margin-top: 0; }
+.summary td:first-child { width: 34%; }
 .story { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
 .story pre { background: var(--surface-2); border-radius: 4px; padding: 12px 14px; margin: 16px 0 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .story pre .cm { color: var(--muted); }
@@ -44,16 +44,12 @@ th { color: var(--muted); font-weight: 600; }
 <p class="sub">C로 처음 손으로 친 서버 · client 둘, client 다섯을 붙여서 연결과 바이트가 어디서 기다리는지 확인</p>
 
 <div class="summary">
-<p class="one">연결은 운영체제(커널)가 맺고, 서버 프로그램은 맺어진 연결을 꺼내 갈 뿐 → 프로그램이 한 client를 상대하는 동안 다음 client의 연결과 보낸 글자는 커널에서 기다림 · Accept Queue가 차면 새 client는 아무 답도 못 받고 약 2분 뒤 실패</p>
 <div class="scroll">
 <table>
-<thead><tr><th>실험 전 내 예측</th><th></th><th>실제</th></tr></thead>
+<thead><tr><th>문제</th><th>한 줄 요약</th></tr></thead>
 <tbody>
-<tr><td>client A가 붙어 있어도 client B의 연결은 맺어짐</td><td class="v">✓</td><td>맺어짐 · 서버 프로그램은 아직 모름</td></tr>
-<tr><td>client B가 보낸 <code>hello</code> 6글자는 서버 커널에 쌓여 있음</td><td class="v">✓</td><td>12글자 (<code>hello</code>를 두 번 쳤음)</td></tr>
-<tr><td>client A가 떠나면 client B는 다시 치지 않아도 답을 받음</td><td class="v">✓</td><td>쌓여 있던 글자가 그대로 돌아옴</td></tr>
-<tr><td>backlog를 1로 주면 셋째 client부터 막힘</td><td class="v">✗</td><td>넷째부터 · Accept Queue 자리가 2칸</td></tr>
-<tr><td>막힌 client는 서버 쪽에서 "밀렸다"는 답을 받음</td><td class="v">✗</td><td>아무 답 없음 · 약 2분 기다리다 조용히 끝남</td></tr>
+<tr><td><a href="#s2">client 둘 (06)</a></td><td>서버 앱이 client A에 묶인 동안 client B의 연결은 Accept Queue에서, B가 보낸 바이트는 Receive Buffer에서 기다림 → 서버 앱은 <code>accept</code>, <code>read</code>를 부를 때 비로소 앎</td></tr>
+<tr><td><a href="#s3">Accept Queue가 차면 (06 과제)</a></td><td>backlog 1이면 자리 2칸 · 넘친 client의 SYN은 답 없이 버려져 약 2분 뒤 실패 → 서버가 하나면 backlog는 크게</td></tr>
 </tbody>
 </table>
 </div>
@@ -78,7 +74,7 @@ th { color: var(--muted); font-weight: 600; }
 </table>
 </div>
 
-<h2>2. client 둘 (06)</h2>
+<h2 id="s2">2. client 둘 (06)</h2>
 <p class="lead">서버 프로그램이 A에 묶인 동안 B의 연결은 Accept Queue에서, B의 글자는 Receive Buffer에서 기다림</p>
 
 <section class="story">
@@ -109,7 +105,7 @@ ESTAB   12  0   127.0.0.1:8080    127.0.0.1:40272    <span class="cm"># 서버 �
 </dl>
 </section>
 
-<h2>3. Accept Queue가 차면 (06 과제)</h2>
+<h2 id="s3">3. Accept Queue가 차면 (06 과제)</h2>
 <p class="lead">backlog 1 → Accept Queue 자리 2칸 · 넘친 client의 SYN은 서버 커널이 답 없이 버림</p>
 
 <section class="story">

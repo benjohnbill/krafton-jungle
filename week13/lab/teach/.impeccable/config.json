@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "repeated-container-text",
+        "value": "*",
+        "files": [
+          "week13/lab/pages/t2-echo-server.html"
+        ],
+        "createdAt": "2026-11-20T12:31:17.764Z",
+        "reason": "agent triage 2026-11-20: repeats are the literal input 'hello' and the verdict glyph in a prediction table, both intentional"
+      }
+    ]
+  }
+}

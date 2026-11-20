@@ -26,6 +26,8 @@ th { color: var(--muted); font-weight: 600; }
 /* summary cells: full sentences, one per line (user said 2026-11-20) */
 .summary td .ln { display: block; }
 .summary td .ln + .ln { margin-top: 8px; }
+/* Before and After labels: bold, fixed width so both sentences start at the same column */
+.summary td .ba { display: inline-block; min-width: 4.2em; font-family: var(--font-code); font-weight: 600; }
 .summary td:first-child { width: 34%; }
 .story { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
 .story pre { background: var(--surface-2); border-radius: 4px; padding: 12px 14px; margin: 16px 0 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -51,8 +53,8 @@ th { color: var(--muted); font-weight: 600; }
 <table>
 <thead><tr><th>문제</th><th>요약</th></tr></thead>
 <tbody>
-<tr><td><a href="#s2">client 둘 (06)</a></td><td><span class="ln">서버 앱이 client A를 상대하는 동안에도 커널은 client B와 연결을 맺고, B가 보낸 바이트를 Receive Buffer에 받아 둔다.</span><span class="ln">서버 앱은 <code>accept</code>와 <code>read</code>를 부를 때가 되어서야 B의 연결과 바이트를 알게 된다.</span></td></tr>
-<tr><td><a href="#s3">Accept Queue가 차면 (06 과제)</a></td><td><span class="ln">backlog를 1로 주면 Accept Queue에 연결 2개가 들어가고, 넘친 client의 SYN은 서버 커널이 답 없이 버려서 그 client는 약 2분 뒤 실패한다.</span><span class="ln">backlog는 값만큼 메모리를 미리 잡지 않으므로, 서버가 하나라면 크게 잡는다.</span></td></tr>
+<tr><td><a href="#s2">client 둘 (06)</a></td><td><span class="ln"><strong class="ba">Before</strong>서버 앱이 client A를 상대하는 동안에도 커널은 client B와 연결을 맺고, B가 보낸 바이트를 Receive Buffer에 받아 둔다.</span><span class="ln"><strong class="ba">After</strong>서버 앱은 <code>accept</code>와 <code>read</code>를 부를 때가 되어서야 B의 연결과 바이트를 알게 된다.</span></td></tr>
+<tr><td><a href="#s3">Accept Queue가 차면 (06 과제)</a></td><td><span class="ln"><strong class="ba">Before</strong>backlog를 1로 주면 Accept Queue에 연결 2개가 들어가고, 넘친 client의 SYN은 서버 커널이 답 없이 버려서 그 client는 약 2분 뒤 실패한다.</span><span class="ln"><strong class="ba">After</strong>backlog는 값만큼 메모리를 미리 잡지 않으므로, 서버가 하나라면 크게 잡는다.</span></td></tr>
 </tbody>
 </table>
 </div>

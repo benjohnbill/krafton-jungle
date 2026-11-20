@@ -114,6 +114,8 @@ echo $?
 
 2단계에서 `signal(SIGPIPE, SIG_IGN);` 한 줄만 지우고, `write` 검사는 그대로 둔다. 실행 전에 예측한다: 손님 1을 끊으면 서버 출력에 `write: Broken pipe`가 찍힐까. 결과를 한 문장으로 쓴다.
 
+결과 (2026-11-20): 예측은 "`write` 단계에서 죽고, `write: Broken pipe`는 안 찍힌다". 맞았다. `wrote tick 5` 다음 zsh 표시 `PIPE`, `echo $?` 141. `SIGPIPE`의 기본 동작이 `write`가 돌아오기 전에 프로세스를 끝내므로, `write` 검사까지 가지 못한다. 소켓은 지워지지 않고 망가졌다는 표시만 남는다 (2단계에서 같은 fd의 `write`가 -1을 돌려주고 `close`까지 갔다).
+
 ## 확인 질문
 
 웹서버에서 이 두 줄(`signal`과 `write` 검사)은 각각 무엇을 막는가. 하나만 있으면 왜 부족한가.

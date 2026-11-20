@@ -50,7 +50,10 @@ progress memo so re-entry restores it.
   number ("1, 2번 수용", "4번까지는 좋아, 5·6번은 설명 필요"). One number
   sequence per reply: never let two lists in one reply share a number.
   When a reply has a decision list, only that list has numbers; findings and
-  steps use bullets.
+  steps use bullets. Headings and answers to his numbered points are lists
+  too: label them with a bold word (**쪽 제목**, **Q1**), never `1.` or
+  `**1. …**`. A Stop hook (`scripts/check-numbering.py`) blocks a reply with
+  two number sequences.
 - **Explicit stall** ("솔직히 이해를 못했어", "몇 분 고민했는데"): test the
   storage model first (where does this value live, who owns it) before
   re-explaining the bug.

@@ -51,7 +51,7 @@
 <p>4절의 즉시 거절. 9999 포트에는 아무것도 듣지 않는다.</p>
 <pre># 아무도 듣지 않는 포트. 얼마나 빨리 끝나나
 time curl http://localhost:9999/</pre>
-<p>출력을 세션에 붙여 넣는다. 1~3절은 06에서 이미 봤고, 5절은 T3에서 직접 만든다.</p>
+<p>curl은 <code>connect</code>의 <code>ECONNREFUSED</code>를 자기 문장으로 바꿔 찍는다. 이 PC의 curl은 <code>curl: (7) Failed to connect to localhost port 9999 after 3 ms: Could not connect to server</code>였다 (2026-11-20). 출력을 세션에 붙여 넣는다. 1~3절은 06에서 이미 봤고, 5절은 T3에서 직접 만든다.</p>
 
 <h2>7. 퀴즈와 T3 예측</h2>
 <div id="quiz"></div>

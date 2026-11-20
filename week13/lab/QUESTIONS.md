@@ -7,3 +7,4 @@
 - [ ] 03: IPv6에서 공유기 방화벽이 들어오는 연결을 막는 방식 → 범위 밖
 - [ ] 03: request smuggling (너그러운 파싱의 한계) → T6 
 - [ ] 06: 서버 쪽이 클라이언트보다 연결을 먼저 끊으면 어떻게 되는가 (서버 쪽 TIME-WAIT, 재시작 시 `bind: Address already in use`) → T3
+- [ ] 06: reverse proxy가 backend 여럿에 나눠 줄 때, backend 대기열이 차면 proxy의 `connect`가 2분쯤 멈춘다. connect timeout을 두고 다른 backend로 옮길까 → T6

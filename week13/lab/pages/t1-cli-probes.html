@@ -7,33 +7,40 @@
 <link rel="stylesheet" href="https://benjohnbill.github.io/assets/site.css">
 <style>
 /* type and boxes follow DESIGN.md (reference: study/week07/debug-panic-exit.html) */
+/* same structure as t2-echo-server.html and t3-restart-sigpipe.html (user asked 2026-11-20): summary first, then glossary, then one story per probe */
 html { font-size: 19px; }
 body { font-size: 1rem; }
 .wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
 h1 { font-family: var(--font-head); font-size: 1.95rem; line-height: 1.25; margin: 12px 0 4px; }
-h2 { font-family: var(--font-head); font-size: 1.56rem; line-height: 1.35; margin: 56px 0 10px; }
-h3 { font-family: var(--font-head); font-size: 1.25rem; line-height: 1.4; margin: 0 0 4px; }
+h2 { font-family: var(--font-head); font-size: 1.56rem; line-height: 1.35; margin: 64px 0 14px; }
 .sub { color: var(--ink-2); margin: 0 0 16px; }
-.lead { font-size: 1.1rem; line-height: 1.75; margin: 0 0 8px; }
-p { margin: 8px 0 0; }
-table { border-collapse: collapse; width: 100%; font-size: .95rem; line-height: 1.6; border: 1px solid var(--line); margin-top: 12px; }
-th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+.lead { font-size: 1.1rem; line-height: 1.75; margin: 0 0 14px; }
+p { margin: 14px 0 0; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; line-height: 1.65; border: 1px solid var(--line); margin-top: 16px; }
+th, td { border-bottom: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
 th { color: var(--muted); font-weight: 600; }
+/* phones: long names in cells may break instead of clipping */
+th, td { overflow-wrap: anywhere; }
 .scroll { overflow-x: auto; }
+/* summary box at the top: one outer line, no fill (box rule 1) */
+.summary { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
+.summary table { margin-top: 0; }
+/* summary cells: full sentences, one per line (user said 2026-11-20) */
+.summary td .ln + .ln { margin-top: 8px; }
+/* Observed and Meaning labels: bold, fixed width so both sentences start at the same column */
+.summary td .ba { display: inline-block; min-width: 5.6em; font-family: var(--font-code); font-weight: 600; }
+.summary td:first-child { width: 30%; }
 .flow td:first-child { font-family: var(--font-code); font-weight: 600; width: 2em; }
-pre.fig { border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; margin: 12px 0 0; font-size: 14px; line-height: 1.6; overflow-x: auto; }
-pre.fig .cm { color: var(--muted); }
-pre.fig .key { font-weight: 600; }
-/* probe cards: one outer line each; the command block is the one fill level inside */
-.probes { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
-.probe { border: 1px solid var(--line); border-radius: 4px; padding: 16px; }
-.probe .no { font-family: var(--font-code); font-weight: 400; margin-right: .5em; }
-.probe pre { background: var(--surface-2); border-radius: 4px; padding: 10px 12px; margin: 10px 0 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
-.probe pre .cm { color: var(--muted); }
-.probe dl { margin: 12px 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; line-height: 1.7; }
-.probe dt { font-weight: 600; }
-.probe dd { margin: 0; }
-@media (max-width: 620px) { .probe dl { grid-template-columns: 1fr; } .probe dd { margin-bottom: 6px; } }
+.story { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
+.story pre { background: var(--surface-2); border-radius: 4px; padding: 12px 14px; margin: 16px 0 0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.story pre .cm { color: var(--muted); }
+.story dl { margin: 16px 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 14px 18px; line-height: 1.75; }
+/* one meaning unit per line in any cell; never join units with · (user said 2026-11-20) */
+.ln { display: block; }
+.ln + .ln { margin-top: 6px; }
+.story dt { font-weight: 600; }
+.story dd { margin: 0; }
+@media (max-width: 620px) { .story dl { grid-template-columns: 1fr; } .story dd { margin-bottom: 6px; } }
 </style>
 </head>
 <body>
@@ -41,77 +48,119 @@ pre.fig .key { font-weight: 600; }
 <a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
 
 <h1>CLI 명령어를 통한 학습</h1>
-<p class="sub">13주차 첫날, 책을 읽기 전에 CLI 도구로 직접 관찰 · DNS부터 시스템콜까지 다섯 프로브</p>
+<p class="sub">13주차 첫날, 책을 읽기 전에 CLI 도구로 직접 관찰<br>요청 하나를 DNS부터 시스템콜까지 다섯 프로브로 따라감</p>
 
-<h2>1. 이렇게 시작한 이유</h2>
-<p class="lead">읽고 나서 만들기 대신 겪고 나서 만들기 → 관찰에서 생긴 질문을 팀 프로토타입으로</p>
-
-<p>웹 서버 주차의 출발점을 책 대신 명령으로 정함. curl, telnet, nc, strace로 요청 하나를 직접 따라가고, 다음 트랙부터는 작은 C 코드를 손으로 따라 침. 각 프로브의 끝은 힌트 없이 혼자 하는 변경 과제 하나.</p>
-
+<div class="summary">
 <div class="scroll">
 <table>
-<thead><tr><th>트랙</th><th>겪어 볼 것</th><th>상태</th></tr></thead>
+<thead><tr><th>프로브</th><th>요약</th></tr></thead>
+<tbody>
+<tr><td><a href="#s3">01 DNS: 이름 → IP</a></td><td><span class="ln"><strong class="ba">Observed</strong>example.com 하나에 IP 넷이 돌아오고, localhost는 DNS에 묻지 않고 <code>/etc/hosts</code>에서 바로 IP로 바뀐다.</span><span class="ln"><strong class="ba">Meaning</strong>이름은 IP만 정하고, 포트는 URL이 정한다.</span></td></tr>
+<tr><td><a href="#s4">02 curl: HTTP의 모양</a></td><td><span class="ln"><strong class="ba">Observed</strong>curl은 TCP 연결을 먼저 맺고 그 위로 요청 텍스트를 보내며, 없는 경로 <code>/nothing</code>도 연결은 같고 상태 줄만 404다.</span><span class="ln"><strong class="ba">Meaning</strong>무엇을 돌려줄지 판단하는 쪽은 커널이 아니라 서버 프로그램이다.</span></td></tr>
+<tr><td><a href="#s5">03 telnet: HTTP를 손으로</a></td><td><span class="ln"><strong class="ba">Observed</strong>빈 줄을 치기 전까지 서버는 다음 헤더를 기다리고, 깨진 요청에는 400이나 405를 돌려준다.</span><span class="ln"><strong class="ba">Meaning</strong>요청의 끝은 빈 줄이고, 서버는 요청 줄의 문법, 헤더, 의미를 차례로 판단한다.</span></td></tr>
+<tr><td><a href="#s6">04 nc: 내가 서버</a></td><td><span class="ln"><strong class="ba">Observed</strong>Content-Length가 없으면 브라우저는 연결이 끊길 때까지 로딩하고, <code>Content-Length: 5</code>면 5바이트만 그린다.</span><span class="ln"><strong class="ba">Meaning</strong>브라우저는 응답이 끝난 것을 Content-Length나 연결의 끝으로만 안다.</span></td></tr>
+<tr><td><a href="#s7">05 strace: 서버와 커널 사이</a></td><td><span class="ln"><strong class="ba">Observed</strong>서버는 <code>socket</code>, <code>bind</code>, <code>listen</code> 다음 <code>accept4</code>에서 멈추고, 접속이 오면 listen 소켓 fd 3과 다른 연결 소켓 fd 4를 받는다.</span><span class="ln"><strong class="ba">Meaning</strong>listen 소켓은 새 연결만 받고, client와의 대화는 client마다 새로 생기는 연결 소켓으로 한다.</span></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h2>1. 앞 이야기와 용어</h2>
+<p class="lead">읽고 나서 만들기 대신 겪고 나서 만들기<br>관찰에서 생긴 질문을 팀 프로토타입으로</p>
+<p>웹 서버 주차의 출발점을 책 대신 명령으로 정함. curl, telnet, nc, strace로 요청 하나를 직접 따라가고, 다음 트랙부터는 작은 C 코드를 손으로 따라 침. 각 프로브의 끝은 힌트 없이 혼자 하는 변경 과제 하나.</p>
+<div class="scroll">
+<table>
+<thead><tr><th>트랙</th><th>겪어 볼 것</th><th>기록</th></tr></thead>
 <tbody>
 <tr><td>T1 CLI</td><td>이름 → IP, HTTP의 모양, socket → bind → listen → accept</td><td>이 페이지</td></tr>
-<tr><td>T2 socket C</td><td>echo 서버 따라치기, 두 번째 클라이언트가 멈추는 이유</td><td>다음</td></tr>
-<tr><td>T3 TCP</td><td>SO_REUSEADDR, TIME_WAIT, handshake, SIGPIPE</td><td></td></tr>
-<tr><td>T4 HTTP</td><td>정적 GET, MIME, 404, keep-alive, 깨진 요청</td><td></td></tr>
+<tr><td>T2 socket C</td><td>echo 서버 따라치기, 두 번째 client가 멈추는 이유</td><td><a href="https://benjohnbill.github.io/study/week13/t2-echo-server.html">한 번에 한 client만 받는 echo 서버</a></td></tr>
+<tr><td>T3 TCP</td><td>SO_REUSEADDR, TIME-WAIT, SIGPIPE</td><td><a href="https://benjohnbill.github.io/study/week13/t3-restart-sigpipe.html">서버 재시작과 응답 도중 떠난 client</a></td></tr>
+<tr><td>T4 HTTP</td><td>정적 GET, MIME, 404, keep-alive, 깨진 요청</td><td>다음</td></tr>
 <tr><td>T5 concurrency</td><td>fork, pthread, epoll을 wrk로 비교</td><td></td></tr>
 <tr><td>T6 proxy</td><td>Reverse Proxy, 중계, C Forward Proxy</td><td></td></tr>
 </tbody>
 </table>
 </div>
-
-<h2>2. 요청 하나의 흐름</h2>
-<p class="lead">다섯 단계 · 단계마다 본 프로브와 출력의 자리가 다름</p>
-
 <div class="scroll">
-<table class="flow">
-<thead><tr><th></th><th>오가는 것</th><th>누가 → 누구에게</th><th>본 곳</th></tr></thead>
+<table>
+<thead><tr><th>용어</th><th>뜻</th></tr></thead>
 <tbody>
-<tr><td>1</td><td>IP 주소는? → IP 목록</td><td>curl과 DNS 서버</td><td>01 · curl의 <code>*</code> 줄</td></tr>
-<tr><td>2</td><td>TCP 연결</td><td>내 커널과 서버 커널</td><td>05 · connect, accept</td></tr>
-<tr><td>3</td><td><code>GET / HTTP/1.1</code>, 헤더, 빈 줄</td><td>curl → 서버 프로그램</td><td>02 03 · <code>&gt;</code> 줄</td></tr>
-<tr><td>4</td><td><code>HTTP/1.1 200 OK</code>, 헤더, 빈 줄</td><td>서버 프로그램 → curl</td><td>02 03 · <code>&lt;</code> 줄</td></tr>
-<tr><td>5</td><td>body (HTML)</td><td>서버 프로그램 → curl</td><td>04 · 브라우저가 받는 대로 그림</td></tr>
+<tr><td>client</td><td><span class="ln">서버에 연결하는 프로그램</span><span class="ln">이 페이지에서는 curl, telnet, nc, 브라우저</span></td></tr>
+<tr><td>DNS</td><td>이름을 물으면 IP를 알려 주는 서버와 그 규칙</td></tr>
+<tr><td><code>/etc/hosts</code></td><td><span class="ln">이름과 IP를 직접 적어 둔 파일</span><span class="ln">DNS보다 먼저 봄</span></td></tr>
+<tr><td>요청 줄</td><td>요청의 첫 줄: 메서드, 경로, 버전 (<code>GET / HTTP/1.1</code>)</td></tr>
+<tr><td>상태 줄</td><td>응답의 첫 줄: 버전, 상태 코드, 설명 (<code>HTTP/1.1 200 OK</code>)</td></tr>
+<tr><td>빈 줄</td><td>헤더가 끝났다는 표시</td></tr>
+<tr><td>keep-alive</td><td>응답 뒤에도 연결을 닫지 않고 다음 요청을 받는 방식</td></tr>
+<tr><td>Content-Length</td><td>body가 몇 바이트인지 알리는 헤더</td></tr>
+<tr><td>시스템콜</td><td>프로그램이 커널에 일을 부탁하는 호출 (<code>socket</code>, <code>bind</code>, <code>listen</code>, <code>accept</code>, <code>connect</code>)</td></tr>
+<tr><td>fd</td><td>프로세스가 커널 안의 파일이나 소켓을 가리키는 번호</td></tr>
+<tr><td>listen 소켓</td><td><code>listen</code>을 부른 소켓, 새 연결만 받음</td></tr>
+<tr><td>연결 소켓</td><td><code>accept</code>가 client마다 새로 만든 소켓, 대화는 여기로</td></tr>
 </tbody>
 </table>
 </div>
 
-<p>웹 서버를 만든다 = 3을 읽고 4와 5를 쓰는 일 · 1은 클라이언트, 2는 커널이 처리 (서버는 listen과 accept로 준비만).</p>
+<h2>2. 요청 하나의 흐름</h2>
+<p class="lead">다섯 단계<br>단계마다 본 프로브와 출력의 자리가 다름</p>
+<div class="scroll">
+<table class="flow">
+<thead><tr><th></th><th>오가는 것</th><th>누가 → 누구에게</th><th>본 곳</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>IP 주소는? → IP 목록</td><td>curl과 DNS 서버</td><td><span class="ln">01</span><span class="ln">curl의 <code>*</code> 줄</span></td></tr>
+<tr><td>2</td><td>TCP 연결</td><td>내 커널과 서버 커널</td><td><span class="ln">05</span><span class="ln"><code>connect</code>, <code>accept</code></span></td></tr>
+<tr><td>3</td><td><code>GET / HTTP/1.1</code>, 헤더, 빈 줄</td><td>curl → 서버 프로그램</td><td><span class="ln">02, 03</span><span class="ln"><code>&gt;</code> 줄</span></td></tr>
+<tr><td>4</td><td><code>HTTP/1.1 200 OK</code>, 헤더, 빈 줄</td><td>서버 프로그램 → curl</td><td><span class="ln">02, 03</span><span class="ln"><code>&lt;</code> 줄</span></td></tr>
+<tr><td>5</td><td>body (HTML)</td><td>서버 프로그램 → curl</td><td><span class="ln">04</span><span class="ln">브라우저가 받는 대로 그림</span></td></tr>
+</tbody>
+</table>
+</div>
+<p>웹 서버를 만든다 = 3을 읽고 4와 5를 쓰는 일. 1은 client가, 2는 커널이 처리하고, 서버는 <code>listen</code>과 <code>accept</code>로 준비만 함.</p>
 
-<h2>3. 프로브 다섯</h2>
-<p class="lead">명령 · 하는 일 · 본 것</p>
-
-<div class="probes">
-
-<section class="probe">
-<h3><span class="no">01</span>DNS: 이름 → IP</h3>
+<h2 id="s3">3. DNS: 이름 → IP (01)</h2>
+<p class="lead">이름이 IP로 바뀌는 곳은 두 군데<br><code>/etc/hosts</code>가 먼저, 없으면 DNS 서버</p>
+<section class="story">
+<dl>
+<dt>상황</dt><dd>내 PC에서 example.com과 localhost의 IP를 여러 방법으로 조회</dd>
+<dt>질문</dt><dd>이름은 어디서 IP로 바뀌고, 포트는 누가 정하나</dd>
+</dl>
 <pre>ip -br addr                    <span class="cm"># 내 PC의 인터페이스와 IP</span>
 getent ahosts example.com      <span class="cm"># /etc/hosts 다음 DNS까지, OS 방식으로</span>
 dig A example.com +short       <span class="cm"># DNS 서버에 직접: IPv4</span>
 dig AAAA example.com +short    <span class="cm"># IPv6</span>
 cat /etc/hosts /etc/resolv.conf</pre>
 <dl>
-<dt>하는 일</dt><dd>이름이 IP로 바뀌는 곳 확인. /etc/hosts가 먼저, 없으면 resolv.conf의 DNS 서버</dd>
-<dt>본 것</dt><dd>example.com 하나 → IP 넷 · localhost는 DNS 없이 /etc/hosts에서 · 포트는 DNS가 아니라 URL이 정함</dd>
-<dt>더 보기</dt><dd><a href="https://benjohnbill.github.io/study/week13/address-map.html">내 PC의 주소 지도</a> · 인터페이스, 이름, Host, NAT</dd>
+<dt>본 것</dt><dd><span class="ln">① example.com 하나 → IP 넷</span><span class="ln">② localhost는 DNS 없이 <code>/etc/hosts</code>에서 바뀜</span><span class="ln">③ 포트는 DNS 답에 없음, URL이 정함</span></dd>
+<dt>웹 서버에서</dt><dd>서버 코드가 이름을 찾을 때 쓰는 <code>getaddrinfo()</code>는 <code>getent</code>와 같은 순서로 찾음</dd>
+<dt>더 보기</dt><dd><a href="https://benjohnbill.github.io/study/week13/address-map.html">내 PC로 살펴보는 IP와 Host</a></dd>
 </dl>
 </section>
 
-<section class="probe">
-<h3><span class="no">02</span>curl: HTTP의 모양</h3>
+<h2 id="s4">4. curl: HTTP의 모양 (02)</h2>
+<p class="lead">연결이 먼저, 요청 텍스트는 그 위로<br>무엇을 돌려줄지는 서버 프로그램이 정함</p>
+<section class="story">
+<dl>
+<dt>상황</dt><dd>curl을 <code>-v</code>로 실행해 연결 과정과 헤더를 봄</dd>
+<dt>질문</dt><dd>HTTP 요청과 응답은 어떤 모양이고, 없는 경로는 어디서 걸러지나</dd>
+</dl>
 <pre>curl -sv http://example.com/ -o /dev/null 2&gt;&amp;1 | bat -l http
 curl -sv http://example.com/nothing -o /dev/null 2&gt;&amp;1 | bat -l http
-curl -sv http://localhost/ -o /dev/null 2&gt;&amp;1 | bat -l http</pre>
+curl -sv http://localhost/ -o /dev/null 2&gt;&amp;1 | bat -l http
+<span class="cm"># -v = 연결 과정과 헤더를 stderr로, -o /dev/null = body 버림, 2&gt;&amp;1 = 둘을 합쳐 bat으로</span></pre>
 <dl>
-<dt>하는 일</dt><dd>-v = 연결 과정과 헤더를 stderr로 · -o /dev/null = body 버림 · 2&gt;&amp;1 = 둘을 합쳐 bat으로</dd>
-<dt>본 것</dt><dd><code>*</code> curl의 기록 · <code>&gt;</code> 보낸 것 · <code>&lt;</code> 받은 것 · <code>{</code> 받은 body 크기. 내 쪽 포트는 실행마다 바뀜(커널이 고른 임시 포트) · /nothing = 연결은 같고 상태 줄만 404 → 판단은 서버 프로그램</dd>
+<dt>본 것</dt><dd><span class="ln">① <code>*</code> 줄 = curl의 기록, <code>&gt;</code> 줄 = 보낸 것, <code>&lt;</code> 줄 = 받은 것, <code>{</code> 줄 = 받은 body 크기</span><span class="ln">② 내 쪽 포트는 실행마다 바뀜 (커널이 고른 임시 포트)</span><span class="ln">③ <code>/nothing</code>도 연결은 같고 상태 줄만 404</span></dd>
+<dt>이유</dt><dd>커널은 연결만 맺음, 경로를 읽고 상태 코드를 고르는 것은 서버 프로그램</dd>
+<dt>웹 서버에서</dt><dd>404 판단은 내 서버 코드가 할 일</dd>
 </dl>
 </section>
 
-<section class="probe">
-<h3><span class="no">03</span>telnet: HTTP를 손으로</h3>
+<h2 id="s5">5. telnet: HTTP를 손으로 (03)</h2>
+<p class="lead">요청의 끝은 빈 줄<br>깨진 요청은 읽는 단계마다 다른 때에 걸러짐</p>
+<section class="story">
+<dl>
+<dt>상황</dt><dd>curl이 대신 쳐 주던 요청 텍스트를 telnet으로 직접 입력, nginx(localhost:80)에 보냄</dd>
+<dt>질문</dt><dd>서버는 요청이 끝난 것을 어떻게 알고, 깨진 요청에는 무엇을 돌려주나</dd>
+</dl>
 <pre>telnet localhost 80
 <span class="cm"># 연결되면 직접 치고 Enter 두 번</span>
 GET / HTTP/1.1
@@ -119,24 +168,31 @@ Host: localhost
 
 nc localhost 80                <span class="cm"># 줄 끝 \n만 (nc -C면 \r\n)</span></pre>
 <dl>
-<dt>하는 일</dt><dd>curl이 대신 쳐 주던 요청 텍스트를 직접 입력. telnet은 HTTP를 모름 → 바이트를 그대로 보여 줌</dd>
-<dt>본 것</dt><dd>빈 줄 전까지 서버는 다음 헤더를 기다림 = 요청의 끝은 빈 줄 · 1.0은 응답 후 연결 닫힘, 1.1은 유지(keep-alive)</dd>
+<dt>본 것</dt><dd><span class="ln">① 빈 줄 전까지 서버는 다음 헤더를 기다림</span><span class="ln">② HTTP/1.0은 응답 뒤 연결이 닫히고, HTTP/1.1은 유지 (keep-alive)</span><span class="ln">③ telnet은 HTTP를 모름, 받은 바이트를 그대로 보여 줌</span></dd>
 </dl>
 <div class="scroll">
 <table>
-<thead><tr><th>바꾼 요청</th><th>응답 · 연결</th><th>판단 시점</th></tr></thead>
+<thead><tr><th>바꾼 요청</th><th>응답과 연결</th><th>판단 시점</th></tr></thead>
 <tbody>
-<tr><td>요청 줄 앞 공백, <code>HTTP1.1</code></td><td>400 · close</td><td>요청 줄을 읽자마자 (문법)</td></tr>
-<tr><td>HTTP/1.1에서 Host 없음</td><td>400 · close</td><td>헤더를 다 읽은 뒤</td></tr>
-<tr><td>메서드 <code>GOT</code></td><td>405 · keep-alive</td><td>문법 통과 후 (의미)</td></tr>
-<tr><td>줄 끝 <code>\n</code>만</td><td>200 · keep-alive</td><td>받아 줌: 읽을 때 너그럽게, 쓸 때 엄격하게</td></tr>
+<tr><td>요청 줄 앞 공백, <code>HTTP1.1</code></td><td><span class="ln">400</span><span class="ln">close</span></td><td>요청 줄을 읽자마자 (문법)</td></tr>
+<tr><td>HTTP/1.1에서 Host 없음</td><td><span class="ln">400</span><span class="ln">close</span></td><td>헤더를 다 읽은 뒤</td></tr>
+<tr><td>메서드 <code>GOT</code></td><td><span class="ln">405</span><span class="ln">keep-alive</span></td><td>문법 통과 후 (의미)</td></tr>
+<tr><td>줄 끝 <code>\n</code>만</td><td><span class="ln">200</span><span class="ln">keep-alive</span></td><td><span class="ln">받아 줌</span><span class="ln">읽을 때 너그럽게, 쓸 때 엄격하게</span></td></tr>
 </tbody>
 </table>
 </div>
+<dl>
+<dt>웹 서버에서</dt><dd><span class="ln">내 서버의 파서도 빈 줄을 만날 때까지 읽어야 함</span><span class="ln">문법 오류는 400, 모르는 메서드는 405로 나눠 답함</span></dd>
+</dl>
 </section>
 
-<section class="probe">
-<h3><span class="no">04</span>nc: 내가 서버</h3>
+<h2 id="s6">6. nc: 내가 서버 (04)</h2>
+<p class="lead">역할 바꾸기: 브라우저가 client, 내가 서버<br>브라우저는 응답의 끝을 Content-Length나 연결의 끝으로 앎</p>
+<section class="story">
+<dl>
+<dt>상황</dt><dd><code>nc -l 8080</code>을 띄우고 Windows 브라우저로 접속, 찍힌 요청에 응답을 손으로 침</dd>
+<dt>질문</dt><dd>브라우저는 무엇을 보내고, 무엇을 믿고 화면을 그리나</dd>
+</dl>
 <pre>nc -l 8080
 <span class="cm"># Windows 브라우저에서 http://localhost:8080/hello → 요청이 찍히면 직접 응답</span>
 HTTP/1.0 200 OK
@@ -144,34 +200,38 @@ Content-Type: text/html
 
 &lt;h1&gt;hello from nc&lt;/h1&gt;</pre>
 <dl>
-<dt>하는 일</dt><dd>역할 바꾸기: 브라우저가 클라이언트, 내가 서버</dd>
-<dt>본 것</dt><dd>브라우저 요청 = curl보다 헤더가 훨씬 많음(언어, 압축, prefetch) · 친 줄마다 바로 렌더링 · Content-Length 없으면 연결이 끊길 때까지 로딩 · <code>Content-Length: 5</code>면 5바이트만 → <code>&lt;h1&gt;H</code>만 그림 · 경로는 nc가 안 읽음 → 어느 경로든 같은 화면 · nc -l은 한 번만 받음 → 새로고침 = 연결 거부</dd>
+<dt>본 것</dt><dd><span class="ln">① 브라우저 요청은 curl보다 헤더가 훨씬 많음 (언어, 압축, prefetch)</span><span class="ln">② 친 줄마다 바로 렌더링</span><span class="ln">③ Content-Length가 없으면 연결이 끊길 때까지 로딩</span><span class="ln">④ <code>Content-Length: 5</code>면 5바이트만 받아 <code>&lt;h1&gt;H</code>만 그림</span><span class="ln">⑤ 경로는 nc가 읽지 않음 → 어느 경로든 같은 화면</span><span class="ln">⑥ <code>nc -l</code>은 한 번만 받음 → 새로고침하면 연결 거부 (서버 커널이 RST를 돌려보냄)</span></dd>
+<dt>웹 서버에서</dt><dd><span class="ln">응답마다 Content-Length를 정확히 넣어야 keep-alive 연결에서 다음 응답과 섞이지 않음</span><span class="ln">한 번 받고 끝나는 서버는 서버가 아님 → <code>accept</code>를 반복하는 구조 (T2)</span></dd>
 </dl>
 </section>
 
-<section class="probe">
-<h3><span class="no">05</span>strace: 서버가 커널에 부탁하는 순서</h3>
+<h2 id="s7">7. strace: 서버와 커널 사이 (05)</h2>
+<p class="lead">서버는 <code>socket</code> → <code>bind</code> → <code>listen</code> 다음 <code>accept4</code>에서 멈춤<br>접속이 오면 새 fd</p>
+<section class="story">
+<dl>
+<dt>상황</dt><dd>strace를 붙인 <code>nc -l 8080</code>에 다른 터미널의 nc로 접속, curl도 strace로 봄</dd>
+<dt>질문</dt><dd>서버와 client는 커널에 무엇을 어떤 순서로 부탁하나</dd>
+</dl>
 <pre>strace -f -e trace=network nc -l 8080        <span class="cm"># 터미널 1</span>
 nc localhost 8080                            <span class="cm"># 터미널 2</span>
 ss -tanp 'sport = :8080'                     <span class="cm"># 터미널 3</span>
 strace -f -e trace=network curl -s http://example.com/ -o /dev/null</pre>
 <dl>
-<dt>하는 일</dt><dd>프로그램이 커널에 들어간 네트워크 시스템콜만 순서대로 보기</dd>
-<dt>본 것</dt><dd>socket → bind → listen 다음 accept4에서 멈춤 · listen 소켓 fd 3, 연결 소켓 fd 4 · curl은 DNS(:53) → connect(:80) → 요청 텍스트 sendto</dd>
-<dt>더 보기</dt><dd><a href="https://benjohnbill.github.io/study/week13/strace-syscalls.html">서버가 커널에 부탁하는 순서</a> · 실제 출력과 fd 표</dd>
+<dt>본 것</dt><dd><span class="ln">① 서버는 <code>accept4</code>에서 잠들었다가 접속이 오자 깨어남</span><span class="ln">② listen 소켓은 fd 3, 연결 소켓은 fd 4</span><span class="ln">③ curl은 DNS(:53) → <code>connect</code>(:80) → 요청 텍스트를 <code>sendto</code></span></dd>
+<dt>이유</dt><dd>fd 3은 다음 client를 받으려고 남아 있고, 대화는 <code>accept</code>가 만든 fd 4로 함</dd>
+<dt>웹 서버에서</dt><dd>내 서버 코드도 같은 순서로 부름 → T2에서 C로 직접</dd>
+<dt>더 보기</dt><dd><a href="https://benjohnbill.github.io/study/week13/strace-syscalls.html">Server to Kernel 요약</a> (실제 출력과 fd 표)</dd>
 </dl>
 </section>
 
-</div>
-
-<h2>4. 다음 트랙으로 미룬 것</h2>
+<h2>8. 다음으로 미룬 것</h2>
 <div class="scroll">
 <table>
 <thead><tr><th>질문</th><th>갈 곳</th></tr></thead>
 <tbody>
-<tr><td>디스크도 안 쓰는데 소켓에 read와 write를 쓰는 이유</td><td>T2 · 소켓도 fd</td></tr>
-<tr><td>커널이 들어온 패킷을 어느 소켓에 줄지 고르는 방법</td><td>T2~T3 · 주소 네 개</td></tr>
-<tr><td>너그러운 파싱의 한계 (request smuggling)</td><td>T6 · proxy</td></tr>
+<tr><td>디스크도 안 쓰는데 소켓에 <code>read</code>와 <code>write</code>를 쓰는 이유</td><td><a href="https://benjohnbill.github.io/study/week13/l1-connection-setup.html">연결 준비와 fd</a> (소켓도 fd)</td></tr>
+<tr><td>커널이 들어온 패킷을 어느 소켓에 줄지 고르는 방법</td><td><a href="https://benjohnbill.github.io/study/week13/l2-receive-buffer.html">Receive Buffer</a> (주소 네 개)</td></tr>
+<tr><td>너그러운 파싱의 한계 (request smuggling)</td><td>proxy 트랙</td></tr>
 </tbody>
 </table>
 </div>

@@ -135,6 +135,7 @@ if (!document.getElementById("flow-lanes-css")) {
 
 customElements.define("flow-lanes", FlowLanes);
 </script>
+<script>window.QUIZ_SEED = {"w13-l1": {"picks": {"0": 0, "1": 0, "2": 2, "3": 2, "4": 1}, "notes": {"0": "accept를 한 번 하면, 커널 대기열에 있는 fd를 직접 꺼내서 연결을 한다고 알고 있어. accept를 한 뒤에는 read/write를 그 client하고 주고받는데. 근데, 그것과는 별개로 두 번째 클라이언트와의 요청을 처리할 수 있지 않을까? 네트워크 패킷을 받고 연결된 상대방의 Socket에 보내는 작업을 별도 스레드를 통해서 하면 된다고 생각했는데. Connect가 끝난다는 말이, 단순히 IP:Port 연결을 의미하는 것이라면, 마찬가지로 병렬작업을 통해서 처리할 수 있다고 봤는데. ", "1": "뭔가 다음과 같은 형태로 tcpdump가 뜨기는 하거든?\n```\n11:26:31.787063 IP 127.0.0.1.8080 > 127.0.0.1.49954: Flags [.], ack 67, win 64, options [nop,nop,TS val 370797769 ecr 2283781797], length 0\n```\n\n다만, no_accept.py를 실행한 쪽에서는 아무것도 뜨지가 않아. 이게 echo가 전혀 돌아오지 않는 건가? 근데, 이건 1번째/2번째 클라이언트 모두 해당하던데. 지금 뭔가 connect는 다 끝난 것 같은데도 불구하고. 그렇게 생각할 때, body로 전송되는 값들은, 뭔가 서버 프로그램인 python 파일에서 따로 body를 받고 출력하는게 없어서 안 보이는게 아닐까 생가갛긴 했거든? 음.. no_accept.py라는 이름을 생각하면. 잘 보니. 그냥 accept를 안 해서 그런 것 같기도 하고. no_ready.py 쪽도 마찬가지인거 같기도 하고."}, "date": "2026-11-20"}, "w13-l2-v2": {"picks": {"0": 1, "1": 0, "2": 0, "3": 1}, "notes": {"0": "6이겠지. 서버 커널에 들어는 왔는데, 읽지를 않았으니까.", "1": "B는 이제서야 accpet()가 순차적으로 일어나지 않을까? 만약에 서버 앱 코드 상으로 순차적인 accept() 처리가 있었다고 하면."}, "date": "2026-11-20"}, "w13-l3": {"picks": {"0": 1, "1": 0, "2": 2, "3": 1, "4": 0}, "notes": {"0": "성공. TIME_WAIT 소켓으로부터 다시 연결을 가져오지 않을까? 음.. 근데. TIME_WAIT이 원래 하고 있던  '옛 데이터 버리기'하고 '응답 신호 보내주기'는 어떻게 할 지 고민이긴 하네.", "1": "client가 끊어버리면, client의 커널이 TIME_WAIT을 소유하고 있겠지. 서버 프로세스는 그에 따라 write()를 하는데에는 문제가 없을 거야. client쪽의 TIME_WAIT이 알아서 응답 신호도 보내줄 거고. 서버 프로세스는 그 뒤에 한 번 더 write()를 보내면 그때서야 오류를 확인하게 되겠지? 혹은. 음.. TIME_WAIT이 '더 이상 보내지 마'하고 신호를 주려나 싶기도 하고. 일단 client 앱은 끊어버리게 되면, 더 이상 정보를 주고받지 않겠지. TIME_WAIT이 남아있는 쪽은 client의 커널일 뿐이고."}, "date": "2026-11-20"}};</script>
 <script>
 // Reusable quiz with immediate feedback, plus predictions and one copy block.
 // Base: week11-12/lab/teach/assets/quiz.js.
@@ -145,6 +146,8 @@ customElements.define("flow-lanes", FlowLanes);
 // With `lesson`, the page keeps picks and prediction text in this browser
 // (localStorage) and shows a button that copies them as markdown for a
 // Claude session. The first pick locks a question.
+// window.QUIZ_SEED[lesson.id] = { picks, notes, date }: answers the published
+// copy shows when this browser has none of its own (publish/build.py adds it).
 function mountQuiz(root, items, lesson) {
   if (!document.getElementById("quiz-css")) {
     const s = document.createElement("style");
@@ -157,6 +160,7 @@ function mountQuiz(root, items, lesson) {
       .quiz button.wrong { border-color: var(--write); background: var(--write-soft, #fbf1ee); }
       .quiz .why { color: var(--muted); font-size: .95rem; margin-top: .3rem; }
       .quiz .score { font-weight: 600; margin-top: 1rem; }
+      .quiz .seed { font-weight: 600; }
       .quiz textarea { display: block; width: 100%; box-sizing: border-box; min-height: 3.2rem; font: inherit; padding: .4rem .6rem; border: 1px solid var(--rule); border-radius: 4px; background: transparent; color: inherit; }
       .quiz .copy { margin-top: 1.2rem; text-align: right; }
       .quiz .copy button { font: inherit; font-weight: 600; padding: .45rem 1rem; border-radius: 6px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; }
@@ -167,16 +171,23 @@ function mountQuiz(root, items, lesson) {
   }
 
   const key = lesson ? "teach:" + lesson.id : null;
+  const seed = lesson && window.QUIZ_SEED ? window.QUIZ_SEED[lesson.id] : null;
+  let seeded = false;
   const state = load();
 
   function load() {
     const empty = { picks: {}, notes: {} };
     if (!key) return empty;
+    let stored = null;
     try {
-      return JSON.parse(localStorage.getItem(key)) || empty;
-    } catch {
-      return empty;
+      stored = JSON.parse(localStorage.getItem(key));
+    } catch {}
+    if (stored) return stored;
+    if (seed) {
+      seeded = true;
+      return { picks: { ...seed.picks }, notes: { ...seed.notes } };
     }
+    return empty;
   }
 
   function save() {
@@ -187,6 +198,12 @@ function mountQuiz(root, items, lesson) {
   }
 
   root.classList.add("quiz");
+  if (seeded) {
+    const from = document.createElement("p");
+    from.className = "seed";
+    from.textContent = `아래 선택과 예측은 ${seed.date}에 직접 고르고 쓴 답이다.`;
+    root.append(from);
+  }
   let done = 0;
   let right = 0;
   const score = document.createElement("div");

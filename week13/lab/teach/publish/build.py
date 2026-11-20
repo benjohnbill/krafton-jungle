@@ -7,6 +7,7 @@ reference, run this script, then copy the outputs to study/week13/.
     python3 publish/build.py
 """
 
+import json
 from pathlib import Path
 
 TEACH = Path(__file__).resolve().parent.parent
@@ -23,6 +24,11 @@ PAGES = {
     "reference/syscall-lanes.html": "syscall-lanes.html",
 }
 SITE_WEEK = "https://benjohnbill.github.io/study/week13/"
+# quiz answers he gave on 2026-11-20 in his local lesson pages (read from that browser's localStorage)
+ANSWERS = json.loads((Path(__file__).resolve().parent / "answers.json").read_text(encoding="utf-8"))
+for entry in ANSWERS.values():
+    entry.setdefault("date", "2026-11-20")
+SEED_JSON = json.dumps(ANSWERS, ensure_ascii=False).replace("</", "<\\/")
 
 
 def rewrite_links(html: str) -> str:
@@ -50,6 +56,10 @@ def build(source: str, slug: str) -> None:
             '<meta name="viewport" content="width=device-width, initial-scale=1">\n',
             1,
         )
+    # his own picks and predictions, read from his local lesson pages (publish/answers.json)
+    seed_tag = '<script src="../assets/quiz.js"></script>'
+    if seed_tag in html:
+        html = html.replace(seed_tag, f"<script>window.QUIZ_SEED = {SEED_JSON};</script>\n{seed_tag}")
     for script in ("stepper.js", "quiz.js", "flow-lanes.js"):
         tag = f'<script src="../assets/{script}"></script>'
         if tag in html:

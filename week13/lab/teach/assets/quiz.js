@@ -7,6 +7,8 @@
 // With `lesson`, the page keeps picks and prediction text in this browser
 // (localStorage) and shows a button that copies them as markdown for a
 // Claude session. The first pick locks a question.
+// window.QUIZ_SEED[lesson.id] = { picks, notes, date }: answers the published
+// copy shows when this browser has none of its own (publish/build.py adds it).
 function mountQuiz(root, items, lesson) {
   if (!document.getElementById("quiz-css")) {
     const s = document.createElement("style");
@@ -19,6 +21,7 @@ function mountQuiz(root, items, lesson) {
       .quiz button.wrong { border-color: var(--write); background: var(--write-soft, #fbf1ee); }
       .quiz .why { color: var(--muted); font-size: .95rem; margin-top: .3rem; }
       .quiz .score { font-weight: 600; margin-top: 1rem; }
+      .quiz .seed { font-weight: 600; }
       .quiz textarea { display: block; width: 100%; box-sizing: border-box; min-height: 3.2rem; font: inherit; padding: .4rem .6rem; border: 1px solid var(--rule); border-radius: 4px; background: transparent; color: inherit; }
       .quiz .copy { margin-top: 1.2rem; text-align: right; }
       .quiz .copy button { font: inherit; font-weight: 600; padding: .45rem 1rem; border-radius: 6px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; }
@@ -29,16 +32,23 @@ function mountQuiz(root, items, lesson) {
   }
 
   const key = lesson ? "teach:" + lesson.id : null;
+  const seed = lesson && window.QUIZ_SEED ? window.QUIZ_SEED[lesson.id] : null;
+  let seeded = false;
   const state = load();
 
   function load() {
     const empty = { picks: {}, notes: {} };
     if (!key) return empty;
+    let stored = null;
     try {
-      return JSON.parse(localStorage.getItem(key)) || empty;
-    } catch {
-      return empty;
+      stored = JSON.parse(localStorage.getItem(key));
+    } catch {}
+    if (stored) return stored;
+    if (seed) {
+      seeded = true;
+      return { picks: { ...seed.picks }, notes: { ...seed.notes } };
     }
+    return empty;
   }
 
   function save() {
@@ -49,6 +59,12 @@ function mountQuiz(root, items, lesson) {
   }
 
   root.classList.add("quiz");
+  if (seeded) {
+    const from = document.createElement("p");
+    from.className = "seed";
+    from.textContent = `아래 선택과 예측은 ${seed.date}에 직접 고르고 쓴 답이다.`;
+    root.append(from);
+  }
   let done = 0;
   let right = 0;
   const score = document.createElement("div");

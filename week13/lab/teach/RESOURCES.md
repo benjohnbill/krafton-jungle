@@ -15,10 +15,15 @@
 - [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
   소켓 API를 C 예제로 설명. Use for: T2 따라치기 전 코드 모양 확인.
 
+- [Linux include/net/inet_hashtables.h](https://github.com/torvalds/linux/blob/master/include/net/inet_hashtables.h)
+  `__inet_lookup`: 주소 네 개로 established를 먼저, 없으면 listener. Use for: L2의 포트로 소켓 찾기.
+- [Linux net/ipv4/tcp_diag.c](https://github.com/torvalds/linux/blob/master/net/ipv4/tcp_diag.c)
+  `ss`의 Recv-Q와 Send-Q 계산식. LISTEN과 연결 소켓에서 다르다. Use for: L1, L2의 `ss` 출력 읽기.
+
 ## Wisdom (Communities)
 
 - 크래프톤 정글 week13 팀. Use for: mini-webserver 결정을 서로 설명하고 검증.
 
 ## Gaps
 
-- 커널 안에서 패킷이 소켓까지 가는 경로(포트로 소켓 찾기)를 짧게 다룬 1차 자료. L2 전에 찾는다.
+- (없음. 포트로 소켓 찾기는 `inet_hashtables.h`로 채움, 2026-11-20)

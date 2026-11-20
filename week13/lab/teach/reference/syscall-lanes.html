@@ -9,7 +9,7 @@
 <body>
 
 <h1>syscall과 네 칸 한눈에 보기</h1>
-<p class="sub">reference · lesson이 끝날 때마다 줄이 늘어난다 · 지금: L1</p>
+<p class="sub">reference · lesson이 끝날 때마다 줄이 늘어난다 · 지금: L2</p>
 
 <flow-lanes active="c-app c-kern s-kern s-app"></flow-lanes>
 
@@ -22,13 +22,21 @@
   <tr><td><code>connect</code></td><td>클라 앱</td><td>SYN을 보내고 handshake를 끝낸다</td><td>0 또는 -1</td><td>handshake가 끝날 때까지</td></tr>
   <tr><td><code>accept</code></td><td>서버 앱</td><td>대기열 맨 앞 연결을 꺼내 새 소켓으로</td><td>새 fd</td><td>대기열이 빌 때</td></tr>
 </table>
+
+<h2>대화 (L2)</h2>
+<table>
+  <tr><th>syscall</th><th>부르는 칸</th><th>커널이 하는 일</th><th>돌려주는 것</th><th>잠드는가</th></tr>
+  <tr><td><code>write</code></td><td>양쪽 앱</td><td>바이트를 내 송신 버퍼에 넣고 보낸다</td><td>넣은 바이트 수</td><td>송신 버퍼가 찰 때</td></tr>
+  <tr><td><code>read</code></td><td>양쪽 앱</td><td>내 수신 버퍼에서 바이트를 꺼내 앱 메모리로</td><td>꺼낸 바이트 수, 상대가 끊으면 0</td><td>수신 버퍼가 빌 때</td></tr>
+</table>
+<p>도착한 패킷은 커널이 주소 네 개로 연결 소켓을 먼저 찾고, 없을 때만 listen 소켓으로 보낸다 (<a href="https://github.com/torvalds/linux/blob/master/include/net/inet_hashtables.h"><code>__inet_lookup</code></a>). ACK는 커널이 받았다는 뜻이지, 앱이 읽었다는 뜻이 아니다.</p>
 <p>출처: <a href="https://man7.org/linux/man-pages/man2/listen.2.html">listen(2)</a>, <a href="https://man7.org/linux/man-pages/man2/accept.2.html">accept(2)</a>, <a href="https://man7.org/linux/man-pages/man2/socket.2.html">socket(2)</a>.</p>
 
 <h2><code>ss</code>의 두 열</h2>
 <table>
   <tr><th>소켓</th><th>Recv-Q</th><th>Send-Q</th></tr>
   <tr><td>LISTEN</td><td>accept 대기열에 쌓인 연결 수</td><td>backlog</td></tr>
-  <tr><td>ESTAB</td><td colspan="2">L2에서 채운다</td></tr>
+  <tr><td>ESTAB</td><td>커널이 받았지만 앱이 아직 <code>read</code>하지 않은 바이트</td><td>앱이 <code>write</code>했지만 상대 커널이 아직 ACK하지 않은 바이트</td></tr>
 </table>
 <p>출처: 커널 <a href="https://github.com/torvalds/linux/blob/master/net/ipv4/tcp_diag.c"><code>tcp_diag.c</code></a>. 이 PC(WSL)에서 backlog 2에 연결 3개가 대기열에 들어갔다 (2026-11-20).</p>
 
@@ -40,8 +48,10 @@
   <tr><td>연결 소켓</td><td><code>accept</code>가 손님마다 만든 소켓. 대화는 여기로 (<code>conn_fd</code>)</td></tr>
   <tr><td>accept 대기열</td><td>handshake가 끝났지만 아직 <code>accept</code>로 꺼내지 않은 연결의 줄</td></tr>
   <tr><td>backlog</td><td><code>listen</code>의 둘째 인자. accept 대기열의 길이 상한</td></tr>
+  <tr><td>주소 네 개</td><td>상대 IP, 상대 포트, 내 IP, 내 포트. 커널이 연결 소켓을 구분하는 열쇠</td></tr>
+  <tr><td>수신 버퍼</td><td>커널이 받은 바이트를 앱이 <code>read</code>할 때까지 두는 곳. 소켓마다 하나</td></tr>
 </table>
 
-<nav class="links">레슨: <a href="../lessons/0001-connection-setup-and-fd.html">L1 연결 준비와 fd</a></nav>
+<nav class="links">레슨: <a href="../lessons/0001-connection-setup-and-fd.html">L1 연결 준비와 fd</a> · <a href="../lessons/0002-socket-lookup-and-receive-buffer.html">L2 포트로 소켓 찾기와 수신 버퍼</a></nav>
 </body>
 </html>

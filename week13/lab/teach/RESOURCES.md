@@ -9,7 +9,7 @@
 - [listen(2)](https://man7.org/linux/man-pages/man2/listen.2.html) · [accept(2)](https://man7.org/linux/man-pages/man2/accept.2.html)
   backlog와 accept 대기열의 정의. Use for: L1의 "accept 없이 handshake가 끝나는가".
 - [socket(7)](https://man7.org/linux/man-pages/man7/socket.7.html)
-  소켓 수준 옵션과 버퍼. Use for: L2의 수신 버퍼, SO_RCVBUF.
+  소켓 수준 옵션과 버퍼. Use for: L2의 수신 버퍼, SO_RCVBUF. L3의 SO_REUSEADDR (옛 프로그램과 새 프로그램 둘 다 켜야 한다).
 - [ss(8)](https://man7.org/linux/man-pages/man8/ss.8.html)
   Recv-Q와 Send-Q의 뜻이 LISTEN 소켓과 연결 소켓에서 다르다. Use for: 모든 관찰 명령의 출력 읽기.
 - [Beej's Guide to Network Programming](https://beej.us/guide/bgnet/)
@@ -19,6 +19,10 @@
   `__inet_lookup`: 주소 네 개로 established를 먼저, 없으면 listener. Use for: L2의 포트로 소켓 찾기.
 - [Linux net/ipv4/tcp_diag.c](https://github.com/torvalds/linux/blob/master/net/ipv4/tcp_diag.c)
   `ss`의 Recv-Q와 Send-Q 계산식. LISTEN과 연결 소켓에서 다르다. Use for: L1, L2의 `ss` 출력 읽기.
+- [read(2)](https://man7.org/linux/man-pages/man2/read.2.html) · [write(2)](https://man7.org/linux/man-pages/man2/write.2.html)
+  `read`의 0 = end of file, `write`의 EPIPE와 SIGPIPE. Use for: L3의 상대가 끊었을 때.
+- [Linux include/net/tcp.h](https://github.com/torvalds/linux/blob/master/include/net/tcp.h)
+  `TCP_TIMEWAIT_LEN` (60초). Use for: L3의 TIME-WAIT 길이. lesson 본문에는 넣지 않는다.
 
 ## Wisdom (Communities)
 

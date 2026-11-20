@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>L3 · close와 실패: 끊는 쪽, 남는 쪽, 죽는 쪽</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="../assets/flow-lanes.js"></script>
+<script src="../assets/quiz.js"></script>
+</head>
+<body>
+
+<h1><code>close</code>와 실패: 끊는 쪽, 남는 쪽, 죽는 쪽</h1>
+<p class="sub">레슨 L3 · T3 바로 앞 · 약 8분 · 목표: 연결이 끝나거나 실패할 때 각 칸에 무엇이 남고 앱이 무엇을 받는지 말하기</p>
+
+<h2>0. L2 복습</h2>
+<p>답을 먼저 말하고 연다. 앱이 <code>read</code>하기 전 바이트는 어느 칸에 있고, <code>ss</code>의 어느 열에 보이나?</p>
+<details>
+<summary>답 열기</summary>
+<p>서버 커널, 그 연결 소켓의 수신 버퍼에 있다. ESTAB 줄의 Recv-Q가 그 바이트 수다. 06-echo에서 B의 <code>hello</code> 두 번이 Recv-Q 12로 보였다.</p>
+</details>
+
+<h2>1. 상대가 끊으면 <code>read</code>는 0을 돌려준다</h2>
+<div class="callout write"><strong>한 문장.</strong> 한쪽 앱이 <code>close</code>하면 그 커널이 상대 커널에 "끝"을 알린다. 상대 앱의 <code>read</code>는 버퍼에 남은 바이트를 다 꺼낸 뒤 0을 돌려준다. 0이 "손님이 떠났다"는 뜻이다.</div>
+<flow-lanes active="c-app c-kern s-kern s-app" loopback>
+  <step from="c-app" to="c-kern"><code>close()</code> (06에서 A를 <code>Ctrl-C</code>)</step>
+  <step from="c-kern" to="s-kern">"끝" 알림</step>
+  <step from="s-app" to="s-kern"><code>read()</code> → 0. 서버 앱이 비로소 앎</step>
+</flow-lanes>
+<p>06-echo의 <code>while ((length = read(...)) > 0)</code>가 이 0에서 끝났고, 그래서 <code>closed</code>가 찍혔다. read(2): "zero indicates end of file" (<a href="https://man7.org/linux/man-pages/man2/read.2.html">read(2)</a>). 웹서버는 이 0을 보고 그 손님의 연결을 닫는다.</p>
+
+<h2>2. 먼저 끊은 쪽에 <code>TIME-WAIT</code>이 남는다</h2>
+<p>06에서 직접 봤다. A를 끊었을 때는 클라 쪽(40270)에, 서버를 먼저 끈 뒤에는 서버 쪽(<code>127.0.0.1:8080</code>)에 <code>TIME-WAIT</code> 한 줄이 남았다. 먼저 <code>close</code>한 쪽의 커널이 연결 하나를 약 60초 더 붙들고 있는 상태다. 앱은 이미 <code>close</code>했으니 fd도 없다.</p>
+
+<h2>3. 그 <code>TIME-WAIT</code>이 서버의 재시작을 막는다</h2>
+<p>서버 쪽 <code>TIME-WAIT</code> 줄은 포트 8080을 쥐고 있다. 그래서 바로 다시 켠 서버의 <code>bind</code>가 <code>Address already in use</code>로 실패했다. 웹서버는 고치고 다시 켜는 일이 잦으니 매번 1분을 기다릴 수 없다. 해결책은 소켓 옵션 <code>SO_REUSEADDR</code>이고, T3에서 직접 넣는다. 한 가지 조건이 있다. socket(7): "only with the SO_REUSEADDR option when this option was set both in the previous program ... and in the program that wants to reuse the port" (<a href="https://man7.org/linux/man-pages/man7/socket.7.html">socket(7)</a>). 이 PC에서도 새 서버만 옵션을 켜면 실패하고, 옛 서버와 새 서버 둘 다 켜야 성공했다 (2026-11-20).</p>
+
+<h2>4. 아무도 듣지 않는 포트는 바로 거절된다</h2>
+<p>06 과제에서 4번째 <code>nc</code>는 대기열이 꽉 찬 서버에 답을 못 받고 약 2분 동안 다시 보내다 조용히 끝났다. 포트에 listen 소켓이 <em>아예 없으면</em> 다르다. 서버 커널이 바로 거절을 돌려보내고, 클라 앱의 <code>connect</code>는 즉시 <code>Connection refused</code>로 실패한다. 이 PC에서 0.000초였다.</p>
+<table>
+  <tr><th>서버 쪽 상황</th><th>서버 커널</th><th>클라 앱이 겪는 일</th></tr>
+  <tr><td>listen 소켓 없음 (서버 꺼짐)</td><td>바로 거절</td><td>즉시 <code>Connection refused</code></td></tr>
+  <tr><td>accept 대기열 꽉 참 (06 과제)</td><td>답 없이 버림</td><td>약 2분 멈췄다가 실패</td></tr>
+</table>
+<p>웹서버로 치면 proxy가 꺼진 backend에 붙을 때 받는 오류가 첫 줄이다.</p>
+
+<h2>5. 끊긴 손님에게 <code>write</code>하면 서버가 죽는다</h2>
+<div class="callout write"><strong>한 문장.</strong> 상대가 이미 끊은 연결에 <code>write</code>하면, 첫 번째는 성공한 것처럼 돌아오고 두 번째에서 커널이 서버 프로세스에 <code>SIGPIPE</code>를 보낸다. 기본 동작은 프로세스 종료다.</div>
+<p>write(2): "EPIPE ... the writing process will also receive a SIGPIPE signal" (<a href="https://man7.org/linux/man-pages/man2/write.2.html">write(2)</a>). 이 PC에서 작은 C 프로그램이 첫 <code>write</code>는 3을 돌려받고, 둘째 <code>write</code>에서 종료 코드 141(128 + SIGPIPE 13)로 죽었다. 손님이 응답 도중에 브라우저를 닫는 일은 흔하다. 손님 하나 때문에 서버 전체가 죽으면 안 되니, T3에서 이걸 막는 법을 본다. 06의 <code>echo_server.c</code>는 <code>write</code>의 반환값을 보지 않는다.</p>
+
+<h2>6. 직접 본다 (퀴즈를 먼저 고르고)</h2>
+<p>4절의 즉시 거절. 9999 포트에는 아무것도 듣지 않는다.</p>
+<pre># 아무도 듣지 않는 포트. 얼마나 빨리 끝나나
+time curl http://localhost:9999/</pre>
+<p>출력을 세션에 붙여 넣는다. 1~3절은 06에서 이미 봤고, 5절은 T3에서 직접 만든다.</p>
+
+<h2>7. 퀴즈와 T3 예측</h2>
+<div id="quiz"></div>
+
+<h2>주 자료</h2>
+<p><a href="https://man7.org/linux/man-pages/man7/socket.7.html">socket(7)</a>의 <code>SO_REUSEADDR</code> 항목과, 맨 아래 BUGS 위의 "Linux will allow port reuse" 한 문단.</p>
+
+<nav class="links">
+  이전: <a href="0002-socket-lookup-and-receive-buffer.html">L2 수신 버퍼</a> ·
+  다음: T3 TCP 동작 probe, 그 뒤 L4 두 커널과 가운데 앱 (T6 앞) ·
+  참고: <a href="../reference/syscall-lanes.html">syscall과 네 칸 한눈에 보기 (reference)</a>
+</nav>
+
+<div class="ask">막히는 곳이 있으면 절 번호와 함께 에이전트에게 물어보자. 예: "#5에서 첫 write는 왜 성공해?"</div>
+
+<script>
+mountQuiz(document.getElementById("quiz"), [
+  { q: "06-echo에서 서버를 <code>Ctrl-C</code>로 먼저 껐다. <code>TIME-WAIT</code> 줄은 어느 칸에 남나?",
+    options: ["클라 커널", "서버 커널", "클라 앱"],
+    answer: 1,
+    why: "먼저 <code>close</code>한 쪽의 커널에 남는다. 앱은 이미 끝났으니 앱 칸에는 아무것도 없다." },
+  { q: "손님이 연결을 끊은 뒤, 버퍼가 빈 상태에서 서버 앱이 <code>read</code>를 부르면?",
+    options: ["0을 돌려준다", "-1을 돌려준다", "계속 멈춰 있다"],
+    answer: 0,
+    why: "0이 \"상대가 끊었다\"는 뜻이다. 06-echo의 <code>while</code>이 이 0에서 끝나 <code>closed</code>를 찍었다." },
+  { q: "listen 소켓이 없는 포트에 <code>connect</code>하면 클라 앱은?",
+    options: ["2분 뒤에 실패", "성공 후에 끊김", "바로 실패한다"],
+    answer: 2,
+    why: "서버 커널이 바로 거절해서 <code>Connection refused</code>가 즉시 온다. 2분은 대기열이 꽉 찬 서버(06 과제)의 경우다." },
+  { q: "손님이 이미 끊은 연결에 서버 앱이 <code>write</code>를 두 번 한다. <code>SIGPIPE</code>를 따로 다루지 않으면?",
+    options: ["첫 write에 죽음", "둘째 write에 죽음", "둘 다 성공한다"],
+    answer: 1,
+    why: "첫 <code>write</code>는 커널이 받아 주고 성공한 것처럼 돌아온다. 그 뒤 상대가 거절하면 둘째 <code>write</code>에서 <code>SIGPIPE</code>로 종료된다 (이 PC에서 2026-11-20 확인)." },
+  { q: "옛 서버는 <code>SO_REUSEADDR</code> 없이 돌다가 <code>TIME-WAIT</code>을 남겼다. 옵션을 넣은 새 서버를 바로 켜면 <code>bind</code>는?",
+    options: ["바로 실패한다", "바로 성공한다", "1분 뒤 성공한다"],
+    answer: 0,
+    why: "socket(7): 옛 프로그램과 새 프로그램 둘 다 옵션을 켰어야 한다. 새 서버만 켜면 실패한다. 다만 기다리면 <code>TIME-WAIT</code>이 사라지니 결국 켜지기는 한다." },
+], {
+  id: "w13-l3",
+  title: "L3 close와 실패",
+  next: "T3 (SO_REUSEADDR, SIGPIPE)",
+  record: "teach/learning-records/0004-close-and-failure.md",
+  predictions: [
+    "T3에서 <code>SO_REUSEADDR</code>를 넣은 echo_server를, 손님이 붙은 채로 끄고 바로 다시 켜면 <code>bind</code>는 성공할까? <code>ss</code>에 <code>TIME-WAIT</code> 줄은 남아 있을까?",
+    "echo_server가 손님에게 응답을 쓰는 도중 손님이 끊으면, 서버 프로세스는 어떻게 될까? 그다음 손님은 서비스를 받을까?",
+  ],
+});
+</script>
+</body>
+</html>

@@ -9,7 +9,7 @@
 <body>
 
 <h1>syscall과 네 칸 한눈에 보기</h1>
-<p class="sub">reference · lesson이 끝날 때마다 줄이 늘어난다 · 지금: L2</p>
+<p class="sub">reference · lesson이 끝날 때마다 줄이 늘어난다 · 지금: L3</p>
 
 <flow-lanes active="c-app c-kern s-kern s-app"></flow-lanes>
 
@@ -32,6 +32,18 @@
 <p>연결된 손님의 바이트는 주소 네 개가 맞는 연결 소켓의 수신 버퍼로 간다. 앱이 <code>read</code>할 때까지 커널에서 기다린다.</p>
 <p>출처: <a href="https://man7.org/linux/man-pages/man2/listen.2.html">listen(2)</a>, <a href="https://man7.org/linux/man-pages/man2/accept.2.html">accept(2)</a>, <a href="https://man7.org/linux/man-pages/man2/socket.2.html">socket(2)</a>.</p>
 
+<h2>끝과 실패 (L3)</h2>
+<table>
+  <tr><th>상황</th><th>커널이 하는 일</th><th>앱이 받는 것</th></tr>
+  <tr><td>상대가 <code>close</code></td><td>"끝"을 받아 둔다</td><td>버퍼를 다 꺼낸 뒤 <code>read</code> → 0</td></tr>
+  <tr><td>내가 먼저 <code>close</code></td><td>그 연결을 <code>TIME-WAIT</code>으로 약 60초 붙든다</td><td>없음 (fd는 이미 닫힘)</td></tr>
+  <tr><td>서버 쪽 <code>TIME-WAIT</code> 중 재시작</td><td>포트가 쓰이는 중</td><td><code>bind</code> → <code>EADDRINUSE</code>. 옛 서버와 새 서버 둘 다 <code>SO_REUSEADDR</code>를 켜야 통과</td></tr>
+  <tr><td>listen 소켓 없는 포트에 연결</td><td>서버 커널이 바로 거절</td><td><code>connect</code> → 즉시 <code>ECONNREFUSED</code></td></tr>
+  <tr><td>accept 대기열 꽉 참</td><td>서버 커널이 답 없이 버림, 클라 커널이 6번 다시 보냄</td><td><code>connect</code>가 약 2분 뒤 실패</td></tr>
+  <tr><td>끊긴 상대에게 <code>write</code></td><td>첫 번째는 받아 주고, 다음 번에 <code>SIGPIPE</code></td><td>기본은 프로세스 종료 (종료 코드 141)</td></tr>
+</table>
+<p>출처: <a href="https://man7.org/linux/man-pages/man2/read.2.html">read(2)</a>, <a href="https://man7.org/linux/man-pages/man2/write.2.html">write(2)</a>, <a href="https://man7.org/linux/man-pages/man7/socket.7.html">socket(7)</a>. 표의 모든 줄을 이 PC에서 확인했다 (2026-11-20).</p>
+
 <h2><code>ss</code>의 두 열</h2>
 <table>
   <tr><th>소켓</th><th>Recv-Q</th><th>Send-Q</th></tr>
@@ -50,8 +62,10 @@
   <tr><td>backlog</td><td><code>listen</code>의 둘째 인자. accept 대기열의 길이 상한</td></tr>
   <tr><td>주소 네 개</td><td>상대 IP, 상대 포트, 내 IP, 내 포트. 커널이 연결 소켓을 구분하는 열쇠</td></tr>
   <tr><td>수신 버퍼</td><td>커널이 받은 바이트를 앱이 <code>read</code>할 때까지 두는 곳. 소켓마다 하나</td></tr>
+  <tr><td>TIME-WAIT</td><td>먼저 <code>close</code>한 쪽 커널이 끝난 연결을 잠시 붙들어 두는 상태. 그동안 그 포트를 쥐고 있다</td></tr>
+  <tr><td>SIGPIPE</td><td>끊긴 연결에 <code>write</code>한 프로세스에 커널이 보내는 신호. 기본 동작은 종료</td></tr>
 </table>
 
-<nav class="links">레슨: <a href="../lessons/0001-connection-setup-and-fd.html">L1 연결 준비와 fd</a> · <a href="../lessons/0002-socket-lookup-and-receive-buffer.html">L2 수신 버퍼</a></nav>
+<nav class="links">레슨: <a href="../lessons/0001-connection-setup-and-fd.html">L1 연결 준비와 fd</a> · <a href="../lessons/0002-socket-lookup-and-receive-buffer.html">L2 수신 버퍼</a> · <a href="../lessons/0003-close-and-failure.html">L3 close와 실패</a></nav>
 </body>
 </html>

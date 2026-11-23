@@ -1,6 +1,6 @@
 ---
 name: jungle-week-init
-description: Day-1 bootstrap of a new Krafton Jungle week repository (build layer, editor config, issue board in solo weeks, week CLAUDE.md draft).
+description: Day-1 bootstrap of a new Krafton Jungle week repository (build layer, editor config, issue board in solo weeks, week AGENTS.md draft).
 disable-model-invocation: true
 ---
 
@@ -31,7 +31,7 @@ Then one message, numbered, and wait:
 
 1. Week number and title ("Week N"; also the board title in a solo week).
 2. Solo tutoring or a team project? A team week gets `Mode:` on the first
-   line of its CLAUDE.md.
+   line of its AGENTS.md.
 3. The course guide's words on AI use (he pastes them), and the mode they
    lead to: tutor mode (`docs/tutor-mode.md`), concept tutor
    (`docs/concept-tutor-mode.md`), transcription
@@ -114,16 +114,16 @@ gh project create --owner benjohnbill --title "Week N" --format json
 gh project item-add N --owner benjohnbill --url <issue url>   # each issue
 ```
 
-Note the project number; it becomes `Board: N` in the week CLAUDE.md. IDs are
+Note the project number; it becomes `Board: N` in the week AGENTS.md. IDs are
 never cached (`jungle-close` looks them up). Criterion: `item-list` shows
 every issue as Todo.
 
 Then set the fields, views, and README from `docs/gh-project-setup.md`. A
 team week gets the same board setup from that file.
 
-## 6. Week CLAUDE.md — the four slots
+## 6. Week AGENTS.md — the four slots
 
-A week's `CLAUDE.md` is thin. It carries a one-paragraph purpose (what the
+A week's `AGENTS.md` is thin. It carries a one-paragraph purpose (what the
 exercises are, and what must remain after them) and four slots:
 
 1. **Step 2 and the ladder rungs** — tutor mode only
@@ -139,18 +139,21 @@ exercises are, and what must remain after them) and four slots:
 Plus, for a team or build week, `Mode:` on the first line.
 
 Draft from the answers to questions 2–7; the Mode section records the
-course words and his answers to 3–4. `LATEST/CLAUDE.md` is the shape
-reference. In a team week the file is local: an excluded `CLAUDE.md`, or
-`CLAUDE.local.md` when the repo tracks a `CLAUDE.md` or `AGENTS.md`.
-CLAUDE.md is user scope: write the draft to
-`~/dev/krafton-jungle/docs/proposals/weekNN-claude-md.md` and give him the
-copy command. Criterion: he confirms the file is in place.
+course words and his answers to 3–4. `LATEST/AGENTS.md` is the shape
+reference. The week's `CLAUDE.md` is only the shim: an exact copy of
+`~/dev/study/CLAUDE.md`, which imports `@AGENTS.md`. In a team week both files
+are local: add `AGENTS.md` and `CLAUDE.md` to `.git/info/exclude`. If the repo
+tracks a `CLAUDE.md` or `AGENTS.md`, use `CLAUDE.local.md` instead (Claude Code
+only). The week rules are user scope: write the draft to
+`~/dev/krafton-jungle/docs/proposals/weekNN-agents-md.md` and give him the
+two copy commands (the draft to `AGENTS.md`, the shim to `CLAUDE.md`).
+Criterion: he confirms both files are in place.
 
 ## 6b. Transcription layer — if question 3 chose transcription mode
 
 Create `notes/sheets/` and a `GLOSSARY.md` skeleton (`domain-modeling`
 format) for the week's domain words; add both to `.git/info/exclude`. In
-the week CLAUDE.md draft, Slot 2 names the sheet location. Criterion: both
+the week AGENTS.md draft, Slot 2 names the sheet location. Criterion: both
 paths exist and `git status` does not show them.
 
 ## 6c. README — core only

@@ -149,6 +149,34 @@ only). The week rules are user scope: write the draft to
 two copy commands (the draft to `AGENTS.md`, the shim to `CLAUDE.md`).
 Criterion: he confirms both files are in place.
 
+**Codex routing.** Each week repository is its own git root, so Codex loads
+only the `AGENTS.md` files inside it and never sees `../AGENTS.md` or the
+tutor spine. Claude Code reaches both through the parent `CLAUDE.md`. Two cases:
+
+- The week file is the repository's `AGENTS.md`: put this header in the draft,
+  directly after the `# ` title line (the `Mode:` line stays first). Fix the
+  `../` depth when the repository is deeper than one level:
+
+  ```markdown
+  > **Codex:** this repository is its own git root, so Codex does not load the
+  > workspace rules above it. Before the first reply, read
+  > [`../AGENTS.md`](../AGENTS.md) (workspace router) and
+  > [`../docs/tutor-spine.md`](../docs/tutor-spine.md) (tutor spine). Claude Code
+  > already loads both through the parent `CLAUDE.md`.
+  ```
+
+- The repository tracks its own team `AGENTS.md` (the week file is then
+  `CLAUDE.local.md`, or a week file one level up as in `week13/`): Codex reads
+  only the team file. Write a local `AGENTS.override.md` in the repository
+  root and add it to `.git/info/exclude`. Codex reads it in place of
+  `AGENTS.md`. It lists, in order: the workspace `AGENTS.md`, the tutor spine,
+  the week file, and the team `AGENTS.md`. Copy the shape from
+  `week13/mini-webserver/AGENTS.override.md` and fix the paths.
+
+Criterion: Codex started in the repository names the week's mode and a spine
+signal, citing `../AGENTS.md` and the spine (check through the `herdr` skill
+when he asks for verification).
+
 ## 6b. Transcription layer — if question 3 chose transcription mode
 
 Create `notes/sheets/` and a `GLOSSARY.md` skeleton (`domain-modeling`

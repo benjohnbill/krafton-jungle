@@ -28,7 +28,7 @@ team has none. It reads and reports. He approves and merges.
   the commands need them.
 
   A repo with a `pintos/` tree: build and test in the container the week
-  `CLAUDE.md` names, with the team's own targets (read the root `Makefile`):
+  file names (`jungle-close` § 0 defines it), with the team's own targets (read the root `Makefile`):
 
   ```bash
   docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
@@ -43,7 +43,7 @@ team has none. It reads and reports. He approves and merges.
   merges only when he asks for that merge explicitly, by the repo's merge
   rule. Code is his when the week's mode says so (a Pintos week: code under
   `pintos/`). Push and `gh pr create` run only after he says yes in this run.
-  Attribution follows the week `CLAUDE.md`.
+  Attribution follows the week file.
 
 ## Mode
 

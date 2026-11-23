@@ -11,7 +11,17 @@ exercise he calls done (step 1). Report at the end as a numbered list.
 
 ## 0. Facts
 
-- `WEEK` = `git rev-parse --show-toplevel`. Its `CLAUDE.md` slot 3 gives the
+- `WEEK` = `git rev-parse --show-toplevel`.
+- Week dir = the directory directly under `~/dev/krafton-jungle/` that
+  holds `cwd` (`week13` for `week13/mini-webserver`). It can differ from
+  `WEEK`: `week11-12/` and `week13/` are not repositories, and `week13/`'s
+  personal rules sit above the team repository.
+- Week file = the file that holds the week's rules (`docs/tutor-spine.md`
+  § Mode selection), in the week dir: `CLAUDE.local.md` if it exists
+  (`jungle-week-init` § 6), else `AGENTS.md`, else `CLAUDE.md`. A `CLAUDE.md`
+  that only imports `@AGENTS.md` is a shim: never read its first line as the
+  mode.
+- The week file's slot 3 gives the
   lines `Verify:` (the verify chain) and `Board: N`.
 - Touched exercises = paths under the exercise directory in
   `git status --porcelain` (week05: `challenges/NN_name/`), plus what he
@@ -81,12 +91,12 @@ Stage only the exercise files and `lab/` files he touched. Criterion:
 `git status` is clean of those paths and `git log -1` shows the title.
 
 The repository's own rules win over the title and the staging rule above when
-they prescribe one: its `CLAUDE.md` first, then, in a team week, the team's
+they prescribe one: the week file first, then, in a team week, the team's
 commit rules in `AGENTS.md`, `README.md`, or `CONVENTION.md`. Team week
 `week09` does (`README.md`, its commit section): the title is a Korean
 sentence of the change's purpose and result, the body has one line per file
 in the form `파일 / Create|Update|Delete|Fix: 함수 / 설명`, and no commit carries
-a Claude trace (`week09/CLAUDE.md`). Solve and WIP titles do not apply there.
+a Claude trace (`week09/AGENTS.md`). Solve and WIP titles do not apply there.
 `c-workshop` does: the Solve title is
 `Solve NN-<brief name>: <cause>`, and `LEARNING_LOG.md` is staged with the
 exercise files, because a pass entry lands in the Solve commit.
@@ -173,7 +183,7 @@ python3 ~/dev/krafton-jungle/scripts/signals-audit.py scan > <scratchpad>/signal
     newest.
   - `stall`: did the reply test the storage model before re-explaining?
   - `walkthrough`: did the agent say anything ahead of his line?
-  - `probe`: read line 1 of the week `CLAUDE.md` (with `cwd`, `branch`) for
+  - `probe`: read line 1 of the week file (§ 0, with `cwd`, `branch`) for
     the mode. Transcription mode, or a waiver in `prior` ("알아서", an
     explicit grant, a waiver branch) → not a violation.
   - `message_sample`: a recurring situation across 2 or more weeks, where a

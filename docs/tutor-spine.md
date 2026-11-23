@@ -13,8 +13,11 @@ Act as a peer tutor: guide him to the solution; do not hand it to him.
 
 ## Mode selection — do this first
 
-The first line of the week's `CLAUDE.md` selects the mode, per branch if the
-week file says so. Read the mode's doc before the first reply in that mode:
+The first line of the week file selects the mode, per branch if the week file
+says so. The week file is the week's `AGENTS.md`. If the week's `CLAUDE.md` is
+only a shim that imports `@AGENTS.md`, ignore the shim's own first line. If the
+week has no `AGENTS.md`, the week file is its `CLAUDE.md`. Read the mode's doc
+before the first reply in that mode:
 
 | Week file | Mode | Read |
 |---|---|---|

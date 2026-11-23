@@ -1,6 +1,6 @@
 Mode: team project (AI 함께하기), half personal. AI-together mode (`../docs/ai-together-mode.md`) until he refines the mode in a separate session.
 
-# CLAUDE.md — week13 (웹 서버 만들기)
+# week13 (웹 서버 만들기)
 
 One team repository, `mini-webserver`: a web server in C on POSIX sockets only, with a Forward Proxy or a Reverse Proxy. Each member builds on a personal branch with much autonomy, so the week is half a personal project. What must remain: he can explain each decision in his code in his own words (sockets, HTTP parsing, the concurrency model, the proxy), and the team keeps one merged code base with tests.
 
@@ -34,7 +34,7 @@ Board: 8
 
 ## Lab
 
-`lab/` holds his hands-on probes in place of reading CSAPP chapter 11. It has its own `CLAUDE.md` and its own mode (transcription, light). Settled 2026-11-19.
+`lab/` holds his hands-on probes in place of reading CSAPP chapter 11. It has its own `AGENTS.md` and its own mode (transcription, light). Settled 2026-11-19.
 
 ## Do not touch
 

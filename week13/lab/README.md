@@ -15,7 +15,7 @@ CSAPP 11장을 읽는 대신, 명령과 작은 C 코드로 직접 겪어 본다.
 | T3 TCP | `07-reuseaddr`, `08-sigpipe` | SO_REUSEADDR, TIME_WAIT, handshake, SIGPIPE | 책 밖, 8장 |
 | T4 HTTP | `09-http-parse` … | 정적 GET, MIME, 404, POST, keep-alive, CGI | 11.5–11.6, RFC 7230 |
 | T5 concurrency | … | fork, pthread, epoll을 wrk로 비교 | 12장 |
-| T6 proxy | … | nginx Reverse Proxy, socat 중계, C Forward Proxy | 1309 |
+| T6 proxy | `10-client-hello` … | TLS 전에 ClientHello 엿보기(MSG_PEEK), nginx Reverse Proxy, socat 중계, C Forward Proxy | 1309, RFC 8446 |
 
 T2부터의 probe는 T1을 끝낸 뒤 만든다.
 

@@ -259,6 +259,13 @@ function mountQuiz(root, items, lesson) {
 
 <h2>2. 예측: <code>spread</code>는 몇 번 drop되나</h2>
 <p>퀴즈 전에 숫자 하나를 예측한다. arena의 <code>layers</code> preset에서 Crawler script <code>spread</code>를 10초 돌렸다.</p>
+<p>먼저 세 낱말이다.</p>
+<ul>
+  <li><strong>arena</strong>: <code>bench/arena/scene.sh</code>. <code>rproxy</code>를 켜고, Crawler script 하나를 10초 동안 돌린 뒤, 응답 상태를 센다.</li>
+  <li><strong>preset</strong>: <code>rproxy</code>에 주는 옵션 묶음의 이름이다. 어느 방어 layer를 켤지 정한다. <code>none</code>은 거의 다 끈 상태, <code>layers</code>는 block list, JA4 table, rate limit, Proof of work, 402, cache를 모두 켠 상태다.</li>
+  <li><strong><code>000</code></strong>: Crawler script는 curl로 요청하고, 응답마다 HTTP 상태 코드(<code>200</code>, <code>429</code> …)를 적는다. 서버가 HTTP 응답을 한 바이트도 주지 않고 연결을 끊으면 curl은 <code>000</code>을 적는다. 즉 <code>000</code> = drop이다.</li>
+</ul>
+<p>그리고 이번 실험의 조건이다.</p>
 <ul>
   <li><code>spread</code>는 127.0.0.2부터 127.0.0.33까지, 주소 32개를 차례로 돌며 보낸다.</li>
   <li><code>layers</code> preset의 block list(<code>bench/arena/layers-block.txt</code>)에는 <code>127.0.0.16/28</code> 한 줄이 있다.</li>

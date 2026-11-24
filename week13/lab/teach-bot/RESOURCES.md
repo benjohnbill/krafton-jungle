@@ -4,15 +4,15 @@
 
 ### 우리 자료 (lesson이 먼저 링크하는 곳)
 
-- [노트 00: crawler 트래픽과 서버의 방어](https://benjohnbill.github.io/study/week13/crawler/00-overview.html)
+- [노트 00: crawler 트래픽과 서버의 방어](https://benjohnbill.github.io/study/week13/mini-webserver/notes/00-overview.html)
   layer 그림과 출처 등급. Use for: L1의 전체 지도 (`#layers`).
-- [노트 01: crawler 트래픽의 비용](https://benjohnbill.github.io/study/week13/crawler/01-cost.html)
+- [노트 01: crawler 트래픽의 비용](https://benjohnbill.github.io/study/week13/mini-webserver/notes/01-cost.html)
   사람의 요청과 crawler의 요청 비교, 운영자들의 청구서. Use for: L1의 "왜 막나" (`#paths`). 나머지 절은 배경 자료다.
-- [노트 02: crawler 방어와 우회의 역사](https://benjohnbill.github.io/study/week13/crawler/02-history.html)
+- [노트 02: crawler 방어와 우회의 역사](https://benjohnbill.github.io/study/week13/mini-webserver/notes/02-history.html)
   방어와 우회의 11 라운드. Use for: L1의 군비 경쟁 순서 (`#rounds`).
-- [노트 03: crawler 방어 layer와 우회 방식](https://benjohnbill.github.io/study/week13/crawler/03-layers.html)
+- [노트 03: crawler 방어 layer와 우회 방식](https://benjohnbill.github.io/study/week13/mini-webserver/notes/03-layers.html)
   layer 0~5와 방법마다 우회 방식. Use for: L2~L5의 지식 본문 (`#m-*` 앵커).
-- [노트 04: 우리 Reverse Proxy의 방어 layer](https://benjohnbill.github.io/study/week13/crawler/04-reverse-proxy.html)
+- [노트 04: 우리 Reverse Proxy의 방어 layer](https://benjohnbill.github.io/study/week13/mini-webserver/notes/04-reverse-proxy.html)
   연결 하나의 길, layer 지도, Request Verdict 규칙 순서, arena, 대가와 한계. Use for: 모든 lesson의 "우리 코드" 쪽.
 - `mini-webserver/docs/spec-cjg.md` §11, "Defaults taken from practice"
   generator가 고른 값마다 출처(nginx, fail2ban, Cloudflare, Anubis, RFC). Use for: 퀴즈의 "왜 이 값인가".

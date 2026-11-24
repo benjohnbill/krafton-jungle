@@ -38,4 +38,10 @@
 
 - `mini-webserver/`는 Event loop 재작성(SPEC §11 step 13)이 push될 때까지 읽기만 한다. `event_loop.c`의 `tarpit_start`는 그 작업 안에 있어서, L4의 코드 위치는 push 뒤에 확정한다.
 - 알려진 버그: Origin이 query string이 붙은 정적 경로에 404를 준다. lesson 문제에 query string을 쓰지 않는다.
-- 사이트 게시는 `../teach/publish/build.py`의 방식을 따른다: 원본 lesson → `publish/` 사본 → 사이트 `study/week13/`. 사이트에 올리기 전에 `benjohnbill.github.io/AGENTS.md`의 "Site rules"를 읽는다. `assets/`는 `../teach/assets/`에서 복사했다 (`flow-lanes.js`는 요청 흐름 전용이라 빼고).
+- 사이트 게시는 `../teach/publish/build.py`의 방식을 따른다: 원본 lesson → `publish/` 사본 → 사이트 `study/week13/mini-webserver/lessons/` (노트는 `study/week13/mini-webserver/notes/`, 2026-11-24 user said). 사이트에 올리기 전에 `benjohnbill.github.io/AGENTS.md`의 "Site rules"를 읽는다. `assets/`는 `../teach/assets/`에서 복사했다 (`flow-lanes.js`는 요청 흐름 전용이라 빼고).
+
+## 진행
+
+- 2026-11-24: Mission 확정. 그는 성공 기준이 "조금 빡세다"고 했다 (user said). 다섯 lesson이 끝난 뒤 기준을 다시 본다.
+- 2026-11-24: L1 `lessons/0001-map-and-cost.html` 작성. 코드 위치는 `CJG` `a1e0984` 기준 (Event loop 재작성 포함, push 전).
+- 노트 링크는 lesson 안에서 해당 절의 앵커로 건다: "먼저 읽기" 표와 퀴즈 해설 끝 (user said "노트의 해당 부분을 내부적으로 링크 걸어서").

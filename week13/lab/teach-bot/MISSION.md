@@ -1,6 +1,6 @@
 # Mission: rproxy의 방어 layer를 내 말로 설명하기
 
-> 초안 (2026-11-24, agent drafted from the kickoff note and the session). 첫 `/teach` 세션에서 그가 확인한다.
+> 확정 (2026-11-24, user said "일단, 확인했어"). 초안은 agent가 kickoff note와 세션에서 썼다. 그는 성공 기준이 "조금 빡세다"고 했다.
 
 ## Why
 `mini-webserver`의 `rproxy` 방어 layer(SPEC §11 v2, step 7~13)는 generator가 만들었다. 코스는 "AI가 작성한 코드를 완벽히 내 것으로 소화해 그 원리를 설명할 수 있어야 합니다"라고 한다. PR의 핵심 결정 한 문단과 발표에서 각 layer를 내 말로 설명하려면, 각 layer의 결정을 우리 코드와 arena 숫자로 말할 수 있어야 한다.

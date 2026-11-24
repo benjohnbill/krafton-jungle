@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리 Reverse Proxy의 방어 layer</title>
+<link rel="stylesheet" href="https://benjohnbill.github.io/assets/site.css">
+<style>
+/* type and boxes follow DESIGN.md; shapes copied from t3-restart-sigpipe.html and debug-panic-exit.html */
+/* voice: headings and .lead stay telegraphic (DESIGN.md); body prose is 평서체, to match the summary boxes and the site (operator decided 2026-11-24) */
+html { font-size: 19px; }
+body { font-size: 1rem; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-family: var(--font-head); font-size: 1.95rem; line-height: 1.25; margin: 12px 0 4px; }
+
+h2 { font-family: var(--font-head); font-size: 1.56rem; line-height: 1.35; margin: 64px 0 14px; }
+
+.sub { color: var(--ink-2); margin: 0 0 16px; }
+.lead { font-size: 1.1rem; line-height: 1.75; margin: 0 0 14px; }
+p { margin: 14px 0 0; }
+ul { margin: 10px 0 0; padding-left: 1.3em; }
+li + li { margin-top: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; line-height: 1.65; border: 1px solid var(--line); margin-top: 16px; }
+th, td { border-bottom: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+.scroll { overflow-x: auto; }
+@media (max-width: 620px) { th, td { padding: 8px 8px; } }
+
+/* status tags for our server: the .tag of l1-connection-setup.html.
+   s2 = in the code now, s1 = the server cannot do it alone, gray = not yet */
+.tag { display: inline-block; font: 600 .75rem/1.5 var(--font-code); padding: .05rem .45rem; border-radius: 3px; border: 1px solid var(--line); white-space: nowrap; }
+.tag.ok { color: var(--s2); background: var(--s2-soft); border-color: var(--s2-rail); }
+.tag.no { color: var(--s1); background: var(--s1-soft); border-color: var(--s1-rail); }
+.tag.plan { color: var(--ink-2); background: var(--surface-2); }
+
+/* fold card, copied from debug-panic-exit.html */
+details.fold { border: 1px solid var(--line); border-radius: 4px; margin: 16px 0 0; }
+details.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: .6em; padding: 12px 16px; font-weight: 600; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: ""; flex: none; width: .5em; height: .5em; border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); transform: rotate(-45deg); transition: transform .15s; align-self: center; }
+details.fold[open] > summary::before { transform: rotate(45deg); }
+details.fold > summary::after { content: "펼치기"; margin-left: auto; flex: none; font: 400 .75rem var(--font-code); color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; }
+details.fold[open] > summary::after { content: "접기"; }
+details.fold > summary:hover { background: var(--surface-2); }
+details.fold > summary:focus-visible { outline: 2px solid var(--s3); outline-offset: -2px; }
+details.fold[open] > summary { border-bottom: 1px solid var(--line); }
+details.fold > .in { padding: 4px 16px 16px; }
+/* note 04: on a phone each row of a wide table becomes a block, each cell
+   led by its column name (DESIGN.md: step table, "on a phone each row becomes a block") */
+@media (max-width: 620px) {
+  table.stack thead { display: none; }
+  table.stack tr { display: block; border-bottom: 1px solid var(--line); padding: 8px 0; }
+  table.stack td { display: block; border: 0; padding: 2px 10px; }
+  table.stack td:first-child { font-weight: 600; }
+  table.stack td[data-h]::before { content: attr(data-h); display: block; font: 600 .75rem/1.6 var(--font-code); color: var(--muted); }
+}
+
+/* note 04: tables of numbers keep one line per value */
+td code, td.mib { white-space: nowrap; }
+
+.ln { display: block; }
+.ln + .ln { margin-top: 6px; }
+blockquote { margin: 14px 0 0; padding: 2px 0 2px 16px; border-left: 3px solid var(--line); }
+
+/* source label: the link to the source, and how far the research read it */
+.src { font: 500 .68rem/1 var(--font-code); padding: 3px 6px; border-radius: 3px; text-decoration: none; white-space: nowrap; vertical-align: .12em; }
+.src.p { background: var(--s2-soft); color: var(--s2); }
+.src.s { background: var(--s4-soft); color: var(--s4); }
+.src.u { background: var(--surface-2); color: var(--muted); }
+.src:hover { text-decoration: underline; }
+/* unverified facts: gray text plus the unverified label (operator choice 3) */
+.unv { color: var(--muted); }
+
+/* diagrams: hand-written SVG from diagrams.py; colors are site tokens only,
+   so light and dark both work. One system for all: nodes rx 6 with a 1px
+   stroke; arrows are orthogonal with one marker set; arrow labels sit on a
+   paper mask. Sizes are viewBox units.
+   Color marks meaning only (DESIGN.md section 2), two meanings in all 25:
+   s1 = the crawler's path and where it ends (blocked, or a cost to the
+   server); s2 = the path that passes or is served cheaply. Everything else
+   is neutral: the focal node is an ink line on the one fill level, a plan
+   is a dashed gray line, and all text is ink or ink-2. */
+/* a figure on its own gets the panel line of .summary (box rule 1); inside a
+   card it stays bare. On a phone the frame would push SVG text under 11px, so
+   it drops there. */
+.wrap > .dgf, .wrap > .dg2 { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
+.wrap > .dgf svg.dg, .wrap > .dg2 svg.dg { margin: 0 auto; }
+@media (max-width: 620px) { .wrap > .dgf, .wrap > .dg2 { border: 0; padding: 0; } }
+.dgf { margin: 18px 0 0; }
+.dg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 620px) { .dg2 { grid-template-columns: 1fr; gap: 0; } }
+svg.dg { display: block; width: 100%; height: auto; font-size: 13px; }
+.dg text { font-family: var(--font-body); fill: var(--ink); }
+.dg .b { font-weight: 600; }
+.dg .mono { font-family: var(--font-code); }
+.dg .t2 { fill: var(--ink-2); }
+.dg .tr, .dg text.r, .dg .tg, .dg text.g, .dg .tp { fill: var(--ink-2); }
+.dg rect.bx { fill: var(--bg); stroke: var(--muted); stroke-width: 1; }
+.dg rect.ink { fill: var(--bg); stroke: var(--ink); stroke-width: 1.25; }
+.dg rect.cell, .dg rect.lane, .dg rect.band { fill: var(--surface-2); stroke: none; }
+.dg rect.sel { fill: var(--surface-2); stroke: none; }
+.dg rect.hl { fill: var(--surface-2); stroke: var(--ink); stroke-width: 1.25; }
+.dg rect.ok { fill: var(--s2-soft); stroke: var(--s2-rail); stroke-width: 1; }
+.dg rect.okf { fill: var(--s2-rail); stroke: none; }
+.dg rect.ng { fill: var(--s1-soft); stroke: var(--s1-rail); stroke-width: 1; }
+.dg rect.ng2 { fill: var(--s1-soft); stroke: var(--s1); stroke-width: 2; }
+.dg rect.ev { fill: var(--bg); stroke: var(--s1-rail); stroke-width: 1; }
+.dg rect.plan { fill: var(--bg); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 3; }
+.dg rect.trap { fill: var(--bg); stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; }
+.dg rect.zone { fill: none; stroke: var(--muted); stroke-width: 1; }
+.dg rect.mk { fill: var(--bg); }
+.dg rect.mk2 { fill: var(--surface-2); }
+.dg rect.drip { fill: var(--ink-2); }
+.dg .ln { stroke: var(--muted); stroke-width: 1.25; fill: none; }
+.dg .ah { fill: var(--muted); }
+.dg .ln.r { stroke: var(--s1); } .dg .ah.r { fill: var(--s1); }
+.dg .ln.g { stroke: var(--s2); } .dg .ah.g { fill: var(--s2); }
+.dg .ln.a { stroke: var(--ink-2); } .dg .ah.a { fill: var(--ink-2); }
+.dg .ln.p { stroke: var(--muted); stroke-dasharray: 5 3; } .dg .ah.p { fill: var(--muted); }
+.dg .ln.ret { stroke-dasharray: 5 4; }
+.dg .ln.fat { stroke-width: 5; }
+.dg .ln.dash { stroke-dasharray: 3 3; }
+.dg .rule { stroke: var(--line); stroke-width: 1; }
+.dg .life { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; }
+.dg .lim { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 5 3; }
+.dg .bucket { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
+.dg .tok { fill: var(--ink-2); }
+.dg a:hover rect, .dg a:focus-visible rect { stroke: var(--s2); stroke-width: 2; }
+.dg a:focus { outline: none; }
+
+/* links between the four crawler notes: the same quiet meta line as .home
+   (site.css: meta text uses the code slot) */
+.notes { display: flex; flex-wrap: wrap; gap: 0 14px; margin: 4px 0 0; font: 13px/1.8 var(--font-code); }
+.notes a { color: var(--muted); text-decoration: none; }
+.notes a:hover { color: var(--ink-2); text-decoration: underline; }
+.notes a[aria-current="page"] { color: var(--ink); }
+/* closing links, the shape of nav.links in l1-connection-setup.html */
+.pn { margin-top: 64px; font-size: .95rem; line-height: 2; }
+
+/* summary box at the top, copied from t2-echo-server.html: one outer line,
+   no fill (box rule 1); two sentences per row, each led by a bold label */
+.summary { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
+.summary table { margin-top: 0; }
+.summary td .ln + .ln { margin-top: 8px; }
+.summary td .ba { display: inline-block; min-width: 5.6em; font-family: var(--font-code); font-weight: 600; }
+.summary td:first-child { width: 34%; }
+</style>
+</head>
+<body>
+<main class="wrap">
+<a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
+<nav class="notes" aria-label="crawler 노트"><a href="00-overview.html">한눈에 보기</a><a href="01-cost.html">01 비용</a><a href="02-history.html">02 역사</a><a href="03-layers.html">03 방어 layer</a><a href="04-reverse-proxy.html" aria-current="page">04 우리 Reverse Proxy</a></nav>
+
+<h1>우리 Reverse Proxy의 방어 layer와 경기장</h1>
+<p class="sub">03의 layer 여덟 개가 rproxy의 어느 단계, 어느 module에 있는지<br>Crawler script 10개로 잰 Origin의 부하와 방어의 대가</p>
+
+<div class="summary">
+<div class="scroll">
+<table>
+<thead><tr><th>주제</th><th>요약</th></tr></thead>
+<tbody>
+<tr><td><a href="#flow">연결 하나의 길</a></td><td><span class="ln"><strong class="ba">Observed</strong><code>rproxy</code>는 Verdict를 두 번 정한다: TLS handshake 전의 Connection Verdict와 request parse 뒤의 Request Verdict다.</span><span class="ln"><strong class="ba">Meaning</strong>handshake 전에 drop한 연결은 RSA 서명도, Origin의 일도 만들지 않는다.</span></td></tr>
+<tr><td><a href="#arena">경기장</a></td><td><span class="ln"><strong class="ba">Observed</strong><code>layers</code> preset에서 Origin이 보낸 바이트가 repeat는 4896.3 MiB에서 8.0 MiB로, disguised는 275.4 MiB에서 0으로 줄었다.</span><span class="ln"><strong class="ba">Meaning</strong>Crawler script 10개 중 polite와 signed는 통과했고, 나머지 여덟은 각자 다른 layer에서 멈추거나 느려졌다.</span></td></tr>
+<tr><td><a href="#cost">대가와 한계</a></td><td><span class="ln"><strong class="ba">Observed</strong>tarpit이 Worker를 모두 붙잡아서, disguised 옆에서 돈 <code>human.py</code>는 10초 동안 응답을 하나도 받지 못했다.</span><span class="ln"><strong class="ba">Meaning</strong>crawler를 붙잡는 방어는 서버의 자원도 붙잡으므로, 사람의 요청까지 멈출 수 있다.</span></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>이 노트는 리서치 파일이 아니라 mini-webserver CJG 브랜치의 commit <code>f9dda4d</code>에 있는 SPEC, ADR, 코드, 측정 파일을 보고 썼다. 숫자는 모두 그 파일에서 가져왔고, 출처 칩(<a class="src p" href="00-overview.html#src-note">primary</a>)은 그 파일로 간다. 추론한 문장은 추론이라고 적었다.</p>
+
+<h2 id="place">1. 자리: client와 Origin 사이</h2>
+<!--GEN:dg-rp-arch--><figure class="dgf"><svg class="dg" id="dg-rp-arch" viewBox="0 0 400 424" style="max-width:520px" role="img" aria-labelledby="dg-rp-arch-title dg-rp-arch-desc"><title id="dg-rp-arch-title">우리 Reverse Proxy의 자리</title><desc id="dg-rp-arch-desc">client는 TLS로 rproxy에 붙고, rproxy는 Verdict와 cache를 지난 요청만 HTTP로 Origin에 보낸다. Origin이 여럿이면 차례로 받는다</desc><defs><marker id="dg-rp-arch-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker></defs><path class="ln" d="M200 40 L200 80" marker-end="url(#dg-rp-arch-ah)"/><rect class="mk" x="204.0" y="52.5" width="31.2" height="14"/><text x="208" y="64.0" text-anchor="start" class="mono" font-size="12.5">TLS</text><rect class="zone" x="24" y="80" width="352" height="192" rx="8" fill="none" stroke="currentColor"/><text x="40" y="104.0" text-anchor="start" class="b" font-size="13">rproxy: 별도 프로세스</text><path class="ln" d="M200 160 L200 172" marker-end="url(#dg-rp-arch-ah)"/><path class="ln" d="M200 208 L200 220" marker-end="url(#dg-rp-arch-ah)"/><path class="ln" d="M200 272 L200 292 Q200 300 192 300 L120 300 Q112 300 112 308 L112 352" marker-end="url(#dg-rp-arch-ah)"/><path class="ln" d="M200 300 L280 300 Q288 300 288 308 L288 352" marker-end="url(#dg-rp-arch-ah)"/><rect class="mk" x="204.0" y="279.0" width="200.2" height="14"/><text x="208" y="290.0" text-anchor="start" font-size="12">HTTP, X-Forwarded-For, X-JA4</text><rect class="zone" x="24" y="320" width="352" height="96" rx="8" fill="none" stroke="currentColor"/><text x="40" y="340.0" text-anchor="start" class="t2" font-size="12">127.0.0.1, --origin 반복 → Round-Robin</text><rect class="bx" x="140" y="0" width="120" height="40" rx="6" fill="none" stroke="currentColor"/><text x="200" y="24.6" text-anchor="middle" class="b" font-size="13">client</text><rect class="hl" x="56" y="116" width="288" height="44" rx="6" fill="none" stroke="currentColor"/><text x="200" y="134.4" text-anchor="middle" font-size="12.5">TLS 종료</text><text x="200" y="150.4" text-anchor="middle" class="t2" font-size="12.5">OpenSSL은 rproxy에만 링크</text><rect class="bx" x="56" y="172" width="288" height="36" rx="6" fill="none" stroke="currentColor"/><text x="200" y="194.4" text-anchor="middle" font-size="12.5">Connection, Request Verdict</text><rect class="bx" x="56" y="220" width="288" height="36" rx="6" fill="none" stroke="currentColor"/><text x="200" y="242.4" text-anchor="middle" font-size="12.5">cache (--cache on)</text><rect class="ok" x="48" y="352" width="128" height="48" rx="6" fill="none" stroke="currentColor"/><text x="112" y="372.4" text-anchor="middle" font-size="12.5">Origin 1</text><text x="112" y="388.4" text-anchor="middle" class="t2" font-size="12.5">server, pool</text><rect class="ok" x="224" y="352" width="128" height="48" rx="6" fill="none" stroke="currentColor"/><text x="288" y="372.4" text-anchor="middle" font-size="12.5">Origin 2</text><text x="288" y="388.4" text-anchor="middle" class="t2" font-size="12.5">server, pool</text></svg></figure><!--/GEN:dg-rp-arch-->
+<ul>
+<li><code>rproxy</code>는 Origin(<code>server</code>) 앞에서 따로 도는 프로세스다. server 안의 Route로 두면 검사가 Origin과 같은 Worker를 쓰고, Origin이 proxy 뒤에 숨을 수 없다. <a class="src p" href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/adr/reverse-proxy-is-a-separate-process.md">primary</a></li>
+<li>OpenSSL은 <code>rproxy</code>만 링크한다. TLS handshake, 암호화, SHA-256, Ed25519는 OpenSSL이 하고, ClientHello parse와 JA4 계산은 우리 코드가 한다. <a class="src p" href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/adr/openssl-for-the-reverse-proxy.md">primary</a></li>
+<li>Origin으로 가는 요청에는 <code>X-Forwarded-For</code>(client IP)와 <code>X-JA4</code>가 붙는다. <code>rproxy</code>는 parse한 필드로 요청을 새로 쓰므로, 그 밖의 header는 Origin에 가지 않는다.</li>
+<li><code>--origin</code>을 여러 번(최대 8) 주면 Origin들이 차례로 요청을 받는다(Round-Robin). 연결이 실패하면 다음 Origin을 한 번 더 시도하고, 그것도 실패하면 502다.</li>
+</ul>
+
+<h2 id="flow">2. 연결 하나의 길</h2>
+<!--GEN:dg-rp-flow--><figure class="dgf"><svg class="dg" id="dg-rp-flow" viewBox="0 0 400 512" style="max-width:520px" role="img" aria-labelledby="dg-rp-flow-title dg-rp-flow-desc"><title id="dg-rp-flow-title">연결 하나의 길</title><desc id="dg-rp-flow-desc">연결 하나가 지나는 순서와 옆으로 빠지는 출구. drop은 TLS handshake 전에 끝난다</desc><defs><marker id="dg-rp-flow-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker><marker id="dg-rp-flow-ah-g" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah g" d="M0 0L8 3L0 6z"/></marker><marker id="dg-rp-flow-ah-r" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah r" d="M0 0L8 3L0 6z"/></marker></defs><path class="ln" d="M104 32 L104 48" marker-end="url(#dg-rp-flow-ah)"/><path class="ln" d="M104 92 L104 108" marker-end="url(#dg-rp-flow-ah)"/><path class="ln g" d="M104 144 L104 172" marker-end="url(#dg-rp-flow-ah-g)"/><path class="ln" d="M104 216 L104 232" marker-end="url(#dg-rp-flow-ah)"/><path class="ln" d="M104 264 L104 280" marker-end="url(#dg-rp-flow-ah)"/><path class="ln" d="M104 324 L104 340" marker-end="url(#dg-rp-flow-ah)"/><path class="ln g" d="M104 376 L104 416" marker-end="url(#dg-rp-flow-ah-g)"/><path class="ln" d="M104 452 L104 476" marker-end="url(#dg-rp-flow-ah)"/><rect class="mk" x="108.0" y="152.0" width="35.8" height="14"/><text x="112" y="163.0" text-anchor="start" class="t2" font-size="12">pass</text><rect class="mk" x="108.0" y="389.0" width="35.8" height="14"/><text x="112" y="400.0" text-anchor="start" class="t2" font-size="12">pass</text><rect class="mk" x="108.0" y="458.0" width="34.6" height="14"/><text x="112" y="469.0" text-anchor="start" class="t2" font-size="12">miss</text><path class="ln r" d="M208 126 L248 126" marker-end="url(#dg-rp-flow-ah-r)"/><path class="ln r" d="M208 358 L248 358" marker-end="url(#dg-rp-flow-ah-r)"/><path class="ln g" d="M208 434 L248 434" marker-end="url(#dg-rp-flow-ah-g)"/><rect class="bx" x="40" y="0" width="128" height="32" rx="6" fill="none" stroke="currentColor"/><text x="104" y="20.6" text-anchor="middle" class="b" font-size="13">client 연결</text><rect class="bx" x="0" y="48" width="208" height="44" rx="6" fill="none" stroke="currentColor"/><text x="104" y="66.4" text-anchor="middle" font-size="12.5">ClientHello 엿보기</text><text x="104" y="82.4" text-anchor="middle" class="t2 mono" font-size="12.5">MSG_PEEK → JA4</text><rect class="hl" x="0" y="108" width="208" height="36" rx="6" fill="none" stroke="currentColor"/><text x="104" y="130.4" text-anchor="middle" class="b" font-size="12.5">Connection Verdict</text><rect class="ev" x="0" y="172" width="208" height="44" rx="6" fill="none" stroke="currentColor"/><text x="104" y="190.4" text-anchor="middle" font-size="12.5">TLS handshake</text><text x="104" y="206.4" text-anchor="middle" class="t2" font-size="12.5">RSA-2048 서명 0.9 ms</text><rect class="bx" x="0" y="232" width="208" height="32" rx="6" fill="none" stroke="currentColor"/><text x="104" y="252.4" text-anchor="middle" font-size="12.5">request parse</text><rect class="bx" x="0" y="280" width="208" height="44" rx="6" fill="none" stroke="currentColor"/><text x="104" y="298.4" text-anchor="middle" font-size="12.5">rate limit,</text><text x="104" y="314.4" text-anchor="middle" font-size="12.5">Behavior counter</text><rect class="hl" x="0" y="340" width="208" height="36" rx="6" fill="none" stroke="currentColor"/><text x="104" y="362.4" text-anchor="middle" class="b" font-size="12.5">Request Verdict</text><rect class="bx" x="0" y="416" width="208" height="36" rx="6" fill="none" stroke="currentColor"/><text x="104" y="438.4" text-anchor="middle" font-size="12.5">cache</text><rect class="ink" x="40" y="476" width="128" height="32" rx="6" fill="none" stroke="currentColor"/><text x="104" y="496.6" text-anchor="middle" class="b" font-size="13">Origin</text><rect class="ng" x="248" y="102" width="152" height="48" rx="6" fill="none" stroke="currentColor"/><text x="324" y="122.2" text-anchor="middle" font-size="12">drop: 응답 없이 닫음</text><text x="324" y="138.2" text-anchor="middle" class="t2" font-size="12">TLS 바이트 0</text><text x="252" y="190.2" text-anchor="start" class="t2" font-size="12">drop은 이 서명을</text><text x="252" y="206.2" text-anchor="start" class="t2" font-size="12">치르지 않는다</text><rect class="ng" x="248" y="314" width="152" height="88" rx="6" fill="none" stroke="currentColor"/><text x="324" y="330.2" text-anchor="middle" font-size="12">403 deny</text><text x="324" y="346.2" text-anchor="middle" font-size="12">429 slow</text><text x="324" y="362.2" text-anchor="middle" font-size="12">401 challenge</text><text x="324" y="378.2" text-anchor="middle" font-size="12">402 pay</text><text x="324" y="394.2" text-anchor="middle" font-size="12">tarpit: 붙잡고 닫음</text><rect class="ok" x="248" y="412" width="152" height="44" rx="6" fill="none" stroke="currentColor"/><text x="324" y="430.2" text-anchor="middle" font-size="12">cache hit, 304</text><text x="324" y="446.2" text-anchor="middle" class="t2" font-size="12">Origin에 안 감</text></svg></figure><!--/GEN:dg-rp-flow-->
+<div class="scroll">
+<table class="stack">
+<thead><tr><th>단계</th><th>언제</th><th>보는 것</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>Connection Verdict</td><td data-h="언제">ClientHello를 엿본 뒤, TLS handshake 전</td><td data-h="보는 것"><span class="ln">client IP</span><span class="ln">JA4</span><span class="ln">Block table</span></td><td data-h="Verdict"><span class="ln">pass</span><span class="ln">drop (응답 없이 닫음)</span><span class="ln">tarpit</span></td></tr>
+<tr><td>Request Verdict</td><td data-h="언제">request parse 뒤</td><td data-h="보는 것"><span class="ln">위의 셋</span><span class="ln">User-Agent, target</span><span class="ln">rate limit, Behavior counter</span><span class="ln">Proof of work 풀이, bot 서명</span></td><td data-h="Verdict"><span class="ln">pass</span><span class="ln">deny (403), slow (429)</span><span class="ln">tarpit</span><span class="ln">challenge (401), pay (402)</span></td></tr>
+</tbody>
+</table>
+</div>
+<p>handshake 전에는 HTTP가 없어서, Connection Verdict는 닫거나 붙잡는 것만 할 수 있다. 대신 drop한 연결에는 RSA-2048 서명이 없다. 측정에서 <code>rproxy</code>는 요청 하나에 CPU 2.1 ms를 썼고, 그중 0.9 ms가 이 서명이다. <a class="src p" href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/measurements/20261124-rproxy-cache-parity.md">primary</a></p>
+<p>drop은 ClientHello를 읽지 않은 채 socket을 닫는다. 그러면 kernel이 RST를 보내고, TLS 바이트는 하나도 나가지 않는다. nginx의 <code>return 444</code>와 <code>ssl_reject_handshake on</code>을 본뜬 것이다. Connection Verdict의 tarpit은 Verdict 종류로만 있고, 아직 그 Verdict를 고르는 규칙이 없다.</p>
+<p>Request Verdict가 request 뒤에 오는 이유는 둘이다. User-Agent와 target은 request 안에 있고, 403과 429는 HTTP 응답이다.</p>
+
+<h2 id="map">3. layer 지도</h2>
+<div class="scroll">
+<table class="stack">
+<thead><tr><th>03의 layer</th><th>rproxy의 방어</th><th>단계</th><th>flag, module</th></tr></thead>
+<tbody>
+<tr><td><a href="03-layers.html#m-ip">IP, 네트워크</a></td><td data-h="rproxy의 방어">Block list: 이 CIDR range의 IP는 drop. localhost에서는 CIDR range가 ASN 목록을 대신한다</td><td data-h="단계">Connection</td><td data-h="flag, module"><span class="ln"><code>--block-list FILE</code></span><span class="ln"><code>ip_list</code></span></td></tr>
+<tr><td><a href="03-layers.html#m-tls">TLS fingerprint</a></td><td data-h="rproxy의 방어">JA4 table: JA4마다 label 하나(<code>curl</code>, <code>browser</code>)</td><td data-h="단계">Connection, Request</td><td data-h="flag, module"><span class="ln"><code>--ja4-list FILE</code></span><span class="ln"><code>ja4</code>, <code>ja4_table</code></span></td></tr>
+<tr><td><a href="03-layers.html#m-ua">HTTP header</a></td><td data-h="rproxy의 방어">User-Agent의 crawler 이름 6개. Origin의 <code>robots.txt</code>는 <code>Disallow: /trap/</code></td><td data-h="단계">Request</td><td data-h="flag, module"><span class="ln">flag 없음, 항상 켜짐</span><span class="ln"><code>verdict</code></span></td></tr>
+<tr><td><a href="03-layers.html#m-rate">양과 행동</a></td><td data-h="rproxy의 방어">IP마다 token bucket. Behavior counter: 요청, 서로 다른 target, 404, <code>robots.txt</code> 읽기, Honeypot hit</td><td data-h="단계">Request</td><td data-h="flag, module"><span class="ln"><code>--rate R --burst B</code></span><span class="ln"><code>rate_limit</code>, <code>behavior</code></span></td></tr>
+<tr><td><a href="03-layers.html#m-pow">시험</a></td><td data-h="rproxy의 방어">Proof of work: 401과 <code>X-PoW-Challenge</code>. SHA-256이 0 bit 16개로 시작해야 한다</td><td data-h="단계">Request</td><td data-h="flag, module"><span class="ln"><code>--pow-prefix PATH</code></span><span class="ln"><code>--pow-bits N</code></span><span class="ln"><code>pow</code></span></td></tr>
+<tr><td><a href="03-layers.html#m-tarpit">함정</a></td><td data-h="rproxy의 방어">tarpit. Honeypot <code>/trap/</code>을 요청한 IP는 Block table에 들어간다</td><td data-h="단계">Request, 그다음 Connection</td><td data-h="flag, module"><span class="ln"><code>--tarpit S</code></span><span class="ln"><code>--block-time S</code></span><span class="ln"><code>block_table</code></span></td></tr>
+<tr><td><a href="03-layers.html#m-pay">거래</a></td><td data-h="rproxy의 방어">Web Bot Auth(RFC 9421, Ed25519). 서명 없는 crawler 이름은 pay 대상 경로에서 402</td><td data-h="단계">Request</td><td data-h="flag, module"><span class="ln"><code>--bot-key FILE</code></span><span class="ln"><code>--pay-prefix PATH</code></span><span class="ln"><code>bot_auth</code></span></td></tr>
+<tr><td><a href="03-layers.html#m-cache">cache</a></td><td data-h="rproxy의 방어">cache hit. Origin은 static file에 <code>ETag</code>를 붙이고, cache는 <code>If-None-Match</code>에 304로 답한다</td><td data-h="단계">Request</td><td data-h="flag, module"><span class="ln"><code>--cache on</code></span><span class="ln">Shared core, <code>cache</code></span></td></tr>
+</tbody>
+</table>
+</div>
+<p>판단 module은 socket도 OpenSSL I/O도 쓰지 않는다. 그래서 unit test가 바이트와 값만 넣어 부른다. <a class="src p" href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/spec-cjg.md#L312">primary</a></p>
+<p>03의 방법 중 둘은 넣지 않았다.</p>
+<ul>
+<li><span class="tag plan">넣지 않음</span> CAPTCHA: 사람이 풀어야 하므로 Scene이 잴 수 없다.</li>
+<li><span class="tag plan">넣지 않음</span> reverse DNS: layer 그림에 없고, 좋은 bot이 이름을 증명하는 일은 Web Bot Auth가 한다.</li>
+</ul>
+
+<h2 id="rules">4. Request Verdict 규칙 순서</h2>
+<!--GEN:dg-rp-rules--><figure class="dgf"><svg class="dg" id="dg-rp-rules" viewBox="0 0 400 488" style="max-width:520px" role="img" aria-labelledby="dg-rp-rules-title dg-rp-rules-desc"><title id="dg-rp-rules-title">Request Verdict 규칙 순서</title><desc id="dg-rp-rules-desc">위에서부터 차례로 보고, 처음 맞는 규칙이 Verdict를 정한다. 맞는 규칙이 없으면 pass</desc><defs><marker id="dg-rp-rules-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker><marker id="dg-rp-rules-ah-g" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah g" d="M0 0L8 3L0 6z"/></marker><marker id="dg-rp-rules-ah-r" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah r" d="M0 0L8 3L0 6z"/></marker></defs><text x="0" y="15.0" text-anchor="start" class="b" font-size="12">위에서부터, 처음 맞는 규칙</text><text x="400" y="15.0" text-anchor="end" class="b" font-size="12">Verdict</text><path class="ln" d="M118 68 L118 80" marker-end="url(#dg-rp-rules-ah)"/><path class="ln" d="M118 120 L118 132" marker-end="url(#dg-rp-rules-ah)"/><path class="ln" d="M118 172 L118 184" marker-end="url(#dg-rp-rules-ah)"/><path class="ln" d="M118 224 L118 236" marker-end="url(#dg-rp-rules-ah)"/><path class="ln" d="M118 276 L118 288" marker-end="url(#dg-rp-rules-ah)"/><path class="ln" d="M118 328 L118 340" marker-end="url(#dg-rp-rules-ah)"/><path class="ln" d="M118 380 L118 392" marker-end="url(#dg-rp-rules-ah)"/><path class="ln" d="M118 432 L118 444" marker-end="url(#dg-rp-rules-ah)"/><path class="ln r" d="M236 48 L276 48" marker-end="url(#dg-rp-rules-ah-r)"/><rect class="hl" x="0" y="28" width="236" height="40" rx="6" fill="none" stroke="currentColor"/><text x="10" y="44.4" text-anchor="start" font-size="12.5">1 Honeypot</text><text x="10" y="60.4" text-anchor="start" class="t2" font-size="12.5">target이 /trap/로 시작</text><rect class="ng" x="276" y="28" width="124" height="40" rx="6" fill="none" stroke="currentColor"/><text x="338" y="44.4" text-anchor="middle" font-size="12.5">tarpit</text><text x="338" y="60.4" text-anchor="middle" class="t2" font-size="12.5">+ Block table</text><path class="ln r" d="M236 100 L276 100" marker-end="url(#dg-rp-rules-ah-r)"/><rect class="hl" x="0" y="80" width="236" height="40" rx="6" fill="none" stroke="currentColor"/><text x="10" y="96.4" text-anchor="start" font-size="12.5">2 scanner</text><text x="10" y="112.4" text-anchor="start" class="t2" font-size="12.5">404 응답 5번</text><rect class="ng" x="276" y="80" width="124" height="40" rx="6" fill="none" stroke="currentColor"/><text x="338" y="96.4" text-anchor="middle" font-size="12.5">403</text><text x="338" y="112.4" text-anchor="middle" class="t2" font-size="12.5">+ Block table</text><path class="ln g" d="M236 152 L276 152" marker-end="url(#dg-rp-rules-ah-g)"/><rect class="bx" x="0" y="132" width="236" height="40" rx="6" fill="none" stroke="currentColor"/><text x="10" y="148.4" text-anchor="start" font-size="12.5">3 verified bot</text><text x="10" y="164.4" text-anchor="start" class="t2" font-size="12.5">Web Bot Auth 서명 통과</text><rect class="ok" x="276" y="136" width="124" height="32" rx="6" fill="none" stroke="currentColor"/><text x="338" y="156.4" text-anchor="middle" font-size="12.5">pass</text><path class="ln r" d="M236 204 L276 204" marker-end="url(#dg-rp-rules-ah-r)"/><rect class="bx" x="0" y="184" width="236" height="40" rx="6" fill="none" stroke="currentColor"/><text x="10" y="200.4" text-anchor="start" font-size="12.5">4 pay</text><text x="10" y="216.4" text-anchor="start" class="t2" font-size="12.5">crawler 이름, pay 대상 경로</text><rect class="ng" x="276" y="188" width="124" height="32" rx="6" fill="none" stroke="currentColor"/><text x="338" y="208.4" text-anchor="middle" font-size="12.5">402</text><path class="ln r" d="M236 256 L276 256" marker-end="url(#dg-rp-rules-ah-r)"/><rect class="bx" x="0" y="236" width="236" height="40" rx="6" fill="none" stroke="currentColor"/><text x="10" y="252.4" text-anchor="start" font-size="12.5">5 crawler 이름</text><text x="10" y="268.4" text-anchor="start" class="t2" font-size="12.5">GPTBot, ClaudeBot 등 6개</text><rect class="ng" x="276" y="240" width="124" height="32" rx="6" fill="none" stroke="currentColor"/><text x="338" y="260.4" text-anchor="middle" font-size="12.5">403</text><path class="ln r" d="M236 308 L276 308" marker-end="url(#dg-rp-rules-ah-r)"/><rect class="bx" x="0" y="288" width="236" height="40" rx="6" fill="none" stroke="currentColor"/><text x="10" y="304.4" text-anchor="start" font-size="12.5">6 false browser</text><text x="10" y="320.4" text-anchor="start" class="t2" font-size="12.5">Chrome/인데 JA4 label이 다름</text><rect class="ng" x="276" y="292" width="124" height="32" rx="6" fill="none" stroke="currentColor"/><text x="338" y="312.4" text-anchor="middle" font-size="12.5">tarpit</text><path class="ln r" d="M236 360 L276 360" marker-end="url(#dg-rp-rules-ah-r)"/><rect class="bx" x="0" y="340" width="236" height="40" rx="6" fill="none" stroke="currentColor"/><text x="10" y="356.4" text-anchor="start" font-size="12.5">7 Proof of work</text><text x="10" y="372.4" text-anchor="start" class="t2" font-size="12.5">대상 경로, 풀이 없음</text><rect class="ng" x="276" y="344" width="124" height="32" rx="6" fill="none" stroke="currentColor"/><text x="338" y="364.4" text-anchor="middle" font-size="12.5">401 challenge</text><path class="ln r" d="M236 412 L276 412" marker-end="url(#dg-rp-rules-ah-r)"/><rect class="bx" x="0" y="392" width="236" height="40" rx="6" fill="none" stroke="currentColor"/><text x="10" y="408.4" text-anchor="start" font-size="12.5">8 rate limit</text><text x="10" y="424.4" text-anchor="start" class="t2" font-size="12.5">token 없음</text><rect class="ng" x="276" y="392" width="124" height="40" rx="6" fill="none" stroke="currentColor"/><text x="338" y="408.4" text-anchor="middle" font-size="12.5">429</text><text x="338" y="424.4" text-anchor="middle" class="t2 mono" font-size="12.5">Retry-After</text><path class="ln g" d="M236 464 L276 464" marker-end="url(#dg-rp-rules-ah-g)"/><rect class="bx" x="0" y="444" width="236" height="40" rx="6" fill="none" stroke="currentColor"/><text x="10" y="468.4" text-anchor="start" font-size="12.5">규칙 없음</text><rect class="ok" x="276" y="448" width="124" height="32" rx="6" fill="none" stroke="currentColor"/><text x="338" y="468.4" text-anchor="middle" font-size="12.5">pass</text></svg></figure><!--/GEN:dg-rp-rules-->
+<p><code>verdict.c</code>의 <code>rules[]</code> 표를 위에서부터 보고, 처음 맞는 규칙이 Verdict를 정한다. 맞는 규칙이 없으면 pass다. <a class="src p" href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/src/rproxy/verdict.c">primary</a></p>
+<ul>
+<li>client를 Block table에 넣는 두 규칙(Honeypot, scanner)이 맨 앞이다. 가장 강한 증거이고, 이름을 밝히고도 <code>robots.txt</code>를 무시하는 crawler도 잡으려는 것이다. 그래서 서명한 bot도 이 둘은 건너뛰지 못한다.</li>
+<li>pay가 crawler 이름보다 앞이라서, pay 대상 경로에서는 403 대신 402가 나간다.</li>
+<li>false browser는 JA4 table이 아는 JA4만 본다. 표에 없는 JA4는 증거로 치지 않아서, 표가 모르는 진짜 browser는 통과한다.</li>
+</ul>
+
+<h2 id="arena">5. 경기장: Crawler script 10개</h2>
+<p><code>bench/arena/scene.sh &lt;crawler&gt; none layers</code>는 Crawler script 하나와 <code>human.py</code>를 나란히, preset마다 10초씩 돌린다. Origin은 <code>./server --model pool --delay 10</code>이다. Scene은 재기만 하고, 합격과 불합격을 가리지 않는다. <a class="src p" href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/measurements/20261124-arena-layers.md">primary</a></p>
+<details class="fold"><summary><span>자세히: 두 preset의 flag</span></summary>
+<div class="in">
+<p><code>none</code>: flag 없음. 그래도 <code>robots.txt</code>, Honeypot, User-Agent 규칙, scanner 규칙은 켜져 있다. 그래서 named, spread, signed는 <code>none</code>에서도 403을 받았고, trapped는 <code>none</code>에서도 drop됐다.</p>
+<p><code>layers</code>: 모든 방어를 켠다.</p>
+<p><span class="ln"><code>--block-list bench/arena/layers-block.txt</code></span><span class="ln"><code>--ja4-list bench/arena/layers-ja4.txt</code></span><span class="ln"><code>--block-time 600 --rate 5 --burst 10</code></span><span class="ln"><code>--pow-prefix /api/ --pow-bits 16</code></span><span class="ln"><code>--pay-prefix /bench/ --bot-key tests/data/bot_test_keys.txt</code></span><span class="ln"><code>--cache on</code></span></p>
+</div>
+</details>
+<div class="scroll">
+<table class="stack">
+<thead><tr><th>Crawler script</th><th>하는 일</th><th>답한 layer (<code>layers</code>)</th><th>상태 (<code>layers</code>)</th><th>Origin의 MiB<br>none → layers</th></tr></thead>
+<tbody>
+<tr><td><code>repeat</code></td><td data-h="하는 일">2 MiB 파일 하나를 조건부 header 없이 계속 받는다</td><td data-h="답한 layer (layers)">rate limit</td><td data-h="상태 (layers)"><span class="ln">200=59</span><span class="ln">429=13681</span></td><td data-h="Origin의 MiB none → layers" class="mib">4896.3 → 8.0</td></tr>
+<tr><td><code>longtail</code></td><td data-h="하는 일">dataset 페이지를 무작위 순서로 읽는다</td><td data-h="답한 layer (layers)">rate limit</td><td data-h="상태 (layers)"><span class="ln">200=59</span><span class="ln">429=9371</span></td><td data-h="Origin의 MiB none → layers" class="mib">248.0 → 1.8</td></tr>
+<tr><td><code>named</code></td><td data-h="하는 일"><code>GPTBot/1.1</code>로 이름을 밝히고 모든 페이지를 빨리 읽는다</td><td data-h="답한 layer (layers)">pay (402)</td><td data-h="상태 (layers)">402=10620</td><td data-h="Origin의 MiB none → layers" class="mib">0.0 → 0.0</td></tr>
+<tr><td><code>disguised</code></td><td data-h="하는 일">User-Agent는 Chrome, TLS는 curl</td><td data-h="답한 layer (layers)">tarpit (false browser)</td><td data-h="상태 (layers)">응답 0개</td><td data-h="Origin의 MiB none → layers" class="mib">275.4 → 0.0</td></tr>
+<tr><td><code>spread</code></td><td data-h="하는 일">named를 주소 32개(127.0.0.2 ~ .33)에서 보낸다</td><td data-h="답한 layer (layers)">Block list (drop), pay</td><td data-h="상태 (layers)"><span class="ln">000=5120</span><span class="ln">402=5120</span></td><td data-h="Origin의 MiB none → layers" class="mib">0.0 → 0.0</td></tr>
+<tr><td><code>polite</code></td><td data-h="하는 일"><code>robots.txt</code>를 읽고 <code>Disallow</code>를 건너뛰며, 1초에 한 번 보낸다</td><td data-h="답한 layer (layers)">없음: <code>robots.txt</code>를 따른다</td><td data-h="상태 (layers)">200=10</td><td data-h="Origin의 MiB none → layers" class="mib">0.1 → 0.1</td></tr>
+<tr><td><code>trapped</code></td><td data-h="하는 일">숨은 <code>/trap/</code> 링크까지 모든 링크를 따라간다</td><td data-h="답한 layer (layers)">Honeypot, 그다음 Block table (drop)</td><td data-h="상태 (layers)"><span class="ln">000=6860</span><span class="ln">200=9</span></td><td data-h="Origin의 MiB none → layers" class="mib">0.0 → 0.0</td></tr>
+<tr><td><code>revalidate</code></td><td data-h="하는 일">repeat에 <code>If-None-Match</code>를 붙인다</td><td data-h="답한 layer (layers)">rate limit, 304</td><td data-h="상태 (layers)"><span class="ln">200=4, 304=55</span><span class="ln">429=9555</span></td><td data-h="Origin의 MiB none → layers" class="mib">4100.2 → 8.0</td></tr>
+<tr><td><code>solver</code></td><td data-h="하는 일">Proof of work를 풀고 다시 보낸다</td><td data-h="답한 layer (layers)">Proof of work, 그다음 rate limit</td><td data-h="상태 (layers)"><span class="ln">200=55, 401=4</span><span class="ln">429=8586</span></td><td data-h="Origin의 MiB none → layers" class="mib">0.4 → 0.0</td></tr>
+<tr><td><code>signed</code></td><td data-h="하는 일">Ed25519로 서명한다(Web Bot Auth). User-Agent는 named와 같다</td><td data-h="답한 layer (layers)">Web Bot Auth: 통과</td><td data-h="상태 (layers)">200=2375</td><td data-h="Origin의 MiB none → layers" class="mib">0.0 → 16.6</td></tr>
+</tbody>
+</table>
+</div>
+<p>000은 응답이 없었다는 뜻이다. Origin이 보낸 MiB가 가장 크게 준 넷은 아래와 같다. 눈금은 로그다.</p>
+<!--GEN:dg-rp-mib--><figure class="dgf"><svg class="dg" id="dg-rp-mib" viewBox="0 0 400 292" style="max-width:560px" role="img" aria-labelledby="dg-rp-mib-title dg-rp-mib-desc"><title id="dg-rp-mib-title">Origin이 보낸 MiB, none과 layers</title><desc id="dg-rp-mib-desc">10초 동안 Origin이 보낸 MiB. 로그 눈금. repeat 4896.3에서 8.0, revalidate 4100.2에서 8.0, disguised 275.4에서 0, longtail 248.0에서 1.8</desc><defs></defs><rect class="ng" x="92" y="4" width="20" height="12" rx="2" fill="none" stroke="currentColor"/><text x="118" y="14.5" text-anchor="start" font-size="12">none</text><rect class="ok" x="180" y="4" width="20" height="12" rx="2" fill="none" stroke="currentColor"/><text x="206" y="14.5" text-anchor="start" font-size="12">layers</text><line class="rule" x1="92" y1="32" x2="92" y2="264"/><text x="92" y="280.0" text-anchor="middle" class="t2" font-size="12">0.1</text><line class="rule" x1="137.6" y1="32" x2="137.6" y2="264"/><text x="137.6" y="280.0" text-anchor="middle" class="t2" font-size="12">1</text><line class="rule" x1="183.2" y1="32" x2="183.2" y2="264"/><text x="183.2" y="280.0" text-anchor="middle" class="t2" font-size="12">10</text><line class="rule" x1="228.8" y1="32" x2="228.8" y2="264"/><text x="228.8" y="280.0" text-anchor="middle" class="t2" font-size="12">100</text><line class="rule" x1="274.4" y1="32" x2="274.4" y2="264"/><text x="274.4" y="280.0" text-anchor="middle" class="t2" font-size="12">1000</text><line class="rule" x1="320" y1="32" x2="320" y2="264"/><text x="320" y="280.0" text-anchor="middle" class="t2" font-size="12">10000</text><text x="0" y="280.0" text-anchor="start" class="t2" font-size="12">MiB, 로그</text><text x="0" y="60.5" text-anchor="start" class="b mono" font-size="12">repeat</text><rect class="ng" x="92" y="40" width="213.858" height="16" rx="2" fill="none" stroke="currentColor"/><text x="311.858" y="52.0" text-anchor="start" class="mono" font-size="12">4896.3</text><rect class="ok" x="92" y="60" width="86.7809" height="16" rx="2" fill="none" stroke="currentColor"/><text x="184.781" y="72.0" text-anchor="start" class="mono" font-size="12">8.0</text><text x="0" y="116.5" text-anchor="start" class="b mono" font-size="12">revalidate</text><rect class="ng" x="92" y="96" width="210.344" height="16" rx="2" fill="none" stroke="currentColor"/><text x="308.344" y="108.0" text-anchor="start" class="mono" font-size="12">4100.2</text><rect class="ok" x="92" y="116" width="86.7809" height="16" rx="2" fill="none" stroke="currentColor"/><text x="184.781" y="128.0" text-anchor="start" class="mono" font-size="12">8.0</text><text x="0" y="172.5" text-anchor="start" class="b mono" font-size="12">disguised</text><rect class="ng" x="92" y="152" width="156.862" height="16" rx="2" fill="none" stroke="currentColor"/><text x="254.862" y="164.0" text-anchor="start" class="mono" font-size="12">275.4</text><text x="98" y="184.0" text-anchor="start" class="t2" font-size="12">0 (Origin까지 안 감)</text><text x="0" y="228.5" text-anchor="start" class="b mono" font-size="12">longtail</text><rect class="ng" x="92" y="208" width="154.787" height="16" rx="2" fill="none" stroke="currentColor"/><text x="252.787" y="220.0" text-anchor="start" class="mono" font-size="12">248.0</text><rect class="ok" x="92" y="228" width="57.2404" height="16" rx="2" fill="none" stroke="currentColor"/><text x="155.24" y="240.0" text-anchor="start" class="mono" font-size="12">1.8</text></svg></figure><!--/GEN:dg-rp-mib-->
+<ul>
+<li><strong>10초에 약 59번 통과</strong>(repeat, longtail, revalidate, solver): token bucket이 처음에 10개를 주고, 그다음 초당 5개를 채운다. 10 + 5 × 10 = 60이다. rate limit의 열쇠는 IP이고, 이 넷은 IP 하나에서 보낸다.</li>
+<li>repeat와 revalidate는 59번 통과했지만, Origin에 간 요청은 4번뿐이고 나머지 55번은 cache가 답했다. revalidate는 그 55번을 304로 받았다. 8.0 MiB는 2 MiB 파일 4번으로 보인다(추론).</li>
+<li>signed는 named와 User-Agent(<code>GPTBot/1.1</code>)가 같다. 다른 것은 서명 하나이고, named는 402를, signed는 200을 받았다. Origin은 16.6 MiB를 보냈다. dataset이 16.7 MiB이고, 나머지 요청 2176개는 cache가 답했다.</li>
+<li>spread의 주소 32개 중 Block list(<code>127.0.0.16/28</code>)에 든 16개는 handshake 전에 drop됐고(000), 나머지 16개는 402를 받았다.</li>
+<li>trapped는 <code>/trap/</code>을 한 번 요청한 뒤 IP가 Block table에 들어갔고, 그 뒤 10초 동안 연결 6860개가 handshake 전에 drop됐다.</li>
+</ul>
+
+<h2 id="cost">6. 대가와 한계</h2>
+<!--GEN:dg-rp-starve--><figure class="dgf"><svg class="dg" id="dg-rp-starve" viewBox="0 0 400 240" style="max-width:520px" role="img" aria-labelledby="dg-rp-starve-title dg-rp-starve-desc"><title id="dg-rp-starve-title">tarpit이 Worker를 모두 붙잡을 때</title><desc id="dg-rp-starve-desc">disguised의 연결이 Worker 4개를 tarpit으로 10초씩 붙잡고, human.py는 대기열에서 기다린다</desc><defs><marker id="dg-rp-starve-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker><marker id="dg-rp-starve-ah-r" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah r" d="M0 0L8 3L0 6z"/></marker></defs><path class="ln r" d="M90 44 L90 72" marker-end="url(#dg-rp-starve-ah-r)"/><path class="ln" d="M310 44 L310 80" marker-end="url(#dg-rp-starve-ah)"/><path class="ln r" d="M44 120 L44 152" marker-end="url(#dg-rp-starve-ah-r)"/><path class="ln r" d="M148 120 L148 152" marker-end="url(#dg-rp-starve-ah-r)"/><path class="ln r" d="M252 120 L252 152" marker-end="url(#dg-rp-starve-ah-r)"/><path class="ln r" d="M356 120 L356 152" marker-end="url(#dg-rp-starve-ah-r)"/><rect class="bx" x="0" y="0" width="180" height="44" rx="6" fill="none" stroke="currentColor"/><text x="90" y="18.4" text-anchor="middle" class="b" font-size="12.5">disguised</text><text x="90" y="34.4" text-anchor="middle" class="t2" font-size="12.5">loop 8개, Chrome UA</text><rect class="bx" x="220" y="0" width="180" height="44" rx="6" fill="none" stroke="currentColor"/><text x="310" y="18.4" text-anchor="middle" class="b" font-size="12.5">human.py</text><text x="310" y="34.4" text-anchor="middle" class="t2" font-size="12.5">1 ~ 3초 쉬고 다시</text><rect class="zone" x="0" y="72" width="400" height="48" rx="6" fill="none" stroke="currentColor"/><text x="12" y="100.5" text-anchor="start" class="b" font-size="12">대기열</text><rect class="ng" x="72" y="84" width="16" height="24" rx="3" fill="none" stroke="currentColor"/><rect class="ng" x="96" y="84" width="16" height="24" rx="3" fill="none" stroke="currentColor"/><rect class="ng" x="120" y="84" width="16" height="24" rx="3" fill="none" stroke="currentColor"/><rect class="ng" x="144" y="84" width="16" height="24" rx="3" fill="none" stroke="currentColor"/><rect class="ng" x="168" y="84" width="16" height="24" rx="3" fill="none" stroke="currentColor"/><rect class="ng" x="192" y="84" width="16" height="24" rx="3" fill="none" stroke="currentColor"/><rect class="bx" x="228" y="80" width="160" height="32" rx="6" fill="none" stroke="currentColor"/><text x="308" y="100.2" text-anchor="middle" font-size="12">human.py 연결</text><rect class="ng" x="0" y="152" width="88" height="44" rx="6" fill="none" stroke="currentColor"/><text x="44" y="170.4" text-anchor="middle" font-size="12.5">Worker</text><text x="44" y="186.4" text-anchor="middle" class="t2" font-size="12.5">tarpit 10초</text><rect class="ng" x="104" y="152" width="88" height="44" rx="6" fill="none" stroke="currentColor"/><text x="148" y="170.4" text-anchor="middle" font-size="12.5">Worker</text><text x="148" y="186.4" text-anchor="middle" class="t2" font-size="12.5">tarpit 10초</text><rect class="ng" x="208" y="152" width="88" height="44" rx="6" fill="none" stroke="currentColor"/><text x="252" y="170.4" text-anchor="middle" font-size="12.5">Worker</text><text x="252" y="186.4" text-anchor="middle" class="t2" font-size="12.5">tarpit 10초</text><rect class="ng" x="312" y="152" width="88" height="44" rx="6" fill="none" stroke="currentColor"/><text x="356" y="170.4" text-anchor="middle" font-size="12.5">Worker</text><text x="356" y="186.4" text-anchor="middle" class="t2" font-size="12.5">tarpit 10초</text><text x="200" y="224.0" text-anchor="middle" font-size="12">Worker 4개가 모두 묶임 → human.py 응답 0개</text></svg></figure><!--/GEN:dg-rp-starve-->
+<p>disguised는 Chrome User-Agent에 curl의 JA4를 보내므로, 요청마다 tarpit을 받는다. tarpit은 Worker 하나를 <code>--tarpit</code> 초(기본 10초) 동안 <code>sleep</code>으로 붙잡은 뒤 응답 없이 닫는다. <code>rproxy</code>의 Worker는 기본 4개이고, disguised는 loop 8개로 보낸다. Worker가 모두 묶이자 <code>human.py</code>는 대기열에서 10초를 기다렸고, 두 client 모두 응답을 하나도 받지 못했다. <a class="src p" href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/measurements/20261124-arena-disguised-v2.md">primary</a></p>
+<p><span class="tag plan">계획, 아직 없음</span> Worker를 붙잡지 않는 tarpit(event loop의 timer)이나 drop으로 바꾸면 이 대가가 사라진다고 측정 파일은 적었다. 아직 재지 않았다.</p>
+<!--GEN:dg-rp-cpu--><figure class="dgf"><svg class="dg" id="dg-rp-cpu" viewBox="0 0 400 132" style="max-width:520px" role="img" aria-labelledby="dg-rp-cpu-title dg-rp-cpu-desc"><title id="dg-rp-cpu-title">요청 하나의 CPU 시간</title><desc id="dg-rp-cpu-desc">평문 HTTP keep-alive 경로는 요청 하나에 0.08 ms, rproxy는 2.1 ms이고 그중 RSA 서명이 0.9 ms다</desc><defs></defs><text x="0" y="20.4" text-anchor="start" font-size="12.5">Proxy Route</text><text x="0" y="36.4" text-anchor="start" class="t2" font-size="12.5">평문, keep-alive</text><rect class="okf" x="120" y="14" width="7.33333" height="20" rx="0"/><text x="133.333" y="28.5" text-anchor="start" class="mono" font-size="12">0.08 ms</text><text x="0" y="76.4" text-anchor="start" font-size="12.5">rproxy</text><text x="0" y="92.4" text-anchor="start" class="t2" font-size="12.5">요청마다 TLS</text><rect class="ng" x="120" y="68" width="82.5" height="24" rx="0" fill="none" stroke="currentColor"/><text x="161.25" y="84.5" text-anchor="middle" class="mono" font-size="12">RSA 0.9</text><rect class="ev" x="202.5" y="68" width="110" height="24" rx="0" fill="none" stroke="currentColor"/><text x="318.5" y="84.5" text-anchor="start" class="mono" font-size="12">2.1 ms</text><text x="200" y="124.0" text-anchor="middle" class="t2" font-size="12">요청 하나에 약 25배</text></svg></figure><!--/GEN:dg-rp-cpu-->
+<p><code>rproxy</code>는 응답 하나를 보내고 연결을 닫으므로, 요청마다 TLS handshake를 한다. parity 측정에서 <code>rproxy</code>는 요청 하나에 CPU 2.1 ms를 썼고, 평문 HTTP와 keep-alive를 쓰던 Proxy Route는 0.08 ms를 썼다. 약 25배다. <a class="src p" href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/measurements/20261124-rproxy-cache-parity.md">primary</a></p>
+<p><span class="tag plan">계획, 아직 없음</span> <code>rproxy</code>의 keep-alive나 TLS session resumption이 있으면 handshake가 아니라 cache를 잴 수 있다고 측정 파일은 적었다. 아직 재지 않았다.</p>
+<p>이 경기장의 한계:</p>
+<ul>
+<li>curl로 만든 Crawler script는 모두 JA4 하나를 같이 쓴다. 그래서 Honeypot hit는 JA4가 아니라 IP만 Block table에 넣고, <code>layers</code>의 rate limit 열쇠도 IP다.</li>
+<li><code>human.py</code>는 Python <code>urllib</code>이고 TLS는 OpenSSL이다. 진짜 Chrome(BoringSSL)이 아니라 browser의 대역이고, JA4 table이 그 JA4를 <code>browser</code>라고 부를 뿐이다.</li>
+<li>localhost에서 돌렸으므로, CIDR range <code>127.0.0.16/28</code>이 hosting 회사의 ASN 목록을 대신한다.</li>
+<li><code>rproxy</code>에는 keep-alive가 없다. 연결 하나에 요청 하나이다.</li>
+<li>각 Scene은 preset마다 10초씩 한 번 돌린 값이다.</li>
+</ul>
+
+<h2 id="more">7. 더 읽기</h2>
+<p>모두 commit <code>f9dda4d</code>에 고정한 링크다.</p>
+<ul>
+<li><a href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/spec-cjg.md#L312">SPEC §11 Reverse Proxy</a>: module, 연결 하나의 순서, 기본값과 그 출처</li>
+<li><a href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/adr/reverse-proxy-is-a-separate-process.md">ADR: Reverse Proxy는 별도 프로세스</a></li>
+<li><a href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/adr/openssl-for-the-reverse-proxy.md">ADR: TLS와 SHA-256에 OpenSSL</a></li>
+<li><a href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/measurements/20261124-arena-layers.md">경기장 결과 요약</a>: Crawler script마다의 표는 같은 폴더의 <code>20261124-arena-&lt;crawler&gt;-v2.md</code></li>
+<li><a href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/measurements/20261124-rproxy-cache-parity.md">cache parity 측정</a>: TLS handshake의 CPU 비용</li>
+</ul>
+
+<nav class="pn" aria-label="이전, 다음 노트">이전: <a href="03-layers.html">03 방어 layer</a><br>처음: <a href="00-overview.html">한눈에 보기</a></nav>
+</main>
+</body>
+</html>

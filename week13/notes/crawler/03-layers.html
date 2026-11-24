@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>crawler 방어 layer와 우회 방식</title>
+<link rel="stylesheet" href="https://benjohnbill.github.io/assets/site.css">
+<style>
+/* type and boxes follow DESIGN.md; shapes copied from t3-restart-sigpipe.html and debug-panic-exit.html */
+/* voice: headings and .lead stay telegraphic (DESIGN.md); body prose is 평서체, to match the summary boxes and the site (operator decided 2026-11-24) */
+html { font-size: 19px; }
+body { font-size: 1rem; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-family: var(--font-head); font-size: 1.95rem; line-height: 1.25; margin: 12px 0 4px; }
+
+h2 { font-family: var(--font-head); font-size: 1.56rem; line-height: 1.35; margin: 64px 0 14px; }
+
+h3 { font-family: var(--font-head); font-size: 1.25rem; line-height: 1.4; margin: 28px 0 8px; }
+
+.sub { color: var(--ink-2); margin: 0 0 16px; }
+.lead { font-size: 1.1rem; line-height: 1.75; margin: 0 0 14px; }
+p { margin: 14px 0 0; }
+ul { margin: 10px 0 0; padding-left: 1.3em; }
+li + li { margin-top: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; line-height: 1.65; border: 1px solid var(--line); margin-top: 16px; }
+th, td { border-bottom: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+.scroll { overflow-x: auto; }
+.ln { display: block; }
+.ln + .ln { margin-top: 6px; }
+blockquote { margin: 14px 0 0; padding: 2px 0 2px 16px; border-left: 3px solid var(--line); }
+
+@media (max-width: 620px) { th, td { padding: 8px 8px; } }
+
+/* source label: the link to the source, and how far the research read it */
+.src { font: 500 .68rem/1 var(--font-code); padding: 3px 6px; border-radius: 3px; text-decoration: none; white-space: nowrap; vertical-align: .12em; }
+.src.p { background: var(--s2-soft); color: var(--s2); }
+.src.s { background: var(--s4-soft); color: var(--s4); }
+.src.u { background: var(--surface-2); color: var(--muted); }
+.src:hover { text-decoration: underline; }
+/* unverified facts: gray text plus the unverified label (operator choice 3) */
+.unv { color: var(--muted); }
+
+/* status tags for our server: the .tag of l1-connection-setup.html.
+   s2 = in the code now, s1 = the server cannot do it alone, gray = not yet */
+.tag { display: inline-block; font: 600 .75rem/1.5 var(--font-code); padding: .05rem .45rem; border-radius: 3px; border: 1px solid var(--line); white-space: nowrap; }
+.tag.ok { color: var(--s2); background: var(--s2-soft); border-color: var(--s2-rail); }
+.tag.no { color: var(--s1); background: var(--s1-soft); border-color: var(--s1-rail); }
+.tag.plan { color: var(--ink-2); background: var(--surface-2); }
+
+/* fold card, copied from debug-panic-exit.html */
+details.fold { border: 1px solid var(--line); border-radius: 4px; margin: 16px 0 0; }
+details.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: .6em; padding: 12px 16px; font-weight: 600; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: ""; flex: none; width: .5em; height: .5em; border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); transform: rotate(-45deg); transition: transform .15s; align-self: center; }
+details.fold[open] > summary::before { transform: rotate(45deg); }
+details.fold > summary::after { content: "펼치기"; margin-left: auto; flex: none; font: 400 .75rem var(--font-code); color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; }
+details.fold[open] > summary::after { content: "접기"; }
+details.fold > summary:hover { background: var(--surface-2); }
+details.fold > summary:focus-visible { outline: 2px solid var(--s3); outline-offset: -2px; }
+details.fold[open] > summary { border-bottom: 1px solid var(--line); }
+details.fold > .in { padding: 4px 16px 16px; }
+
+/* method cards */
+.method h3 { margin-top: 0; }
+.method { border: 1px solid var(--line); border-radius: 4px; padding: 20px 22px; margin-top: 16px; scroll-margin-top: 12px; }
+.method dl { margin: 12px 0 0; display: grid; grid-template-columns: 7.4em 1fr; gap: 12px 16px; line-height: 1.75; font-size: .95rem; }
+.method dt { font-weight: 600; }
+.method dd { margin: 0; }
+@media (max-width: 620px) { .method { padding: 16px 14px; } .method dl { grid-template-columns: 1fr; gap: 2px; } .method dd { margin-bottom: 10px; } }
+
+/* diagrams: hand-written SVG from diagrams.py; colors are site tokens only,
+   so light and dark both work. One system for all: nodes rx 6 with a 1px
+   stroke; arrows are orthogonal with one marker set; arrow labels sit on a
+   paper mask. Sizes are viewBox units.
+   Color marks meaning only (DESIGN.md section 2), two meanings in all 25:
+   s1 = the crawler's path and where it ends (blocked, or a cost to the
+   server); s2 = the path that passes or is served cheaply. Everything else
+   is neutral: the focal node is an ink line on the one fill level, a plan
+   is a dashed gray line, and all text is ink or ink-2. */
+/* a figure on its own gets the panel line of .summary (box rule 1); inside a
+   card it stays bare. On a phone the frame would push SVG text under 11px, so
+   it drops there. */
+.wrap > .dgf, .wrap > .dg2 { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
+.wrap > .dgf svg.dg, .wrap > .dg2 svg.dg { margin: 0 auto; }
+@media (max-width: 620px) { .wrap > .dgf, .wrap > .dg2 { border: 0; padding: 0; } }
+.dgf { margin: 18px 0 0; }
+.dg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 620px) { .dg2 { grid-template-columns: 1fr; gap: 0; } }
+svg.dg { display: block; width: 100%; height: auto; font-size: 13px; }
+.dg text { font-family: var(--font-body); fill: var(--ink); }
+.dg .b { font-weight: 600; }
+.dg .mono { font-family: var(--font-code); }
+.dg .t2 { fill: var(--ink-2); }
+.dg .tr, .dg text.r, .dg .tg, .dg text.g, .dg .tp { fill: var(--ink-2); }
+.dg rect.bx { fill: var(--bg); stroke: var(--muted); stroke-width: 1; }
+.dg rect.ink { fill: var(--bg); stroke: var(--ink); stroke-width: 1.25; }
+.dg rect.cell, .dg rect.lane, .dg rect.band { fill: var(--surface-2); stroke: none; }
+.dg rect.sel { fill: var(--surface-2); stroke: none; }
+.dg rect.hl { fill: var(--surface-2); stroke: var(--ink); stroke-width: 1.25; }
+.dg rect.ok { fill: var(--s2-soft); stroke: var(--s2-rail); stroke-width: 1; }
+.dg rect.okf { fill: var(--s2-rail); stroke: none; }
+.dg rect.ng { fill: var(--s1-soft); stroke: var(--s1-rail); stroke-width: 1; }
+.dg rect.ng2 { fill: var(--s1-soft); stroke: var(--s1); stroke-width: 2; }
+.dg rect.ev { fill: var(--bg); stroke: var(--s1-rail); stroke-width: 1; }
+.dg rect.plan { fill: var(--bg); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 3; }
+.dg rect.trap { fill: var(--bg); stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; }
+.dg rect.zone { fill: none; stroke: var(--muted); stroke-width: 1; }
+.dg rect.mk { fill: var(--bg); }
+.dg rect.mk2 { fill: var(--surface-2); }
+.dg rect.drip { fill: var(--ink-2); }
+.dg .ln { stroke: var(--muted); stroke-width: 1.25; fill: none; }
+.dg .ah { fill: var(--muted); }
+.dg .ln.r { stroke: var(--s1); } .dg .ah.r { fill: var(--s1); }
+.dg .ln.g { stroke: var(--s2); } .dg .ah.g { fill: var(--s2); }
+.dg .ln.a { stroke: var(--ink-2); } .dg .ah.a { fill: var(--ink-2); }
+.dg .ln.p { stroke: var(--muted); stroke-dasharray: 5 3; } .dg .ah.p { fill: var(--muted); }
+.dg .ln.ret { stroke-dasharray: 5 4; }
+.dg .ln.fat { stroke-width: 5; }
+.dg .ln.dash { stroke-dasharray: 3 3; }
+.dg .rule { stroke: var(--line); stroke-width: 1; }
+.dg .life { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; }
+.dg .lim { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 5 3; }
+.dg .bucket { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
+.dg .tok { fill: var(--ink-2); }
+.dg a:hover rect, .dg a:focus-visible rect { stroke: var(--s2); stroke-width: 2; }
+.dg a:focus { outline: none; }
+
+/* the walk lights the swimlane: checks passed, the check that stopped, the reply */
+svg.walkmap.js g.dim { opacity: .45; }
+svg.walkmap.js g.pass rect { fill: var(--s2-soft); stroke: var(--s2-rail); }
+svg.walkmap.js g.stop rect { fill: var(--s1-soft); stroke: var(--s1); stroke-width: 2; }
+svg.walkmap.js [data-r], svg.walkmap.js [data-d] { opacity: .3; }
+svg.walkmap.js [data-r].on, svg.walkmap.js [data-d].on { opacity: 1; }
+
+/* method card: three visible lines, the rest in the fold */
+.gist { margin: 14px 0 0; font-size: .95rem; line-height: 1.7; }
+.gist b { display: inline-block; min-width: 6.2em; font-weight: 600; }
+.method details.fold { margin-top: 14px; }
+/* desktop: schematic left, the three lines right; the fold spans both */
+@media (min-width: 760px) {
+  .method { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 28px; align-items: start; }
+  .method > h3, .method > details { grid-column: 1 / -1; }
+  .method > .dgf { grid-column: 1; }
+  .method > .gist { grid-column: 2; grid-row: 2 / span 2; margin-top: 18px; }
+  .method > .gist .ln + .ln { margin-top: 10px; }
+}
+
+/* the request walk */
+.walk { border: 1px solid var(--line); border-radius: 4px; padding: 18px 20px; margin-top: 16px; }
+.walk .pick, .walk .ctl { display: none; }
+.walk.js .pick, .walk.js .ctl { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.walk button { font: .8rem/1.4 var(--font-code); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 3px; padding: 6px 10px; cursor: pointer; }
+.walk button:hover { border-color: var(--ink-2); }
+.walk button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.walk button:disabled { opacity: .45; cursor: default; }
+.walk button:focus-visible { outline: 2px solid var(--s3); outline-offset: 2px; }
+.walk .ctl { margin-top: 14px; }
+.steps { list-style: none; padding: 0; margin: 14px 0 0; }
+.steps > li { border-top: 1px solid var(--line); padding: 10px 0; margin: 0; }
+.steps h3 { font-size: .95rem; margin: 0; }
+.steps .v { display: block; font-size: .88rem; line-height: 1.7; margin-top: 4px; }
+.steps .v b { font-family: var(--font-code); font-weight: 600; }
+.walk.js .steps .v { display: none; }
+.walk.js .steps .v.on { display: block; }
+.walk.js .steps > li.later { display: none; }
+.ok { color: var(--s2); font-weight: 600; }
+.ng { color: var(--s1); font-weight: 600; }
+.wt td, .wt th { text-align: center; font-family: var(--font-code); font-size: .8rem; padding: 8px 6px; }
+.wt td:first-child, .wt th:first-child { text-align: left; font-family: var(--font-body); }
+.wt .sel { outline: 2px solid var(--ink); outline-offset: -2px; }
+@media (max-width: 620px) {
+  .walk { padding: 14px 12px; }
+  .wt .lg { display: none; }
+  td .tag { white-space: normal; display: inline-block; line-height: 1.3; }
+}
+
+/* links between the four crawler notes: the same quiet meta line as .home
+   (site.css: meta text uses the code slot) */
+.notes { display: flex; flex-wrap: wrap; gap: 0 14px; margin: 4px 0 0; font: 13px/1.8 var(--font-code); }
+.notes a { color: var(--muted); text-decoration: none; }
+.notes a:hover { color: var(--ink-2); text-decoration: underline; }
+.notes a[aria-current="page"] { color: var(--ink); }
+/* closing links, the shape of nav.links in l1-connection-setup.html */
+.pn { margin-top: 64px; font-size: .95rem; line-height: 2; }
+
+/* summary box at the top, copied from t2-echo-server.html: one outer line,
+   no fill (box rule 1); two sentences per row, each led by a bold label */
+.summary { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
+.summary table { margin-top: 0; }
+.summary td .ln + .ln { margin-top: 8px; }
+.summary td .ba { display: inline-block; min-width: 5.6em; font-family: var(--font-code); font-weight: 600; }
+.summary td:first-child { width: 34%; }
+</style>
+</head>
+<body>
+<main class="wrap">
+<a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
+<nav class="notes" aria-label="crawler 노트"><a href="00-overview.html">한눈에 보기</a><a href="01-cost.html">01 비용</a><a href="02-history.html">02 역사</a><a href="03-layers.html" aria-current="page">03 방어 layer</a><a href="04-reverse-proxy.html">04 우리 Reverse Proxy</a></nav>
+
+<h1>crawler 방어 layer와 우회 방식</h1>
+<p class="sub">layer마다 client에게 질문 하나<br>방법마다: 보는 것, 쓰는 곳, 사람이 치르는 값, 뚫리는 방식, 우리 서버</p>
+<div class="summary">
+<div class="scroll">
+<table>
+<thead><tr><th>주제</th><th>요약</th></tr></thead>
+<tbody>
+<tr><td><a href="#l0">방어 layer 여섯 개</a></td><td><span class="ln"><strong class="ba">Observed</strong>layer 0부터 layer 5까지 방법 14개가 있고, layer마다 client에게 질문 하나를 한다.</span><span class="ln"><strong class="ba">Meaning</strong>방법마다 뚫리는 방식이 있다: User-Agent는 browser의 문자열로, IP는 residential proxy로, proof of work는 headless browser로 넘는다.</span></td></tr>
+<tr><td><a href="#ours">우리 서버 (CJG)</a></td><td><span class="ln"><strong class="ba">Observed</strong><code>rproxy</code>에는 응답 cache가 있고, User-Agent 차단, TLS fingerprint, rate limit, tarpit은 만드는 중이다.</span><span class="ln"><strong class="ba">Meaning</strong>CAPTCHA와 pay per crawl은 서버 혼자서는 만들 수 없다.</span></td></tr>
+<tr><td><a href="#walk-h">요청 하나 따라가기</a></td><td><span class="ln"><strong class="ba">Observed</strong>가상의 서버에서 curl은 검사 2, User-Agent만 Chrome은 검사 3, 같은 handshake는 검사 4에서 멈춘다.</span><span class="ln"><strong class="ba">Meaning</strong>headless browser는 다섯 검사를 모두 넘으므로, 이 crawler에게는 누구이고 누가 값을 내는가를 물어야 한다.</span></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>출처 칩(<a class="src p" href="00-overview.html#src-note">primary</a>, <a class="src s" href="00-overview.html#src-note">secondary</a>, <a class="src u" href="00-overview.html#src-note">unverified</a>)의 뜻은 <a href="00-overview.html#src-note">한눈에 보기</a>에 있다.</p>
+<p>뚫리는 방식은 생각의 수준까지만 적었다. 특정 방어를 넘는 절차나 코드는 적지 않았다.</p>
+<p id="ours">우리 서버 칸은 mini-webserver CJG 브랜치의 Reverse Proxy <code>rproxy</code>를 기준으로 적었다. <code>rproxy</code>는 Origin 앞에서 따로 도는 프로세스이고, TLS는 OpenSSL로 받는다. <span class="tag ok">CJG에 있음</span>은 지금 코드에 있는 것, <span class="tag plan">만드는 중</span>은 테스트와 빈 자리는 있고 판단 코드를 아직 쓰는 중인 것, <span class="tag plan">가능</span>은 OpenSSL이 들어와 만들 수 있게 됐지만 아직 없는 것, <span class="tag plan">계획, 아직 없음</span>은 아직 만들지 않은 것, <span class="tag no">못 함</span>은 서버 혼자서는 만들 수 없는 것이다.</p>
+
+<h2 id="l0">layer 0: 비용 줄이기</h2>
+<p>거절하지 않고 요청 하나의 값을 낮추는 layer다. client에게 묻는 것이 없다.</p>
+<section class="method" id="m-cache">
+<h3>cache와 edge</h3>
+<!--GEN:dg-cache--><figure class="dgf"><svg class="dg" id="dg-cache" viewBox="0 0 360 124" style="max-width:460px" role="img" aria-labelledby="dg-cache-title dg-cache-desc"><title id="dg-cache-title">cache hit와 cache miss</title><desc id="dg-cache-desc">인기 페이지는 cache hit로 끝나고, 드문 페이지는 cache miss로 origin까지 간다</desc><defs><marker id="dg-cache-ah-g" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah g" d="M0 0L8 3L0 6z"/></marker><marker id="dg-cache-ah-r" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah r" d="M0 0L8 3L0 6z"/></marker></defs><path class="ln g" d="M64 36 L144 36" marker-end="url(#dg-cache-ah-g)"/><rect class="mk" x="68.2" y="16.0" width="71.6" height="14"/><text x="104" y="27.0" text-anchor="middle" class="t" font-size="12">인기 페이지</text><path class="ln r" d="M64 100 L144 100" marker-end="url(#dg-cache-ah-r)"/><rect class="mk" x="68.2" y="80.0" width="71.6" height="14"/><text x="104" y="91.0" text-anchor="middle" class="t" font-size="12">드문 페이지</text><path class="ln r" d="M240 100 L284 100" marker-end="url(#dg-cache-ah-r)"/><rect class="bx" x="0" y="20" width="64" height="32" rx="6" fill="none" stroke="currentColor"/><text x="32" y="40.2" text-anchor="middle" font-size="12">client</text><rect class="ok" x="144" y="20" width="96" height="32" rx="6" fill="none" stroke="currentColor"/><text x="192" y="40.5" text-anchor="middle" font-size="13">cache hit</text><text x="252" y="40.5" text-anchor="start" class="tg b" font-size="12">여기서 응답</text><rect class="bx" x="0" y="84" width="64" height="32" rx="6" fill="none" stroke="currentColor"/><text x="32" y="104.2" text-anchor="middle" font-size="12">client</text><rect class="ng" x="144" y="84" width="96" height="32" rx="6" fill="none" stroke="currentColor"/><text x="192" y="104.5" text-anchor="middle" font-size="13">cache miss</text><rect class="ng" x="284" y="84" width="76" height="32" rx="6" fill="none" stroke="currentColor"/><text x="322" y="104.5" text-anchor="middle" font-size="13">origin</text></svg></figure><!--/GEN:dg-cache-->
+<p class="gist"><span class="ln"><b>보는 것</b>없음. 저장한 응답을 다시 보낸다.</span><span class="ln"><b>뚫리는 방식</b>드문 페이지를 읽어 cache miss를 낸다.</span><span class="ln"><b>우리 서버</b><span class="tag ok">CJG에 있음</span> <code>rproxy</code>의 응답 cache다. <code>--cache on</code>으로 켠다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>보는 것</dt><dd>없음. 같은 요청에 저장한 응답을 다시 보낸다.</dd>
+<dt>쓰는 곳</dt><dd><span class="ln">Read the Docs: 파일이 cache에 더 잘 남게 바꾸고, CDN을 우회하던 오래된 redirect를 고쳤다. <a class="src p" href="https://about.readthedocs.com/blog/2024/07/ai-crawlers-abuse/">primary</a></span><span class="ln">Stack Overflow: 사이트의 더 많은 부분을 edge에 cache한다. <a class="src p" href="https://stackoverflow.blog/2024/07/30/how-stack-overflow-fends-off-scraping-bots/">primary</a></span><span class="ln">GNOME: 2026년 3월 bot 처리를 Fastly의 edge로 옮겼다. "Offloading bot mitigation to the edge will reduce the load on our core infrastructure." <a class="src p" href="https://discourse.gnome.org/t/gnome-gitlab-bot-management-migration-to-fastly/34358">primary</a></span></dd>
+<dt>사람이 치르는 값</dt><dd>없음. 사람에게도 빨라진다.</dd>
+<dt>뚫리는 방식</dt><dd>crawler는 오래된 commit, git blame 화면, 드문 문서처럼 cache에 없는 것을 읽는다. 그래서 Wikimedia에서 페이지뷰의 35%가 비싼 트래픽의 65%가 됐다. <a class="src p" href="https://diff.wikimedia.org/2025/04/01/how-crawlers-impact-the-operations-of-the-wikimedia-projects/">primary</a></dd>
+<dt>우리 서버</dt><dd><span class="tag ok">CJG에 있음</span> <code>rproxy</code>가 Origin 앞에서 응답을 cache한다(<code>--cache on</code>). Verdict가 통과시킨 요청만 cache를 보고, hit면 Origin에 가지 않는다.</dd>
+</dl>
+</div>
+</details>
+</section>
+<section class="method" id="m-304">
+<h3>조건부 요청과 304</h3>
+<!--GEN:dg-304--><figure class="dgf"><svg class="dg" id="dg-304" viewBox="0 0 360 196" style="max-width:460px" role="img" aria-labelledby="dg-304-title dg-304-desc"><title id="dg-304-title">304와 200</title><desc id="dg-304-desc">조건부 요청에는 본문 없는 304, 조건 없는 요청에는 본문 전체</desc><defs><marker id="dg-304-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker><marker id="dg-304-ah-g" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah g" d="M0 0L8 3L0 6z"/></marker><marker id="dg-304-ah-rf" viewBox="0 0 8 6" markerWidth="14" markerHeight="10.5" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah r" d="M0 0L8 3L0 6z"/></marker></defs><line class="life" x1="60" y1="28" x2="60" y2="192"/><line class="life" x1="300" y1="28" x2="300" y2="192"/><rect class="bx" x="20" y="0" width="80" height="28" rx="6" fill="none" stroke="currentColor"/><text x="60" y="18.6" text-anchor="middle" class="b" font-size="13">client</text><rect class="bx" x="260" y="0" width="80" height="28" rx="6" fill="none" stroke="currentColor"/><text x="300" y="18.6" text-anchor="middle" class="b" font-size="13">server</text><path class="ln" d="M60 56 L299 56" marker-end="url(#dg-304-ah)"/><rect class="mk" x="105.3" y="36.0" width="149.4" height="14"/><text x="180" y="47.0" text-anchor="middle" class="t mono" font-size="12">GET + If-None-Match</text><path class="ln g ret" d="M300 92 L61 92" marker-end="url(#dg-304-ah-g)"/><rect class="mk" x="135.9" y="72.0" width="88.2" height="14"/><text x="180" y="83.0" text-anchor="middle" class="t g" font-size="12">304, 본문 없음</text><path class="ln" d="M60 136 L299 136" marker-end="url(#dg-304-ah)"/><rect class="mk" x="110.7" y="116.0" width="138.6" height="14"/><text x="180" y="127.0" text-anchor="middle" class="t" font-size="12">GET, 조건 header 없음</text><path class="ln r fat" d="M300 172 L73 172" marker-end="url(#dg-304-ah-rf)"/><rect class="mk" x="116.8" y="150.0" width="126.3" height="14"/><text x="180" y="161.0" text-anchor="middle" class="t r b" font-size="12">200 + 본문 전체, 매번</text></svg></figure><!--/GEN:dg-304-->
+<p class="gist"><span class="ln"><b>보는 것</b>If-None-Match, If-Modified-Since header</span><span class="ln"><b>뚫리는 방식</b>조건부 header를 보내지 않으면 효과가 없다.</span><span class="ln"><b>우리 서버</b><span class="tag plan">계획, 아직 없음</span> ETag와 304를 아직 다루지 않는다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>보는 것</dt><dd>요청의 If-None-Match, If-Modified-Since header</dd>
+<dt>판단</dt><dd>client가 가진 사본이 아직 최신이면 본문 없이 304 Not Modified만 보낸다.</dd>
+<dt>쓰는 곳</dt><dd>Read the Docs에서 73 TB를 받아 간 crawler는 ETag도 Last-Modified도 쓰지 않고 같은 파일을 다시 받았다. <a class="src p" href="https://about.readthedocs.com/blog/2024/07/ai-crawlers-abuse/">primary</a> 서버가 304로 답하고 cache할 수 있는 것을 cache하면 이 부하의 큰 몫을 덜 수 있다는 것이 리서치 파일의 추론이다.</dd>
+<dt>뚫리는 방식</dt><dd>조건부 header를 보내지 않는 crawler에게는 효과가 없다.</dd>
+<dt>우리 서버</dt><dd><span class="tag plan">계획, 아직 없음</span> <code>rproxy</code>도 Origin도 ETag와 304를 아직 다루지 않는다.</dd>
+</dl>
+</div>
+</details>
+</section>
+
+<h2>layer 1: 부탁하기</h2>
+<p>질문을 crawler가 스스로 하게 하는 layer다. 따를지는 crawler가 정한다.</p>
+<section class="method" id="m-robots">
+<h3>robots.txt와 opt-out 토큰</h3>
+<!--GEN:dg-robots--><figure class="dgf"><svg class="dg" id="dg-robots" viewBox="0 0 360 212" style="max-width:460px" role="img" aria-labelledby="dg-robots-title dg-robots-desc"><title id="dg-robots-title">robots.txt는 부탁</title><desc id="dg-robots-desc">crawler가 robots.txt를 읽고 따를지 스스로 정한다. 서버는 막지 않는다</desc><defs><marker id="dg-robots-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker><marker id="dg-robots-ah-r" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah r" d="M0 0L8 3L0 6z"/></marker></defs><line class="life" x1="70" y1="28" x2="70" y2="208"/><line class="life" x1="300" y1="28" x2="300" y2="208"/><rect class="bx" x="24" y="0" width="92" height="28" rx="6" fill="none" stroke="currentColor"/><text x="70" y="18.6" text-anchor="middle" class="b" font-size="13">crawler</text><rect class="bx" x="260" y="0" width="80" height="28" rx="6" fill="none" stroke="currentColor"/><text x="300" y="18.6" text-anchor="middle" class="b" font-size="13">site</text><path class="ln" d="M70 56 L299 56" marker-end="url(#dg-robots-ah)"/><rect class="mk" x="125.2" y="36.0" width="119.6" height="14"/><text x="185" y="47.0" text-anchor="middle" class="t mono" font-size="12">GET /robots.txt</text><path class="ln ret" d="M300 88 L71 88" marker-end="url(#dg-robots-ah)"/><rect class="mk" x="140.1" y="68.0" width="89.8" height="14"/><text x="185" y="79.0" text-anchor="middle" class="t mono" font-size="12">Disallow: /</text><rect class="hl" x="4" y="104" width="132" height="28" rx="6" fill="none" stroke="currentColor"/><text x="70" y="122.2" text-anchor="middle" class="b" font-size="12">crawler가 고름</text><text x="148" y="122.5" text-anchor="start" class="tg" font-size="12">따르면 여기서 멈춤</text><path class="ln r" d="M70 164 L299 164" marker-end="url(#dg-robots-ah-r)"/><rect class="mk" x="134.4" y="144.0" width="101.1" height="14"/><text x="185" y="155.0" text-anchor="middle" class="t r" font-size="12">무시: GET /page</text><path class="ln r ret" d="M300 196 L71 196" marker-end="url(#dg-robots-ah-r)"/><rect class="mk" x="140.9" y="176.0" width="88.2" height="14"/><text x="185" y="187.0" text-anchor="middle" class="t r" font-size="12">200, 막지 않음</text></svg></figure><!--/GEN:dg-robots-->
+<p class="gist"><span class="ln"><b>보는 것</b>없음. crawler가 읽고 따를지 고른다.</span><span class="ln"><b>뚫리는 방식</b>무시하거나 이름을 숨긴다.</span><span class="ln"><b>우리 서버</b><span class="tag plan">계획, 아직 없음</span> static file Route로 줄 수 있다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>보는 것</dt><dd>없음. crawler가 파일을 읽고 따를지 고른다.</dd>
+<dt>쓰는 곳</dt><dd><span class="ln">거의 모든 사이트. 2023년 말 10개국 상위 뉴스 사이트의 48%가 OpenAI crawler를 막았다(미국 79%). <a class="src p" href="https://reutersinstitute.politics.ox.ac.uk/how-many-news-websites-block-ai-crawlers">primary</a></span><span class="ln">BuiltWith 집계로 GPTBot을 막는 사이트는 약 560만 개이다(2025년 7월 330만 개). <a class="src s" href="https://www.theregister.com/2025/12/08/publishers_say_no_ai_scrapers/">secondary</a></span><span class="ln">Google-Extended(2023-09-28)는 검색에는 남고 Bard와 Vertex AI 학습에서만 빠지는 토큰이다. <a class="src p" href="https://blog.google/technology/ai/an-update-on-web-publisher-controls/">primary</a></span><span class="ln">ai.robots.txt 프로젝트가 AI crawler 이름 목록을 공유한다. <a class="src p" href="https://github.com/ai-robots-txt/ai.robots.txt">primary</a></span></dd>
+<dt>사람이 치르는 값</dt><dd>없음</dd>
+<dt>뚫리는 방식</dt><dd>무시하거나, 파일을 읽지 않거나, 이름을 밝히지 않는다. RFC 9309도 접근 권한이 아니라고 적는다. <a class="src p" href="https://datatracker.ietf.org/doc/rfc9309/">primary</a></dd>
+<dt>우리 서버</dt><dd><span class="tag plan">계획, 아직 없음</span> static file Route로 줄 수 있다. 파일은 아직 없다. 아무것도 강제하지 않는다.</dd>
+</dl>
+</div>
+</details>
+</section>
+
+<h2>layer 2: 신원 묻기</h2>
+<p>"너는 누구인가"를 묻는 layer다. client의 말(User-Agent)과 client의 바이트(TLS, 네트워크)를 맞춰 본다.</p>
+<section class="method" id="m-ua">
+<h3>User-Agent 차단</h3>
+<!--GEN:dg-ua--><figure class="dgf"><svg class="dg" id="dg-ua" viewBox="0 0 360 160" style="max-width:460px" role="img" aria-labelledby="dg-ua-title dg-ua-desc"><title id="dg-ua-title">User-Agent 표</title><desc id="dg-ua-desc">User-Agent 표에 있는 이름은 403, browser 이름을 보내면 통과</desc><defs><marker id="dg-ua-ah-g" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah g" d="M0 0L8 3L0 6z"/></marker><marker id="dg-ua-ah-r" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah r" d="M0 0L8 3L0 6z"/></marker></defs><text x="180" y="17.0" text-anchor="middle" class="b" font-size="13">서버의 표: GPTBot, ClaudeBot, …</text><path class="ln r" d="M86 88 L86 112" marker-end="url(#dg-ua-ah-r)"/><rect class="bx" x="0" y="28" width="172" height="60" rx="6" fill="none" stroke="currentColor"/><text x="12" y="50.0" text-anchor="start" class="mono" font-size="12">GET /page</text><rect class="ng" x="6" y="60" width="160" height="22" rx="4" fill="none" stroke="currentColor"/><text x="12" y="75.5" text-anchor="start" class="mono" font-size="12">User-Agent: GPTBot</text><rect class="ng" x="36" y="112" width="100" height="44" rx="6" fill="none" stroke="currentColor"/><text x="86" y="130.2" text-anchor="middle" font-size="12">표에 있음</text><text x="86" y="146.2" text-anchor="middle" font-size="12">403</text><path class="ln g" d="M274 88 L274 112" marker-end="url(#dg-ua-ah-g)"/><rect class="bx" x="188" y="28" width="172" height="60" rx="6" fill="none" stroke="currentColor"/><text x="200" y="50.0" text-anchor="start" class="mono" font-size="12">GET /page</text><rect class="ok" x="194" y="60" width="160" height="22" rx="4" fill="none" stroke="currentColor"/><text x="200" y="75.5" text-anchor="start" class="mono" font-size="12">User-Agent: Chrome</text><rect class="ok" x="224" y="112" width="100" height="44" rx="6" fill="none" stroke="currentColor"/><text x="274" y="130.2" text-anchor="middle" font-size="12">표에 없음</text><text x="274" y="146.2" text-anchor="middle" font-size="12">통과</text></svg></figure><!--/GEN:dg-ua-->
+<p class="gist"><span class="ln"><b>보는 것</b>User-Agent 문자열</span><span class="ln"><b>뚫리는 방식</b>browser의 문자열을 보내면 끝난다.</span><span class="ln"><b>우리 서버</b><span class="tag plan">만드는 중</span> User-Agent는 Verdict로 간다. 표는 아직 없다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>보는 것</dt><dd>User-Agent header 문자열</dd>
+<dt>쓰는 곳</dt><dd><span class="ln">ai.robots.txt가 nginx, HAProxy, Caddy용 설정 조각을 함께 준다. <a class="src p" href="https://github.com/ai-robots-txt/ai.robots.txt">primary</a></span><span class="ln">KDE는 bot이 내세운 특정 MS Edge 버전 하나를 막았다. <a class="src s" href="https://thelibre.news/foss-infrastructure-is-under-attack-by-ai-companies/">secondary</a></span></dd>
+<dt>사람이 치르는 값</dt><dd>보통은 없다. 막은 문자열이 진짜 browser의 것이면 그 browser를 쓰는 사람도 막힌다(KDE의 Edge 차단).</dd>
+<dt>뚫리는 방식</dt><dd>User-Agent는 client가 마음대로 쓰는 문자열이라, crawler가 흔한 browser의 문자열을 보내면 끝난다. SourceHut은 "random User-Agents that overlap with end-users"를 봤다. <a class="src p" href="https://drewdevault.com/blog/Stop-externalizing-your-costs-on-me/">primary</a> Cloudflare: "user agent headers alone are easily spoofed" <a class="src p" href="https://blog.cloudflare.com/web-bot-auth/">primary</a> 이름을 숨긴 crawler의 사례는 <a href="02-history.html#s5">⑤</a>의 칸에 있다.</dd>
+<dt>우리 서버</dt><dd><span class="tag plan">만드는 중</span> <code>rproxy</code>는 parse한 User-Agent를 Verdict의 입력으로 넘기고, Origin에도 그대로 보낸다. 그 값을 표와 비교해 403을 고르는 <code>verdict_decide()</code>는 아직 모든 요청을 통과시키는 빈 자리다. 싸고, 속이면 바로 뚫린다.</dd>
+</dl>
+</div>
+</details>
+</section>
+<section class="method" id="m-tls">
+<h3>TLS fingerprint: JA3에서 JA4로</h3>
+<!--GEN:dg-ja4--><figure class="dgf"><svg class="dg" id="dg-ja4" viewBox="0 0 360 252" style="max-width:460px" role="img" aria-labelledby="dg-ja4-title dg-ja4-desc"><title id="dg-ja4-title">JA4 비교</title><desc id="dg-ja4-desc">ClientHello의 필드를 정렬해 hash한 JA4를, User-Agent가 말한 browser와 비교</desc><defs><marker id="dg-ja4-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker></defs><path class="ln" d="M160 72 L212 72" marker-end="url(#dg-ja4-ah)"/><path class="ln" d="M286 96 L286 120" marker-end="url(#dg-ja4-ah)"/><path class="ln" d="M286 152 L286 176" marker-end="url(#dg-ja4-ah)"/><rect class="bx" x="0" y="4" width="160" height="132" rx="6" fill="none" stroke="currentColor"/><text x="80" y="23.0" text-anchor="middle" class="b" font-size="12">ClientHello (평문)</text><rect class="cell" x="8" y="32" width="144" height="20" rx="4"/><text x="80" y="46.2" text-anchor="middle" font-size="12">TLS 버전</text><rect class="sel" x="8" y="56" width="144" height="20" rx="4"/><text x="80" y="70.2" text-anchor="middle" font-size="12">cipher 목록</text><rect class="sel" x="8" y="80" width="144" height="20" rx="4"/><text x="80" y="94.2" text-anchor="middle" font-size="12">extension 목록</text><rect class="cell" x="8" y="104" width="144" height="20" rx="4"/><text x="80" y="118.2" text-anchor="middle" font-size="12">ALPN</text><rect class="bx" x="212" y="48" width="148" height="48" rx="6" fill="none" stroke="currentColor"/><text x="286" y="68.2" text-anchor="middle" font-size="12">목록을 정렬한 뒤 hash</text><text x="286" y="84.2" text-anchor="middle" class="t2" font-size="12">JA3는 받은 순서 그대로</text><rect class="hl" x="212" y="120" width="148" height="32" rx="6" fill="none" stroke="currentColor"/><text x="286" y="140.6" text-anchor="middle" class="mono b" font-size="13">JA4: a_b_c</text><rect class="bx" x="212" y="176" width="148" height="44" rx="6" fill="none" stroke="currentColor"/><text x="286" y="194.2" text-anchor="middle" font-size="12">JA4가 가리키는</text><text x="286" y="210.2" text-anchor="middle" font-size="12">TLS 라이브러리</text><rect class="bx" x="0" y="176" width="148" height="44" rx="6" fill="none" stroke="currentColor"/><text x="74" y="194.2" text-anchor="middle" font-size="12">User-Agent가</text><text x="74" y="210.2" text-anchor="middle" font-size="12">말한 browser</text><text x="180" y="202.5" text-anchor="middle" class="b" font-size="13">같은가?</text><text x="180" y="244.0" text-anchor="middle" class="tr b" font-size="13">어긋나면 bot 의심</text></svg></figure><!--/GEN:dg-ja4-->
+<p class="gist"><span class="ln"><b>보는 것</b>TLS handshake의 첫 메시지 ClientHello</span><span class="ln"><b>뚫리는 방식</b>browser의 TLS 라이브러리로 같은 handshake를 보낸다.</span><span class="ln"><b>우리 서버</b><span class="tag plan">만드는 중</span> TLS는 OpenSSL로 받고, ClientHello parser는 있다. JA4 계산은 쓰는 중이다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>보는 것</dt><dd>TLS handshake의 첫 메시지 ClientHello. 각 TLS 라이브러리(Chrome의 BoringSSL, Firefox의 NSS, OpenSSL, Python의 ssl)는 자기 모양을 만든다. 그래서 TLS fingerprint는 사람이 아니라 소프트웨어를 가리킨다. <a class="src p" href="https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967/">primary</a></dd>
+<dt>판단</dt><dd><span class="ln">JA3(Salesforce, 2017)는 다섯 필드를 받은 순서대로 이어 MD5로 hash한다. <a class="src p" href="https://engineering.salesforce.com/tls-fingerprinting-with-ja3-and-ja3s-247362855967/">primary</a></span><span class="ln">2023년 초 Chrome이 연결마다 extension 순서를 섞기 시작하자, Fastly는 Chrome 연결마다 "practically a unique JA3 fingerprint"가 생긴다고 봤다. browser의 개인정보 보호 변경이었지 scraper 도구가 아니었다. <a class="src p" href="https://www.fastly.com/blog/a-first-look-at-chromes-tls-clienthello-permutation-in-the-wild">primary</a></span><span class="ln">JA4(FoxIO)는 정렬한 뒤 hash해서 순서를 섞어도 값이 같다. a_b_c 모양이라 한 부분만 맞춰 볼 수도 있다. <a class="src p" href="https://github.com/FoxIO-LLC/ja4">primary</a></span><span class="ln">HTTP/2에도 같은 생각이 있다. Akamai는 2017년 SETTINGS 값과 pseudo-header 순서로 만든 fingerprint를 발표하며 "detecting browser impersonators"를 용도로 들었다. <a class="src p" href="https://www.blackhat.com/docs/eu-17/materials/eu-17-Shuster-Passive-Fingerprinting-Of-HTTP2-Clients.pdf">primary</a></span></dd>
+<dt>쓰는 곳</dt><dd>Cloudflare(JA4 Signals, 2024-08-12) <a class="src p" href="https://blog.cloudflare.com/ja4-signals/">primary</a>, Stack Overflow(IP가 달라도 bot을 한 무리로 묶으려고) <a class="src p" href="https://stackoverflow.blog/2024/07/30/how-stack-overflow-fends-off-scraping-bots/">primary</a></dd>
+<dt>사람이 치르는 값</dt><dd>직접은 없다. 드문 browser나 개인정보 보호 도구가 bot과 같은 fingerprint를 가질 수 있다.</dd>
+<dt>뚫리는 방식</dt><dd>browser의 TLS 라이브러리로 다시 빌드한 HTTP client는 browser와 똑같은 handshake를 보낸다(curl-impersonate 계열). <a class="src p" href="https://github.com/lwthiker/curl-impersonate">primary</a> 진짜 headless browser도 진짜 fingerprint를 낸다. Cloudflare도 fingerprint는 "can be easily spoofed"라고 적었다. <a class="src p" href="https://blog.cloudflare.com/ja4-signals/">primary</a></dd>
+<dt>우리 서버</dt><dd><span class="tag plan">만드는 중</span> <code>rproxy</code>가 TLS를 직접 받는다. TLS 라이브러리는 OpenSSL로 정했다(2026-11-24 결정). handshake 전에 <code>recv(..., MSG_PEEK)</code>로 평문 ClientHello를 엿보고, <code>client_hello_parse()</code>가 cipher와 extension을 wire 순서 그대로 읽는다. 이 parser는 <code>openssl s_client</code>와 curl이 보낸 바이트로 테스트한다. 그 값으로 JA4 문자열을 만드는 <code>ja4_format()</code>은 아직 빈 자리라서, 지금은 X-JA4 header가 빈 값으로 Origin에 간다.</dd>
+</dl>
+</div>
+</details>
+</section>
+<section class="method" id="m-rdns">
+<h3>reverse DNS로 좋은 bot 확인</h3>
+<!--GEN:dg-rdns--><figure class="dgf"><svg class="dg" id="dg-rdns" viewBox="0 0 360 256" style="max-width:460px" role="img" aria-labelledby="dg-rdns-title dg-rdns-desc"><title id="dg-rdns-title">reverse DNS 확인</title><desc id="dg-rdns-desc">IP로 이름을 찾고, 그 이름으로 다시 IP를 찾아 처음 IP와 같은지 확인</desc><defs><marker id="dg-rdns-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker></defs><line class="life" x1="90" y1="28" x2="90" y2="224"/><line class="life" x1="300" y1="28" x2="300" y2="224"/><rect class="bx" x="50" y="0" width="80" height="28" rx="6" fill="none" stroke="currentColor"/><text x="90" y="18.6" text-anchor="middle" class="b" font-size="13">서버</text><rect class="bx" x="260" y="0" width="80" height="28" rx="6" fill="none" stroke="currentColor"/><text x="300" y="18.6" text-anchor="middle" class="b" font-size="13">DNS</text><path class="ln" d="M90 56 L299 56" marker-end="url(#dg-rdns-ah)"/><rect class="mk" x="135.2" y="36.0" width="119.6" height="14"/><text x="195" y="47.0" text-anchor="middle" class="t mono" font-size="12">getnameinfo(IP)</text><path class="ln ret" d="M300 88 L91 88" marker-end="url(#dg-rdns-ah)"/><rect class="mk" x="138.9" y="68.0" width="112.2" height="14"/><text x="195" y="79.0" text-anchor="middle" class="t mono" font-size="12">…googlebot.com</text><rect class="bx" x="4" y="100" width="172" height="28" rx="6" fill="none" stroke="currentColor"/><text x="90" y="118.2" text-anchor="middle" font-size="12">googlebot.com으로 끝나나</text><path class="ln" d="M90 156 L299 156" marker-end="url(#dg-rdns-ah)"/><rect class="mk" x="130.6" y="136.0" width="128.7" height="14"/><text x="195" y="147.0" text-anchor="middle" class="t mono" font-size="12">getaddrinfo(이름)</text><path class="ln ret" d="M300 188 L91 188" marker-end="url(#dg-rdns-ah)"/><rect class="mk" x="183.6" y="168.0" width="22.9" height="14"/><text x="195" y="179.0" text-anchor="middle" class="t mono" font-size="12">IP</text><rect class="ok" x="4" y="200" width="172" height="28" rx="6" fill="none" stroke="currentColor"/><text x="90" y="218.2" text-anchor="middle" font-size="12">처음 IP와 같으면 확인</text><text x="180" y="248.0" text-anchor="middle" class="tr b" font-size="12">두 호출 모두 답이 올 때까지 멈춤</text></svg></figure><!--/GEN:dg-rdns-->
+<p class="gist"><span class="ln"><b>보는 것</b>client IP와 DNS 기록</span><span class="ln"><b>뚫리는 방식</b>이름을 숨긴 crawler는 확인할 것이 없다.</span><span class="ln"><b>우리 서버</b><span class="tag plan">계획, 아직 없음</span> 두 조회가 멈추는 호출이라 결과를 cache한다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>보는 것</dt><dd>client IP와 DNS 기록 <a class="src p" href="https://developers.google.com/search/blog/2006/09/how-to-verify-googlebot">primary</a></dd>
+<dt>쓰는 곳</dt><dd>HAProxy 안내서는 이 확인으로 허용 목록을 만들어 Googlebot이 rate limit에 걸리지 않게 한다. <a class="src p" href="https://www.haproxy.com/blog/bot-protection-with-haproxy">primary</a></dd>
+<dt>사람이 치르는 값</dt><dd>없음</dd>
+<dt>뚫리는 방식</dt><dd>이름이나 IP 범위를 공개한 crawler에만 쓸 수 있다. 이름을 숨긴 crawler는 확인할 것이 없다. Web Bot Auth의 오래되고 약한 형태다.</dd>
+<dt>우리 서버</dt><dd><span class="tag plan">계획, 아직 없음</span> 두 조회 모두 응답이 올 때까지 멈추는 호출이다. <code>rproxy</code>는 pool Concurrency model이라 조회 동안 Worker 하나가 멈춘다. 결과를 cache하고, 요청마다 부르면 안 된다.</dd>
+</dl>
+</div>
+</details>
+</section>
+
+<h2>layer 3: 양 제한하기</h2>
+<p>"얼마나 많이 오는가"를 묻는 layer다. 대부분 IP 주소를 열쇠로 센다.</p>
+<section class="method" id="m-ip">
+<h3>IP, subnet, ASN, 국가 차단</h3>
+<!--GEN:dg-ipblock--><figure class="dgf"><svg class="dg" id="dg-ipblock" viewBox="0 0 360 124" style="max-width:460px" role="img" aria-labelledby="dg-ipblock-title dg-ipblock-desc"><title id="dg-ipblock-title">accept() 직후 IP 표</title><desc id="dg-ipblock-desc">accept() 직후 peer 주소를 CIDR 표와 비교해, 있으면 한 바이트도 읽기 전에 닫는다</desc><defs><marker id="dg-ipblock-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker><marker id="dg-ipblock-ah-g" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah g" d="M0 0L8 3L0 6z"/></marker><marker id="dg-ipblock-ah-r" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah r" d="M0 0L8 3L0 6z"/></marker></defs><path class="ln" d="M88 20 L116 20" marker-end="url(#dg-ipblock-ah)"/><path class="ln" d="M204 20 L232 20" marker-end="url(#dg-ipblock-ah)"/><path class="ln r" d="M272 36 L272 48 Q272 56 264 56 L188 56 Q180 56 180 64 L180 76" marker-end="url(#dg-ipblock-ah-r)"/><path class="ln g" d="M320 36 L320 76" marker-end="url(#dg-ipblock-ah-g)"/><rect class="bx" x="0" y="4" width="88" height="32" rx="6" fill="none" stroke="currentColor"/><text x="44" y="24.2" text-anchor="middle" class="mono" font-size="12">accept()</text><rect class="bx" x="116" y="4" width="88" height="32" rx="6" fill="none" stroke="currentColor"/><text x="160" y="24.2" text-anchor="middle" font-size="12">peer 주소</text><rect class="hl" x="232" y="4" width="128" height="32" rx="6" fill="none" stroke="currentColor"/><text x="296" y="24.6" text-anchor="middle" class="b" font-size="13">CIDR 표</text><rect class="cell" x="0" y="76" width="104" height="44" rx="6"/><text x="52" y="94.2" text-anchor="middle" class="t2" font-size="12">한 바이트도</text><text x="52" y="110.2" text-anchor="middle" class="t2" font-size="12">읽기 전</text><rect class="ng" x="120" y="76" width="120" height="44" rx="6" fill="none" stroke="currentColor"/><text x="180" y="94.2" text-anchor="middle" font-size="12">표에 있음</text><text x="180" y="110.2" text-anchor="middle" class="mono" font-size="12">close()</text><rect class="ok" x="264" y="76" width="96" height="44" rx="6" fill="none" stroke="currentColor"/><text x="312" y="94.2" text-anchor="middle" font-size="12">표에 없음</text><text x="312" y="110.2" text-anchor="middle" class="mono" font-size="12">read()</text></svg></figure><!--/GEN:dg-ipblock-->
+<p class="gist"><span class="ln"><b>보는 것</b>출발지 IP와 그 네트워크</span><span class="ln"><b>뚫리는 방식</b>IP를 계속 바꾼다.</span><span class="ln"><b>우리 서버</b><span class="tag plan">계획, 아직 없음</span> accept() 직후 CIDR 표와 비교하고 닫는다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>보는 것</dt><dd>출발지 IP와 그 IP가 속한 네트워크</dd>
+<dt>쓰는 곳</dt><dd><span class="ln">Fedora: subnet을 막았다가 실제 사용자가 막혀 되돌리고, 브라질 전체를 막았다. <a class="src p" href="https://www.scrye.com/blogs/nirik/posts/2025/03/15/mid-march-infra-bits-2025/">primary</a></span><span class="ln">SourceHut: GCP와 Azure 같은 클라우드 전체를 막았다. <a class="src p" href="https://status.sr.ht/issues/2025-03-17-git.sr.ht-llms/">primary</a></span><span class="ln">Stack Overflow: ASN 단위로 막는다. "it becomes whack-a-mole" <a class="src p" href="https://stackoverflow.blog/2024/07/30/how-stack-overflow-fends-off-scraping-bots/">primary</a></span></dd>
+<dt>사람이 치르는 값</dt><dd>크고 거칠다. 국가 차단은 그 나라 사람 전부를 끊는다. 클라우드 차단은 CI 작업과 연동 도구를 깬다. Stack Overflow는 자기 GitHub Actions도 깨진다는 이유로 클라우드 전체 차단을 하지 않는다. <a class="src p" href="https://stackoverflow.blog/2024/07/30/how-stack-overflow-fends-off-scraping-bots/">primary</a></dd>
+<dt>뚫리는 방식</dt><dd>IP를 계속 바꾼다. 아래 rate limit 카드의 residential proxy 참고.</dd>
+<dt>우리 서버</dt><dd><span class="tag plan">계획, 아직 없음</span> <code>rproxy</code>는 연결을 받자마자 peer 주소를 읽어 로그와 X-Forwarded-For header에 쓴다. 그 주소를 CIDR 범위와 비교해 한 바이트도 읽기 전에 연결을 닫는 표는 아직 없다. 비용은 거의 없다.</dd>
+</dl>
+</div>
+</details>
+</section>
+<section class="method" id="m-rate">
+<h3>rate limit</h3>
+<!--GEN:dg-bucket--><figure class="dgf"><svg class="dg" id="dg-bucket" viewBox="0 0 360 172" style="max-width:460px" role="img" aria-labelledby="dg-bucket-title dg-bucket-desc"><title id="dg-bucket-title">token bucket</title><desc id="dg-bucket-desc">token bucket: 요청마다 token 하나를 쓰고, 없으면 429와 Retry-After</desc><defs><marker id="dg-bucket-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker><marker id="dg-bucket-ah-g" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah g" d="M0 0L8 3L0 6z"/></marker><marker id="dg-bucket-ah-r" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah r" d="M0 0L8 3L0 6z"/></marker></defs><text x="180" y="15.0" text-anchor="middle" class="t2" font-size="12">일정한 속도로 token을 채움</text><path class="ln" d="M180 22 L180 44" marker-end="url(#dg-bucket-ah)"/><path class="ln" d="M80 92 L120 92" marker-end="url(#dg-bucket-ah)"/><path class="ln g" d="M240 64 L264 64" marker-end="url(#dg-bucket-ah-g)"/><path class="ln r" d="M240 120 L264 120" marker-end="url(#dg-bucket-ah-r)"/><path class="bucket" d="M120 44 V132 Q120 144 132 144 H228 Q240 144 240 132 V44"/><circle class="tok" cx="150" cy="128" r="7"/><circle class="tok" cx="172" cy="128" r="7"/><circle class="tok" cx="194" cy="128" r="7"/><circle class="tok" cx="216" cy="128" r="7"/><circle class="tok" cx="161" cy="108" r="7"/><circle class="tok" cx="183" cy="108" r="7"/><text x="180" y="164.0" text-anchor="middle" class="t2" font-size="12">열쇠: peer 주소</text><rect class="bx" x="0" y="76" width="80" height="32" rx="6" fill="none" stroke="currentColor"/><text x="40" y="96.5" text-anchor="middle" font-size="13">요청</text><rect class="ok" x="264" y="44" width="96" height="40" rx="6" fill="none" stroke="currentColor"/><text x="312" y="60.2" text-anchor="middle" font-size="12">token 있음</text><text x="312" y="76.2" text-anchor="middle" font-size="12">통과</text><rect class="ng" x="264" y="92" width="96" height="56" rx="6" fill="none" stroke="currentColor"/><text x="312" y="108.2" text-anchor="middle" font-size="12">token 없음</text><text x="312" y="124.2" text-anchor="middle" font-size="12">429,</text><text x="312" y="140.2" text-anchor="middle" class="mono" font-size="12">Retry-After</text></svg></figure><!--/GEN:dg-bucket-->
+<!--GEN:dg-spread--><figure class="dgf"><svg class="dg" id="dg-spread" viewBox="0 0 360 180" style="max-width:460px" role="img" aria-labelledby="dg-spread-title dg-spread-desc"><title id="dg-spread-title">요청 나눠 보내기</title><desc id="dg-spread-desc">IP 하나에 요청 100만 개는 한도를 넘고, IP 10만 개에 10개씩 나누면 모두 한도 아래</desc><defs></defs><text x="180" y="15.0" text-anchor="middle" class="t2" font-size="12">설명을 위한 계산</text><rect class="bx" x="0" y="24" width="172" height="104" rx="6" fill="none" stroke="currentColor"/><line class="lim" x1="8" y1="72" x2="164" y2="72"/><text x="164" y="66.0" text-anchor="end" class="t2" font-size="12">IP당 한도</text><rect class="bx" x="188" y="24" width="172" height="104" rx="6" fill="none" stroke="currentColor"/><line class="lim" x1="196" y1="72" x2="352" y2="72"/><text x="352" y="66.0" text-anchor="end" class="t2" font-size="12">IP당 한도</text><rect class="ng" x="60" y="32" width="48" height="92" rx="2" fill="none" stroke="currentColor"/><rect class="okf" x="196" y="116" width="3" height="8" rx="0"/><rect class="okf" x="200.4" y="116" width="3" height="8" rx="0"/><rect class="okf" x="204.8" y="116" width="3" height="8" rx="0"/><rect class="okf" x="209.2" y="116" width="3" height="8" rx="0"/><rect class="okf" x="213.6" y="116" width="3" height="8" rx="0"/><rect class="okf" x="218" y="116" width="3" height="8" rx="0"/><rect class="okf" x="222.4" y="116" width="3" height="8" rx="0"/><rect class="okf" x="226.8" y="116" width="3" height="8" rx="0"/><rect class="okf" x="231.2" y="116" width="3" height="8" rx="0"/><rect class="okf" x="235.6" y="116" width="3" height="8" rx="0"/><rect class="okf" x="240" y="116" width="3" height="8" rx="0"/><rect class="okf" x="244.4" y="116" width="3" height="8" rx="0"/><rect class="okf" x="248.8" y="116" width="3" height="8" rx="0"/><rect class="okf" x="253.2" y="116" width="3" height="8" rx="0"/><rect class="okf" x="257.6" y="116" width="3" height="8" rx="0"/><rect class="okf" x="262" y="116" width="3" height="8" rx="0"/><rect class="okf" x="266.4" y="116" width="3" height="8" rx="0"/><rect class="okf" x="270.8" y="116" width="3" height="8" rx="0"/><rect class="okf" x="275.2" y="116" width="3" height="8" rx="0"/><rect class="okf" x="279.6" y="116" width="3" height="8" rx="0"/><rect class="okf" x="284" y="116" width="3" height="8" rx="0"/><rect class="okf" x="288.4" y="116" width="3" height="8" rx="0"/><rect class="okf" x="292.8" y="116" width="3" height="8" rx="0"/><rect class="okf" x="297.2" y="116" width="3" height="8" rx="0"/><rect class="okf" x="301.6" y="116" width="3" height="8" rx="0"/><rect class="okf" x="306" y="116" width="3" height="8" rx="0"/><rect class="okf" x="310.4" y="116" width="3" height="8" rx="0"/><rect class="okf" x="314.8" y="116" width="3" height="8" rx="0"/><rect class="okf" x="319.2" y="116" width="3" height="8" rx="0"/><rect class="okf" x="323.6" y="116" width="3" height="8" rx="0"/><rect class="okf" x="328" y="116" width="3" height="8" rx="0"/><rect class="okf" x="332.4" y="116" width="3" height="8" rx="0"/><rect class="okf" x="336.8" y="116" width="3" height="8" rx="0"/><rect class="okf" x="341.2" y="116" width="3" height="8" rx="0"/><rect class="okf" x="345.6" y="116" width="3" height="8" rx="0"/><rect class="okf" x="350" y="116" width="3" height="8" rx="0"/><rect class="cell" x="0" y="132" width="172" height="44" rx="6"/><text x="86" y="150.2" text-anchor="middle" font-size="12">IP 1개, 요청 100만</text><text x="86" y="166.2" text-anchor="middle" class="tr" font-size="12">한도를 넘어 429</text><rect class="cell" x="188" y="132" width="172" height="44" rx="6"/><text x="274" y="150.2" text-anchor="middle" font-size="12">IP 10만 개, 각 10개</text><text x="274" y="166.2" text-anchor="middle" class="tg" font-size="12">모두 한도 아래</text></svg></figure><!--/GEN:dg-spread-->
+<p class="gist"><span class="ln"><b>보는 것</b>열쇠(보통 IP)당 시간 창 안의 요청 수</span><span class="ln"><b>뚫리는 방식</b>residential proxy로 IP 수만 개에 나눈다.</span><span class="ln"><b>우리 서버</b><span class="tag plan">만드는 중</span> client IP마다 token bucket, 넘으면 429</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<p>위 숫자는 설명을 위한 계산이다. 실제로 SourceHut은 IP 하나에 요청이 약 1개씩 오는 트래픽을 봤다. <a class="src p" href="https://status.sr.ht/issues/2025-03-17-git.sr.ht-llms/">primary</a></p>
+<dl>
+<dt>보는 것</dt><dd>열쇠 하나당 시간 창 안의 요청 수. 열쇠는 보통 IP이고, API key나 계정일 수도 있다.</dd>
+<dt>쓰는 곳</dt><dd><span class="ln">nginx limit_req: IP를 열쇠로 하는 leaky bucket이고, 기본으로 503을 보낸다. <a class="src p" href="https://nginx.org/en/docs/http/ngx_http_limit_req_module.html">primary</a></span><span class="ln">Wikimedia(2026): IP로만 아는 client는 분당 10, browser나 규칙에 맞는 User-Agent의 bot은 200, 자리 잡은 편집자는 2,000. 넘으면 429와 Retry-After를 보낸다. <a class="src p" href="https://www.mediawiki.org/wiki/Wikimedia_APIs/Rate_limits">primary</a></span></dd>
+<dt>사람이 치르는 값</dt><dd>한도가 넉넉하고 계정 단위면 작다. 공유 NAT 뒤에 여러 사람이 있거나 한도가 낮으면 크다. 2023년 7월 1일 X는 읽기 한도를 걸었고, 로그인한 사람도 자기 피드에서 "Rate limit exceeded"를 봤다. <a class="src s" href="https://www.engadget.com/twitter-puts-strict-cap-on-how-many-tweets-users-can-read-each-day-182623928.html">secondary</a></dd>
+<dt>뚫리는 방식</dt><dd><span class="ln">residential proxy: 집과 휴대폰 회선의 IP를 빌려 요청을 내보내는 유료 네트워크다. 집 IP는 사람의 평판을 가진다.</span><span class="ln">Read the Docs: 요청이 "from many IP addresses"로 와서 IP 단위 rate limit이 효과가 없었다. <a class="src p" href="https://about.readthedocs.com/blog/2024/07/ai-crawlers-abuse/">primary</a></span><span class="ln">diaspora*: IP 약 130만 개, IP당 2개 남짓 <a class="src p" href="https://overengineer.dev/blog/2025/07/11/dynamic-denial-of-crawlers">primary</a></span><span class="ln">한도의 열쇠를 등록해야 얻는 것(OAuth client, 계정)으로 바꾸면 훨씬 잘 듣는다. Wikimedia가 client를 인증 쪽으로 옮기는 이유다. <a class="src p" href="https://www.mediawiki.org/wiki/Wikimedia_APIs/Rate_limits">primary</a></span></dd>
+<dt>우리 서버</dt><dd><span class="tag plan">만드는 중</span> <code>--rate R --burst B</code>가 client IP마다 token bucket을 켠다. <code>rate_limit_take()</code>의 결과가 Verdict로 가고, Verdict가 고르면 429와 Retry-After를 보내는 길은 이미 있다. bucket과 key 표를 담을 <code>rate_limit.c</code>는 테스트가 먼저 있고, 지금은 모든 요청을 통과시키는 빈 자리다.</dd>
+</dl>
+</div>
+</details>
+<details class="fold">
+<summary><span>residential proxy의 IP는 어디서 오나</span></summary>
+<div class="in">
+<p>Google Threat Intelligence Group(2026-01-29)은 IPIDEA 네트워크를 분석했다. proxy SDK가 앱 안에 들어가고, 앱을 깐 기기가 그 앱의 원래 기능과 함께 proxy의 출구가 된다. 개발자는 보통 다운로드 수만큼 돈을 받았고, 분석한 앱 상당수는 기기를 등록한다는 사실을 알리지 않았다. Android 앱 600개 넘게, Windows 파일 hash 3,075개가 나왔고, 2026년 1월 7일 동안 추적 중인 위협 그룹 550개 넘게 이 출구를 썼다. <a class="src p" href="https://cloud.google.com/blog/topics/threat-intelligence/disrupting-largest-residential-proxy-network">primary</a></p>
+<p>2019년 IEEE S&amp;P 논문은 residential proxy IP를 230개 넘는 나라에서 약 600만 개로 셌다. <a class="src s" href="https://cse.buffalo.edu/faculty/xmi/publication/resi_sp/">secondary</a></p>
+<p>반론도 있다. 2026년 8월 GCC 메일링 리스트의 한 참여자는, AI scraper가 residential IP를 산다는 Sourceware의 주장이 자체 데이터로 보인 것이 아니라 외부 단서에서 나온 가설이며, 자원 사용량 수치도 공개되지 않았다고 지적했다. 그리고 차단의 강도를 증거에 맞추자고 했다. <a class="src p" href="https://gcc.gnu.org/pipermail/gcc/2026-August/248802.html">primary</a></p>
+</div>
+</details>
+</section>
+<section class="method" id="m-honey">
+<h3>행동 카운터와 honeypot</h3>
+<!--GEN:dg-honey--><figure class="dgf"><svg class="dg" id="dg-honey" viewBox="0 0 360 180" style="max-width:460px" role="img" aria-labelledby="dg-honey-title dg-honey-desc"><title id="dg-honey-title">숨은 함정 링크</title><desc id="dg-honey-desc">사람은 보이는 링크만 누르고, 모든 링크를 따르는 crawler는 숨은 함정 링크를 요청해 차단된다</desc><defs><marker id="dg-honey-ah-g" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah g" d="M0 0L8 3L0 6z"/></marker><marker id="dg-honey-ah-r" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah r" d="M0 0L8 3L0 6z"/></marker></defs><path class="ln g" d="M236 48 L140 48" marker-end="url(#dg-honey-ah-g)"/><rect class="mk" x="156.2" y="28.0" width="71.6" height="14"/><text x="192" y="39.0" text-anchor="middle" class="t g" font-size="12">보이는 것만</text><path class="ln r" d="M236 108 L140 108" marker-end="url(#dg-honey-ah-r)"/><rect class="mk" x="162.2" y="88.0" width="59.6" height="14"/><text x="192" y="99.0" text-anchor="middle" class="t r" font-size="12">다 따라감</text><path class="ln r" d="M296 124 L296 140" marker-end="url(#dg-honey-ah-r)"/><rect class="zone" x="0" y="4" width="152" height="128" rx="6" fill="none" stroke="currentColor"/><text x="76" y="23.0" text-anchor="middle" class="b" font-size="12">페이지</text><rect class="cell" x="8" y="34" width="132" height="28" rx="4"/><text x="74" y="52.2" text-anchor="middle" font-size="12">링크 A</text><rect class="cell" x="8" y="66" width="132" height="28" rx="4"/><text x="74" y="84.2" text-anchor="middle" font-size="12">링크 B</text><rect class="trap" x="8" y="96" width="132" height="28" rx="4" fill="none" stroke="currentColor"/><text x="74" y="114.2" text-anchor="middle" class="tr" font-size="12">숨은 링크 /trap</text><rect class="bx" x="236" y="32" width="124" height="32" rx="6" fill="none" stroke="currentColor"/><text x="298" y="52.5" text-anchor="middle" font-size="13">사람</text><rect class="bx" x="236" y="92" width="124" height="32" rx="6" fill="none" stroke="currentColor"/><text x="298" y="112.5" text-anchor="middle" font-size="13">crawler</text><rect class="ng" x="220" y="140" width="140" height="32" rx="6" fill="none" stroke="currentColor"/><text x="290" y="160.2" text-anchor="middle" font-size="12">IP 일정 시간 차단</text><text x="0" y="160.0" text-anchor="start" class="t2" font-size="12">robots.txt도 /trap 금지</text></svg></figure><!--/GEN:dg-honey-->
+<p class="gist"><span class="ln"><b>보는 것</b>새 URL 속도, 4xx 비율, 함정 URL 요청</span><span class="ln"><b>뚫리는 방식</b>IP를 흩거나 숨은 링크를 건너뛴다.</span><span class="ln"><b>우리 서버</b><span class="tag plan">계획, 아직 없음</span> 아무 페이지도 링크하지 않는 Route 하나를 함정으로 둔다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>보는 것</dt><dd><span class="ln">client마다의 행동: 새 URL을 여는 속도, 4xx 비율, 로그에 반복되는 실패</span><span class="ln">honeypot: 사람이 닿지 않는 URL(숨긴 링크, robots.txt가 막은 경로)을 요청했는가</span></dd>
+<dt>쓰는 곳</dt><dd><span class="ln">HAProxy: 30초 안에 새 페이지를 약 15개 넘게 연 client를 표시하고, 우선순위 낮은 backend나 honeypot backend로 보낸다. <a class="src p" href="https://www.haproxy.com/blog/bot-protection-with-haproxy">primary</a></span><span class="ln">fail2ban: 로그를 정규식으로 읽고 IP를 일정 시간 방화벽으로 막는다. <a class="src p" href="https://github.com/fail2ban/fail2ban">primary</a></span><span class="ln">Cloudflare AI Labyrinth는 숨은 링크를 얼마나 깊이 따라가는지 센다. "No real human would go four links deep into a maze of AI-generated nonsense." <a class="src s" href="https://blog.cloudflare.com/ai-labyrinth/">secondary</a></span><span class="ln unv">robots.txt가 막은 경로를 함정으로 쓰는 방식은 관행으로 전해질 뿐, 숫자를 낸 운영자 글은 리서치에서 찾지 못했다. <span class="src u">unverified</span></span></dd>
+<dt>사람이 치르는 값</dt><dd>기준이 상식적이면 작다. 사람은 30초에 새 페이지 15개를 거의 열지 않는다.</dd>
+<dt>뚫리는 방식</dt><dd>여전히 IP 단위라 IP를 흩으면 같이 뚫린다. 페이지를 그려 보고 보이지 않는 링크를 건너뛰거나, sitemap의 링크만 따라가는 crawler에게는 honeypot이 닿지 않는다.</dd>
+<dt>우리 서버</dt><dd><span class="tag plan">계획, 아직 없음</span> 아무 페이지도 링크하지 않고 robots.txt가 막은 Route 하나를 두고, 요청한 IP를 일정 시간 막는다. Verdict가 요청 target을 입력으로 받으니, 그 Route는 Verdict의 표에 들어간다. IP마다 새 URL 속도와 4xx 비율을 세면 로그를 읽지 않는 fail2ban이 된다.</dd>
+</dl>
+</div>
+</details>
+</section>
+
+<h2>layer 4: 시험하기</h2>
+<p>"진짜 browser이고, 값을 치를 것인가"를 묻는 layer다.</p>
+<section class="method" id="m-pow">
+<h3>proof of work (Anubis)</h3>
+<!--GEN:dg-pow--><figure class="dgf"><svg class="dg" id="dg-pow" viewBox="0 0 360 260" style="max-width:460px" role="img" aria-labelledby="dg-pow-title dg-pow-desc"><title id="dg-pow-title">Anubis proof of work</title><desc id="dg-pow-desc">Anubis: challenge를 받은 browser가 hash를 약 65,536번 돌려 답을 찾고, 서버는 한 번에 확인해 1주일 cookie를 준다</desc><defs><marker id="dg-pow-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker><marker id="dg-pow-ah-g" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah g" d="M0 0L8 3L0 6z"/></marker></defs><line class="life" x1="70" y1="28" x2="70" y2="256"/><line class="life" x1="288" y1="28" x2="288" y2="256"/><rect class="bx" x="24" y="0" width="92" height="28" rx="6" fill="none" stroke="currentColor"/><text x="70" y="18.6" text-anchor="middle" class="b" font-size="13">browser</text><rect class="bx" x="248" y="0" width="80" height="28" rx="6" fill="none" stroke="currentColor"/><text x="288" y="18.6" text-anchor="middle" class="b" font-size="13">서버</text><path class="ln" d="M70 56 L287 56" marker-end="url(#dg-pow-ah)"/><rect class="mk" x="125.0" y="36.0" width="108.1" height="14"/><text x="179" y="47.0" text-anchor="middle" class="t" font-size="12">GET, cookie 없음</text><path class="ln ret" d="M288 88 L71 88" marker-end="url(#dg-pow-ah)"/><rect class="mk" x="141.5" y="68.0" width="75.0" height="14"/><text x="179" y="79.0" text-anchor="middle" class="t mono" font-size="12">challenge</text><rect class="hl" x="4" y="100" width="132" height="60" rx="6" fill="none" stroke="currentColor"/><text x="70" y="118.2" text-anchor="middle" font-size="12">SHA-256 반복</text><text x="70" y="134.2" text-anchor="middle" font-size="12">앞 0 네 개까지</text><text x="70" y="150.2" text-anchor="middle" font-size="12">약 65,536번</text><path class="ln" d="M70 184 L287 184" marker-end="url(#dg-pow-ah)"/><rect class="mk" x="156.4" y="164.0" width="45.2" height="14"/><text x="179" y="175.0" text-anchor="middle" class="t mono" font-size="12">nonce</text><rect class="bx" x="212" y="196" width="148" height="28" rx="6" fill="none" stroke="currentColor"/><text x="286" y="214.2" text-anchor="middle" font-size="12">hash 1번으로 확인</text><path class="ln g ret" d="M288 244 L71 244" marker-end="url(#dg-pow-ah-g)"/><rect class="mk" x="116.4" y="224.0" width="125.1" height="14"/><text x="179" y="235.0" text-anchor="middle" class="t g" font-size="12">서명한 cookie, 1주일</text></svg></figure><!--/GEN:dg-pow-->
+<p class="gist"><span class="ln"><b>보는 것</b>CPU를 쓴 증거, JavaScript와 cookie</span><span class="ln"><b>뚫리는 방식</b>headless browser가 푼다. 비용은 작다.</span><span class="ln"><b>우리 서버</b><span class="tag plan">가능, Route별로만</span> OpenSSL에 SHA-256이 있다. curl, ab, wrk, hey는 통과하지 못한다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>보는 것</dt><dd>client가 CPU를 썼다는 증거, 그리고 JavaScript를 실행하고 cookie를 지킬 수 있는가. 기본 설정은 User-Agent에 "Mozilla"가 들어간 요청만 시험한다. <a class="src p" href="https://xeiaso.net/blog/2025/anubis/">primary</a></dd>
+<dt>쓰는 곳</dt><dd>SourceHut, GNOME(2026년 3월까지), KDE, Codeberg, FFmpeg, UNESCO. 2025년 7월까지 다운로드 약 20만 회 <a class="src s" href="https://www.404media.co/the-open-source-software-saving-the-internet-from-ai-bot-scrapers/">secondary</a></dd>
+<dt>사람이 치르는 값</dt><dd><span class="ln">JavaScript나 cookie가 없는 사람, 텍스트 browser, 오래된 기기는 못 들어온다. 만든 사람도 "a tradeoff that I am not happy about"라고 적었다. <a class="src p" href="https://xeiaso.net/blog/2025/anubis/">primary</a></span><span class="ln">검색 엔진이 보호된 페이지를 색인하지 못한다.</span><span class="ln">GNOME에서는 링크가 퍼졌을 때 사람이 challenge 앞에서 최대 약 2분을 기다렸다. <a class="src s" href="https://thelibre.news/foss-infrastructure-is-under-attack-by-ai-companies/">secondary</a></span></dd>
+<dt>뚫리는 방식</dt><dd><span class="ln">headless browser는 스크립트를 실행하고 일을 한다. CPU 비용 자체는 작다. Tavis Ormandy의 C 풀이기는 기본 난이도의 답을 약 0.017초에 찾았다. <a class="src p" href="https://cmpxchg8b.com/anubis.html">primary</a></span><span class="ln">Codeberg(2025-08): "the AI crawlers learned how to solve the Anubis challenges" <a class="src s" href="https://www.theregister.com/2025/08/15/codeberg_beset_by_ai_bots/">secondary</a></span><span class="ln">이 방법이 실제로 거르는 것은 CPU가 아니라, 진짜 JavaScript 엔진과 cookie를 갖추라는 요구다.</span></dd>
+<dt>우리 서버</dt><dd><span class="tag plan">가능, Route별로만</span> OpenSSL이 들어와서 SHA-256과 HMAC은 쓸 수 있다. 남은 문제는 client가 JavaScript를 돌려야 한다는 점이다. Verification client인 curl, ab, wrk, hey는 모두 통과하지 못한다. 그래서 기본은 끄고, 기능 테스트와 부하 테스트가 쓰지 않는 Route에만 걸 수 있다.</dd>
+</dl>
+</div>
+</details>
+</section>
+<section class="method" id="m-captcha">
+<h3>CAPTCHA와 보이지 않는 시험</h3>
+<!--GEN:dg-captcha--><figure class="dgf"><svg class="dg" id="dg-captcha" viewBox="0 0 360 228" style="max-width:460px" role="img" aria-labelledby="dg-captcha-title dg-captcha-desc"><title id="dg-captcha-title">그림 퍼즐</title><desc id="dg-captcha-desc">같은 그림 퍼즐 앞에서 사람은 느리고 일부는 포기하고, bot은 더 정확하고 풀이 서비스도 싸다</desc><defs><marker id="dg-captcha-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker></defs><path class="ln" d="M156 32 L156 38 Q156 44 150 44 L94 44 Q86 44 86 52 L86 60" marker-end="url(#dg-captcha-ah)"/><path class="ln" d="M204 32 L204 38 Q204 44 210 44 L266 44 Q274 44 274 52 L274 60" marker-end="url(#dg-captcha-ah)"/><rect class="hl" x="112" y="0" width="136" height="32" rx="6" fill="none" stroke="currentColor"/><text x="180" y="20.6" text-anchor="middle" class="b" font-size="13">그림 퍼즐</text><rect class="bx" x="0" y="60" width="172" height="32" rx="6" fill="none" stroke="currentColor"/><text x="86" y="80.5" text-anchor="middle" class="b" font-size="13">사람</text><rect class="bx" x="188" y="60" width="172" height="32" rx="6" fill="none" stroke="currentColor"/><text x="274" y="80.5" text-anchor="middle" class="b" font-size="13">bot</text><rect class="cell" x="0" y="100" width="172" height="44" rx="6"/><text x="86" y="118.2" text-anchor="middle" font-size="12">약 18초</text><text x="86" y="134.2" text-anchor="middle" font-size="12">정확도 50 ~ 85%</text><rect class="cell" x="188" y="100" width="172" height="44" rx="6"/><text x="274" y="118.2" text-anchor="middle" font-size="12">대개 사람보다 빠름</text><text x="274" y="134.2" text-anchor="middle" font-size="12">정확도 85 ~ 100%</text><rect class="ng" x="0" y="152" width="172" height="44" rx="6" fill="none" stroke="currentColor"/><text x="86" y="170.2" text-anchor="middle" font-size="12">퍼즐 앞에서</text><text x="86" y="186.2" text-anchor="middle" font-size="12">약 15% 포기</text><rect class="ng" x="188" y="152" width="172" height="44" rx="6" fill="none" stroke="currentColor"/><text x="274" y="170.2" text-anchor="middle" font-size="12">풀이 서비스</text><text x="274" y="186.2" text-anchor="middle" font-size="12">1,000건에 1 ~ 3달러</text><text x="180" y="220.0" text-anchor="middle" class="t2" font-size="12">퍼즐이 벽이 아니라 수수료가 됨 (추론)</text></svg></figure><!--/GEN:dg-captcha-->
+<p class="gist"><span class="ln"><b>보는 것</b>퍼즐의 답, 또는 보이지 않는 점수</span><span class="ln"><b>뚫리는 방식</b>풀이 서비스와 ML이 푼다.</span><span class="ln"><b>우리 서버</b><span class="tag no">못 함</span> 외부 vendor의 서비스가 있어야 한다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>보는 것</dt><dd><span class="ln">reCAPTCHA v3: 동작마다 0.0 ~ 1.0 점수, 권장 기준 0.5, 사람을 멈춰 세우지 않음 <a class="src p" href="https://developers.google.com/recaptcha/docs/v3">primary</a></span><span class="ln">Cloudflare Turnstile(2023-09-29 정식): browser API 검사와 작은 proof of work, 그림 퍼즐 없음 <a class="src p" href="https://blog.cloudflare.com/turnstile-ga/">primary</a></span></dd>
+<dt>사람이 치르는 값</dt><dd><span class="ln">사람의 약 15%가 CAPTCHA 퍼즐 앞에서 포기한다(Cloudflare). <a class="src p" href="https://blog.cloudflare.com/turnstile-ga/">primary</a></span><span class="ln">사람은 그림 CAPTCHA를 약 18초(실제 작업 중에는 22초)에 50 ~ 85% 정확도로 푼다(USENIX Security 2023, 참가자 1,400명). <a class="src p" href="https://www.usenix.org/conference/usenixsecurity23/presentation/searles">primary</a></span><span class="ln">reCAPTCHA v2에 사람이 쓴 시간은 13년 넘게 약 8억 1,900만 시간이라는 추정이 있다. <a class="src s" href="https://arxiv.org/abs/2311.10911">secondary</a></span></dd>
+<dt>뚫리는 방식</dt><dd><span class="ln">같은 USENIX 연구에서 bot은 85 ~ 100% 정확도로 대개 사람보다 빨리 풀었다. <a class="src p" href="https://www.usenix.org/conference/usenixsecurity23/presentation/searles">primary</a></span><span class="ln">풀이 서비스의 공개 가격은 1,000건에 약 1 ~ 3달러다(Turnstile 1.45달러). 그 값이면 CAPTCHA는 벽이 아니라 수수료가 된다는 것이 리서치 파일의 추론이다. <a class="src p" href="https://2captcha.com/pricing">primary</a></span><span class="ln">ETH Zurich의 2024년 모델은 reCAPTCHAv2 그림 문제를 100% 풀었다. <a class="src s" href="https://arxiv.org/abs/2409.08831">secondary</a></span></dd>
+<dt>우리 서버</dt><dd><span class="tag no">못 함</span> 페이지에 vendor의 스크립트를 넣고, 서버가 vendor의 검증 API를 불러야 한다. 서버 혼자서는 만들 수 없고, Verification client는 퍼즐을 풀지 못한다.</dd>
+</dl>
+</div>
+</details>
+</section>
+<section class="method" id="m-tarpit">
+<h3>tarpit과 미끼 페이지</h3>
+<!--GEN:dg-tarpit--><figure class="dgf"><svg class="dg" id="dg-tarpit" viewBox="0 0 360 132" style="max-width:460px" role="img" aria-labelledby="dg-tarpit-title dg-tarpit-desc"><title id="dg-tarpit-title">tarpit</title><desc id="dg-tarpit-desc">개념도: 보통 응답은 Worker를 잠깐 쓰고, tarpit은 몇 바이트씩 흘리며 Worker를 오래 붙잡는다</desc><defs><marker id="dg-tarpit-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker></defs><text x="0" y="15.0" text-anchor="start" class="t2" font-size="12">개념도, 시간 눈금 없음</text><rect class="cell" x="0" y="24" width="84" height="32" rx="4"/><text x="42" y="44.2" text-anchor="middle" font-size="12">보통 응답</text><rect class="bx" x="92" y="24" width="268" height="32" rx="4" fill="none" stroke="currentColor"/><rect class="okf" x="92" y="24" width="20" height="32" rx="0"/><rect class="cell" x="0" y="64" width="84" height="32" rx="4"/><text x="42" y="84.2" text-anchor="middle" font-size="12">tarpit</text><rect class="ng" x="92" y="64" width="268" height="32" rx="4" fill="none" stroke="currentColor"/><rect class="drip" x="100" y="68" width="4" height="24" rx="0"/><rect class="drip" x="138" y="68" width="4" height="24" rx="0"/><rect class="drip" x="176" y="68" width="4" height="24" rx="0"/><rect class="drip" x="214" y="68" width="4" height="24" rx="0"/><rect class="drip" x="252" y="68" width="4" height="24" rx="0"/><rect class="drip" x="290" y="68" width="4" height="24" rx="0"/><rect class="drip" x="328" y="68" width="4" height="24" rx="0"/><text x="226" y="115.0" text-anchor="middle" class="tr" font-size="12">몇 초마다 몇 바이트, Worker는 계속 묶임</text><path class="ln" d="M92 124 L358 124" marker-end="url(#dg-tarpit-ah)"/></svg></figure><!--/GEN:dg-tarpit-->
+<p class="gist"><span class="ln"><b>하는 것</b>응답을 아주 천천히 흘려 연결을 붙잡는다.</span><span class="ln"><b>뚫리는 방식</b>사이트당 깊이와 페이지 수를 제한한다.</span><span class="ln"><b>우리 서버</b><span class="tag plan">만드는 중</span> Verdict tarpit은 있다. pool에서는 Worker를 붙잡는다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>판단</dt><dd><span class="ln">Nepenthes: 끝없이 생성되는 페이지마다 함정으로 돌아가는 링크가 수십 개 있고, 응답을 아주 천천히 흘려보내 연결을 붙잡는다. 페이지의 경고: "ANY SITE THIS SOFTWARE IS APPLIED TO WILL LIKELY DISAPPEAR FROM ALL SEARCH RESULTS" <a class="src p" href="https://zadzmo.org/code/nepenthes/">primary</a></span><span class="ln">iocaine: 요청마다 쓰레기를 줄지 시험을 줄지 분류 스크립트가 정한다. CPU와 메모리를 적게 쓰도록 만들었다. <a class="src p" href="https://iocaine.madhouse-project.org/">primary</a></span><span class="ln">Cloudflare AI Labyrinth(2025-03-19): 사람이 보지 못하는 링크 뒤에 AI가 만든 미끼 페이지를 둔다. <a class="src s" href="https://blog.cloudflare.com/ai-labyrinth/">secondary</a></span></dd>
+<dt>쓰는 곳</dt><dd>SourceHut이 2025년 3월 LLM 트래픽이 몰린 경로에 Nepenthes를 걸었다. "You may encounter certain pages which are not usable as a result." <a class="src p" href="https://status.sr.ht/issues/2025-03-17-git.sr.ht-llms/">primary</a></dd>
+<dt>사람이 치르는 값</dt><dd>분류가 틀리면 사람도 미로에 빠진다. 방어하는 쪽도 CPU와 검색 순위를 내준다.</dd>
+<dt>뚫리는 방식</dt><dd>사이트당 깊이나 페이지 수에 한도를 두거나, CSS로 숨긴 링크와 nofollow 링크를 건너뛰거나, 질 낮은 문장을 알아본다.</dd>
+<dt>우리 서버</dt><dd><span class="tag plan">만드는 중</span> <code>rproxy</code>에는 Verdict tarpit이 있다. 고르면 응답 없이 <code>--tarpit S</code>초(기본 10초) 동안 연결을 붙잡았다가 닫는다. 바이트를 천천히 흘리지 않고 그냥 기다리는 형태이고, 아직 <code>verdict_decide()</code>가 tarpit을 고르지 않는다. <code>rproxy</code>는 pool이라 걸린 연결 하나가 Worker 하나를 통째로 붙잡는다. 많이 고르면 방어가 스스로 만든 DoS가 된다. 연결 수천 개를 싸게 붙잡을 수 있는 것은 epoll뿐이다.</dd>
+</dl>
+</div>
+</details>
+</section>
+
+<h2>layer 5: 거래 바꾸기</h2>
+<p>질문을 "bot인가"에서 "누구이고, 누가 값을 내는가"로 바꾸는 layer다.</p>
+<section class="method" id="m-pay">
+<h3>로그인, 유료 API, pay per crawl</h3>
+<!--GEN:dg-402--><figure class="dgf"><svg class="dg" id="dg-402" viewBox="0 0 360 164" style="max-width:460px" role="img" aria-labelledby="dg-402-title dg-402-desc"><title id="dg-402-title">pay per crawl</title><desc id="dg-402-desc">pay per crawl: 402와 가격, 가격을 받아들인 재요청, 200과 청구</desc><defs><marker id="dg-402-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker><marker id="dg-402-ah-g" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah g" d="M0 0L8 3L0 6z"/></marker></defs><line class="life" x1="64" y1="28" x2="64" y2="160"/><line class="life" x1="296" y1="28" x2="296" y2="160"/><rect class="bx" x="18" y="0" width="92" height="28" rx="6" fill="none" stroke="currentColor"/><text x="64" y="18.6" text-anchor="middle" class="b" font-size="13">crawler</text><rect class="bx" x="256" y="0" width="80" height="28" rx="6" fill="none" stroke="currentColor"/><text x="296" y="18.6" text-anchor="middle" class="b" font-size="13">site</text><path class="ln" d="M64 56 L295 56" marker-end="url(#dg-402-ah)"/><rect class="mk" x="164.8" y="36.0" width="30.3" height="14"/><text x="180" y="47.0" text-anchor="middle" class="t mono" font-size="12">GET</text><path class="ln ret" d="M296 88 L65 88" marker-end="url(#dg-402-ah)"/><rect class="mk" x="105.3" y="68.0" width="149.4" height="14"/><text x="180" y="79.0" text-anchor="middle" class="t mono" font-size="12">402 + crawler-price</text><path class="ln" d="M64 120 L295 120" marker-end="url(#dg-402-ah)"/><rect class="mk" x="83.0" y="100.0" width="194.0" height="14"/><text x="180" y="111.0" text-anchor="middle" class="t mono" font-size="12">GET + crawler-exact-price</text><path class="ln g ret" d="M296 152 L65 152" marker-end="url(#dg-402-ah-g)"/><rect class="mk" x="97.9" y="132.0" width="164.2" height="14"/><text x="180" y="143.0" text-anchor="middle" class="t g mono" font-size="12">200 + crawler-charged</text></svg></figure><!--/GEN:dg-402-->
+<p class="gist"><span class="ln"><b>보는 것</b>계정, API key, 돈</span><span class="ln"><b>뚫리는 방식</b>이름을 숨긴 crawler는 가격을 보지 않는다.</span><span class="ln"><b>우리 서버</b><span class="tag no">못 함</span> 402는 쉽고, 결제는 CDN만 준다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>보는 것</dt><dd>계정이나 API key, 그리고 돈. pay per crawl은 확인된 crawler 신원(Web Bot Auth)과 결제 합의를 본다. 사이트는 crawler마다 허용, 요금, 차단 중 하나를 고른다. <a class="src p" href="https://blog.cloudflare.com/introducing-pay-per-crawl/">primary</a></dd>
+<dt>쓰는 곳</dt><dd><span class="ln">Reddit(2023): 무료 한도를 넘으면 1,000 호출에 0.24달러. 월 약 70억 요청을 하던 Apollo 앱에는 연 약 2,000만 달러가 되어, Apollo는 2023-06-30에 문을 닫았다. <a class="src s" href="https://www.macrumors.com/2023/05/31/reddit-api-changes-pricing-apollo/">secondary</a></span><span class="ln">X(2023): 무료 API는 쓰기 전용, Basic은 월 100달러에 읽기 10,000건 <a class="src s" href="https://techcrunch.com/2023/02/08/twitter-says-the-basic-tier-of-its-api-will-cost-100-per-month/">secondary</a></span><span class="ln">Stack Overflow(2026): pay per crawl. "it's not a no, it's a yes if." 402를 보내기 시작하자 403 뒤에도 계속 오던 bot 일부가 멈췄다: "it's almost like they got the message." <a class="src p" href="https://stackoverflow.blog/2026/02/19/stack-overflow-cloudflare-pay-per-crawl/">primary</a></span></dd>
+<dt>사람이 치르는 값</dt><dd>계정이 없는 독자와 third-party 앱이 접근을 잃는다. Apollo는 접근성 때문에 쓰는 사람이 많았다. <a class="src s" href="https://www.macrumors.com/2023/05/31/reddit-api-changes-pricing-apollo/">secondary</a></dd>
+<dt>뚫리는 방식</dt><dd>값을 낼 수 있는 것은 자기를 밝힌 crawler뿐이다. 이름을 숨긴 crawler는 가격을 보지도 않는다. 그래서 이 layer는 아래 layer의 탐지가 있어야 선다.</dd>
+<dt>우리 서버</dt><dd><span class="tag no">못 함</span> 402와 header를 보내는 것은 쉽다. 요금을 받으려면 확인된 신원과 결제 업체가 필요하고, 지금은 CDN만 그것을 준다.</dd>
+</dl>
+</div>
+</details>
+</section>
+<section class="method" id="m-wba">
+<h3>Web Bot Auth</h3>
+<!--GEN:dg-wba--><figure class="dgf"><svg class="dg" id="dg-wba" viewBox="0 0 360 220" style="max-width:460px" role="img" aria-labelledby="dg-wba-title dg-wba-desc"><title id="dg-wba-title">Web Bot Auth</title><desc id="dg-wba-desc">Web Bot Auth: bot이 요청에 서명하고, 사이트가 key 목록에서 공개 key를 받아 확인</desc><defs><marker id="dg-wba-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker></defs><line class="life" x1="48" y1="28" x2="48" y2="216"/><line class="life" x1="180" y1="28" x2="180" y2="216"/><line class="life" x1="312" y1="28" x2="312" y2="216"/><rect class="bx" x="12" y="0" width="72" height="28" rx="6" fill="none" stroke="currentColor"/><text x="48" y="18.6" text-anchor="middle" class="b" font-size="13">bot</text><rect class="bx" x="126" y="0" width="108" height="28" rx="6" fill="none" stroke="currentColor"/><text x="180" y="18.6" text-anchor="middle" class="b" font-size="13">사이트, CDN</text><rect class="bx" x="264" y="0" width="96" height="28" rx="6" fill="none" stroke="currentColor"/><text x="312" y="18.6" text-anchor="middle" class="b" font-size="13">key 목록</text><path class="ln" d="M48 56 L179 56" marker-end="url(#dg-wba-ah)"/><rect class="mk" x="78.2" y="36.0" width="71.6" height="14"/><text x="114" y="47.0" text-anchor="middle" class="t" font-size="12">서명한 요청</text><rect class="mk" x="54.2" y="63.0" width="119.6" height="14"/><text x="114" y="74.0" text-anchor="middle" class="t2 mono" font-size="12">Signature-Agent</text><path class="ln" d="M180 104 L311 104" marker-end="url(#dg-wba-ah)"/><rect class="mk" x="204.0" y="84.0" width="84.1" height="14"/><text x="246" y="95.0" text-anchor="middle" class="t" font-size="12">공개 key 요청</text><path class="ln ret" d="M312 136 L181 136" marker-end="url(#dg-wba-ah)"/><rect class="mk" x="217.8" y="116.0" width="56.5" height="14"/><text x="246" y="127.0" text-anchor="middle" class="t" font-size="12">공개 key</text><rect class="hl" x="116" y="148" width="128" height="28" rx="6" fill="none" stroke="currentColor"/><text x="180" y="166.2" text-anchor="middle" font-size="12">Ed25519 확인</text><rect class="ok" x="108" y="184" width="144" height="28" rx="6" fill="none" stroke="currentColor"/><text x="180" y="202.2" text-anchor="middle" font-size="12">허용, 요금, 차단</text></svg></figure><!--/GEN:dg-wba-->
+<p class="gist"><span class="ln"><b>보는 것</b>HTTP Message Signature(RFC 9421)</span><span class="ln"><b>뚫리는 방식</b>서명하지 않는 bot에는 아무것도 하지 않는다.</span><span class="ln"><b>우리 서버</b><span class="tag plan">가능, 아직 없음</span> OpenSSL에 Ed25519가 있다.</span></p>
+<details class="fold"><summary><span>자세히: 사례와 출처</span></summary>
+<div class="in">
+<dl>
+<dt>보는 것</dt><dd>HTTP Message Signature(RFC 9421) <a class="src p" href="https://blog.cloudflare.com/web-bot-auth/">primary</a></dd>
+<dt>왜 생겼나</dt><dd>IP 목록은 주소가 바뀌고 공유되면 깨지고, User-Agent는 "easily spoofed"이고, 사이트마다 bot마다 토큰을 나누는 방식은 너무 많다. <a class="src p" href="https://blog.cloudflare.com/web-bot-auth/">primary</a></dd>
+<dt>사람이 치르는 값</dt><dd>없음</dd>
+<dt>뚫리는 방식</dt><dd>얌전한 bot이 누구인지 증명할 뿐, 서명하지 않기로 한 bot에는 아무것도 하지 않는다. 그런 bot에는 다른 layer가 여전히 필요하다.</dd>
+<dt>우리 서버</dt><dd><span class="tag plan">가능, 아직 없음</span> OpenSSL이 들어와서 Ed25519 서명 검증은 할 수 있다. 서명하는 bot을 알아보는 길이 하나 생길 뿐이다. Verification client는 서명하지 않으므로 다른 검사를 대신하지 않는다. 실제로는 보통 CDN이 확인한다.</dd>
+</dl>
+</div>
+</details>
+</section>
+
+<h2 class="part" id="walk-h">요청 하나 따라가기</h2>
+<p class="lead">가상의 서버 하나, crawler 넷<br>한 칸 오를 때마다 browser에 가까워짐</p>
+<p>가상의 서버는 아래 다섯 검사를 이 순서로 한다. 네 crawler는 모두 robots.txt를 따르지 않는다. layer 1은 부탁이라서 막지 못한다. 검사 규칙은 설명을 위해 정한 가상의 설정이다.</p>
+<div class="walk" id="walk">
+<div class="pick" role="group" aria-label="crawler 고르기">
+<button type="button" data-p="a" aria-pressed="true">A curl</button>
+<button type="button" data-p="b" aria-pressed="false">B User-Agent만 Chrome</button>
+<button type="button" data-p="c" aria-pressed="false">C 같은 handshake</button>
+<button type="button" data-p="d" aria-pressed="false">D headless browser</button>
+</div>
+<!--GEN:dg-walk--><figure class="dgf"><svg class="dg walkmap" id="dg-walk" viewBox="0 0 400 392" style="max-width:520px" role="img" aria-labelledby="dg-walk-title dg-walk-desc"><title id="dg-walk-title">요청 하나가 지나는 길</title><desc id="dg-walk-desc">가상의 서버에서 요청 하나가 지나는 길: client, Reverse Proxy, origin</desc><defs><marker id="dg-walk-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker><marker id="dg-walk-ah-g" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah g" d="M0 0L8 3L0 6z"/></marker><marker id="dg-walk-ah-r" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah r" d="M0 0L8 3L0 6z"/></marker></defs><rect class="lane" x="0" y="28" width="96" height="360" rx="6"/><text x="48" y="18.0" text-anchor="middle" class="b" font-size="13">client</text><rect class="lane" x="108" y="28" width="184" height="360" rx="6"/><text x="200" y="18.0" text-anchor="middle" class="b" font-size="13">Reverse Proxy</text><rect class="lane" x="304" y="28" width="96" height="360" rx="6"/><text x="352" y="18.0" text-anchor="middle" class="b" font-size="13">origin</text><path class="ln" d="M88 56 L124 56" marker-end="url(#dg-walk-ah)"/><path class="ln" d="M200 72 L200 88" marker-end="url(#dg-walk-ah)"/><path class="ln" d="M200 120 L200 136" marker-end="url(#dg-walk-ah)"/><path class="ln" d="M200 168 L200 184" marker-end="url(#dg-walk-ah)"/><path class="ln" d="M200 216 L200 232" marker-end="url(#dg-walk-ah)"/><rect class="bx" x="8" y="40" width="80" height="32" rx="6" fill="none" stroke="currentColor"/><text x="48" y="60.5" text-anchor="middle" font-size="13">요청</text><g data-s="0"><rect class="bx" x="124" y="40" width="152" height="32" rx="6" fill="none" stroke="currentColor"/><text x="200" y="60.5" text-anchor="middle" font-size="13">1 IP 블록리스트</text></g><g data-s="1"><rect class="bx" x="124" y="88" width="152" height="32" rx="6" fill="none" stroke="currentColor"/><text x="200" y="108.5" text-anchor="middle" font-size="13">2 User-Agent 표</text></g><g data-s="2"><rect class="bx" x="124" y="136" width="152" height="32" rx="6" fill="none" stroke="currentColor"/><text x="200" y="156.6" text-anchor="middle" font-size="13">3 JA4 비교</text></g><g data-s="3"><rect class="bx" x="124" y="184" width="152" height="32" rx="6" fill="none" stroke="currentColor"/><text x="200" y="204.6" text-anchor="middle" font-size="13">4 rate limit</text></g><g data-s="4"><rect class="bx" x="124" y="232" width="152" height="48" rx="6" fill="none" stroke="currentColor"/><text x="200" y="252.1" text-anchor="middle" font-size="13">5 proof of work</text><text x="200" y="269.1" text-anchor="middle" class="t2" font-size="13">challenge, nonce</text></g><g data-r="a"><path class="ln r" d="M124 104 L80 104" marker-end="url(#dg-walk-ah-r)"/><text x="40" y="108.5" text-anchor="middle" class="tr b" font-size="13">A 403</text></g><g data-r="b"><path class="ln r" d="M124 152 L80 152" marker-end="url(#dg-walk-ah-r)"/><text x="40" y="156.5" text-anchor="middle" class="tr b" font-size="13">B 403</text></g><g data-r="c"><path class="ln r" d="M124 200 L80 200" marker-end="url(#dg-walk-ah-r)"/><text x="40" y="204.5" text-anchor="middle" class="tr b" font-size="13">C 429</text></g><g data-d="1"><path class="ln" d="M124 244 L88 244" marker-end="url(#dg-walk-ah)"/><path class="ln" d="M88 268 L124 268" marker-end="url(#dg-walk-ah)"/><path class="ln" d="M200 280 L200 300" marker-end="url(#dg-walk-ah)"/><path class="ln" d="M276 316 L312 316" marker-end="url(#dg-walk-ah)"/><path class="ln g" d="M352 332 L352 356 Q352 364 344 364 L88 364" marker-end="url(#dg-walk-ah-g)"/><rect class="mk2" x="183.9" y="340.0" width="32.2" height="14"/><text x="200" y="352.0" text-anchor="middle" class="tg b mono" font-size="13">200</text><rect class="hl" x="8" y="232" width="80" height="48" rx="6" fill="none" stroke="currentColor"/><text x="48" y="252.1" text-anchor="middle" font-size="13">D가</text><text x="48" y="269.1" text-anchor="middle" font-size="13">nonce 찾음</text><rect class="bx" x="124" y="300" width="152" height="32" rx="6" fill="none" stroke="currentColor"/><text x="200" y="320.6" text-anchor="middle" font-size="13">cache miss</text><rect class="bx" x="312" y="300" width="80" height="32" rx="6" fill="none" stroke="currentColor"/><text x="352" y="320.6" text-anchor="middle" font-size="13">origin</text><rect class="ok" x="8" y="348" width="80" height="32" rx="6" fill="none" stroke="currentColor"/><text x="48" y="368.6" text-anchor="middle" class="b" font-size="13">D 200</text></g></svg></figure><!--/GEN:dg-walk-->
+<ol class="steps">
+<li><h3>검사 1. IP 블록리스트 (layer 3, accept 직후)</h3>
+<span class="v" data-p="a"><b>A curl</b> <span class="ok">✓ 통과</span> 블록리스트에 없는 새 datacenter IP다.</span>
+<span class="v" data-p="b"><b>B User-Agent만 Chrome</b> <span class="ok">✓ 통과</span> 블록리스트에 없는 새 datacenter IP다.</span>
+<span class="v" data-p="c"><b>C 같은 handshake</b> <span class="ok">✓ 통과</span> 블록리스트에 없는 새 datacenter IP다.</span>
+<span class="v" data-p="d"><b>D headless browser</b> <span class="ok">✓ 통과</span> residential proxy를 거친 집 IP다.</span></li>
+<li><h3>검사 2. User-Agent 표 (layer 2)</h3>
+<span class="v" data-p="a"><b>A curl</b> <span class="ng">✗ 403</span> User-Agent가 자기 도구 이름을 그대로 말한다. 가상의 표는 browser가 아니라고 밝힌 User-Agent를 막는다.</span>
+<span class="v" data-p="b"><b>B User-Agent만 Chrome</b> <span class="ok">✓ 통과</span> User-Agent가 Chrome이라고 말한다.</span>
+<span class="v" data-p="c"><b>C 같은 handshake</b> <span class="ok">✓ 통과</span> User-Agent가 Chrome이라고 말한다.</span>
+<span class="v" data-p="d"><b>D headless browser</b> <span class="ok">✓ 통과</span> 진짜 Chrome의 User-Agent다.</span></li>
+<li><h3>검사 3. JA4와 User-Agent 비교 (layer 2, TLS가 필요)</h3>
+<span class="v" data-p="a"><b>A curl</b> 검사 2에서 멈췄다.</span>
+<span class="v" data-p="b"><b>B User-Agent만 Chrome</b> <span class="ng">✗ 403</span> User-Agent는 Chrome인데 JA4는 다른 TLS 라이브러리를 가리킨다. 말과 바이트가 어긋난다.</span>
+<span class="v" data-p="c"><b>C 같은 handshake</b> <span class="ok">✓ 통과</span> browser의 TLS 라이브러리로 만든 handshake라 JA4도 Chrome이다.</span>
+<span class="v" data-p="d"><b>D headless browser</b> <span class="ok">✓ 통과</span> 진짜 Chrome이 보낸 바이트다.</span></li>
+<li><h3>검사 4. IP 평판과 rate limit (layer 3)</h3>
+<span class="v" data-p="a"><b>A curl</b> 검사 2에서 멈췄다.</span>
+<span class="v" data-p="b"><b>B User-Agent만 Chrome</b> 검사 3에서 멈췄다.</span>
+<span class="v" data-p="c"><b>C 같은 handshake</b> <span class="ng">✗ 429</span> datacenter IP 하나에서 요청이 몰린다. datacenter 평판과 IP당 한도에 둘 다 걸린다.</span>
+<span class="v" data-p="d"><b>D headless browser</b> <span class="ok">✓ 통과</span> 집 IP 수만 개에 나눠서 IP마다 요청이 몇 개뿐이다.</span></li>
+<li><h3>검사 5. proof of work (layer 4)</h3>
+<span class="v" data-p="a"><b>A curl</b> 검사 2에서 멈췄다.</span>
+<span class="v" data-p="b"><b>B User-Agent만 Chrome</b> 검사 3에서 멈췄다.</span>
+<span class="v" data-p="c"><b>C 같은 handshake</b> 검사 4에서 멈췄다. JavaScript가 없어서 여기 왔더라도 막혔을 것이다.</span>
+<span class="v" data-p="d"><b>D headless browser</b> <span class="ok">✓ 통과, 200</span> JavaScript를 실행해 challenge를 푼다. 비용은 작다. 다섯 layer를 모두 넘었고, 그래서 layer 5가 생겼다: 이 crawler에게는 "bot인가"가 아니라 "누구이고, 누가 값을 내는가"를 물어야 한다.</span></li>
+</ol>
+<div class="ctl"><button type="button" data-act="next">다음 검사</button><button type="button" data-act="reset">처음부터</button></div>
+<div class="scroll">
+<table class="wt">
+<thead><tr><th>검사</th><th data-p="a">A<span class="lg"> curl</span></th><th data-p="b">B<span class="lg"> User-Agent만 Chrome</span></th><th data-p="c">C<span class="lg"> 같은 handshake</span></th><th data-p="d">D<span class="lg"> headless browser</span></th></tr></thead>
+<tbody>
+<tr><td>1. IP 블록리스트</td><td data-p="a" class="ok">✓</td><td data-p="b" class="ok">✓</td><td data-p="c" class="ok">✓</td><td data-p="d" class="ok">✓</td></tr>
+<tr><td>2. User-Agent 표</td><td data-p="a" class="ng">✗ 403</td><td data-p="b" class="ok">✓</td><td data-p="c" class="ok">✓</td><td data-p="d" class="ok">✓</td></tr>
+<tr><td>3. JA4 비교</td><td data-p="a">—</td><td data-p="b" class="ng">✗ 403</td><td data-p="c" class="ok">✓</td><td data-p="d" class="ok">✓</td></tr>
+<tr><td>4. IP 평판, rate limit</td><td data-p="a">—</td><td data-p="b">—</td><td data-p="c" class="ng">✗ 429</td><td data-p="d" class="ok">✓</td></tr>
+<tr><td>5. proof of work</td><td data-p="a">—</td><td data-p="b">—</td><td data-p="c">—</td><td data-p="d" class="ok">✓ 200</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>각 crawler가 쓰는 생각은 위의 카드에 출처와 함께 있다: <a href="#m-ua">User-Agent</a>, <a href="#m-tls">같은 handshake</a>, <a href="#m-rate">residential proxy</a>, <a href="#m-pow">headless browser와 proof of work</a>.</p>
+
+<nav class="pn" aria-label="이전, 다음 노트">이전: <a href="02-history.html">02 역사</a><br>다음: <a href="04-reverse-proxy.html">04 우리 Reverse Proxy</a><br>처음: <a href="00-overview.html">한눈에 보기</a></nav>
+</main>
+<script>
+/* request walk: pick a crawler, then reveal one check at a time.
+   Without JavaScript every line and the table stay visible. */
+(function () {
+  var walk = document.getElementById("walk");
+  if (!walk) return;
+  var stopAt = { a: 1, b: 2, c: 3, d: 4 };
+  var steps = walk.querySelectorAll(".steps > li");
+  var picks = walk.querySelectorAll(".pick button");
+  var next = walk.querySelector('[data-act="next"]');
+  var profile = "a";
+  var shown = 0;
+  var map = document.getElementById("dg-walk");
+  var stopIdx = { a: 1, b: 2, c: 3, d: -1 };
+  function paintMap() {
+    if (!map) return;
+    map.querySelectorAll("[data-s]").forEach(function (g) {
+      var i = Number(g.dataset.s);
+      g.classList.toggle("dim", i > shown);
+      g.classList.toggle("pass", i <= shown && i !== stopIdx[profile]);
+      g.classList.toggle("stop", i <= shown && i === stopIdx[profile]);
+    });
+    map.querySelectorAll("[data-r]").forEach(function (g) {
+      g.classList.toggle("on", g.dataset.r === profile && shown >= stopAt[profile]);
+    });
+    map.querySelectorAll("[data-d]").forEach(function (g) {
+      g.classList.toggle("on", profile === "d" && shown >= stopAt.d);
+    });
+  }
+  function render() {
+    steps.forEach(function (li, i) {
+      li.classList.toggle("later", i > shown);
+      li.querySelectorAll(".v").forEach(function (v) {
+        v.classList.toggle("on", v.dataset.p === profile);
+      });
+    });
+    picks.forEach(function (b) {
+      b.setAttribute("aria-pressed", String(b.dataset.p === profile));
+    });
+    walk.querySelectorAll(".wt [data-p]").forEach(function (c) {
+      c.classList.toggle("sel", c.dataset.p === profile);
+    });
+    next.disabled = shown >= stopAt[profile];
+    paintMap();
+  }
+  picks.forEach(function (b) {
+    b.addEventListener("click", function () { profile = b.dataset.p; shown = 0; render(); });
+  });
+  next.addEventListener("click", function () { shown += 1; render(); });
+  walk.querySelector('[data-act="reset"]').addEventListener("click", function () { shown = 0; render(); });
+  walk.classList.add("js");
+  if (map) map.classList.add("js");
+  render();
+})();
+</script>
+</body>
+</html>

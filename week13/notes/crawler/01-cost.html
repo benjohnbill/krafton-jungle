@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>crawler 트래픽의 비용</title>
+<link rel="stylesheet" href="https://benjohnbill.github.io/assets/site.css">
+<style>
+/* type and boxes follow DESIGN.md; shapes copied from t3-restart-sigpipe.html and debug-panic-exit.html */
+/* voice: headings and .lead stay telegraphic (DESIGN.md); body prose is 평서체, to match the summary boxes and the site (operator decided 2026-11-24) */
+html { font-size: 19px; }
+body { font-size: 1rem; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-family: var(--font-head); font-size: 1.95rem; line-height: 1.25; margin: 12px 0 4px; }
+
+h2 { font-family: var(--font-head); font-size: 1.56rem; line-height: 1.35; margin: 64px 0 14px; }
+
+.sub { color: var(--ink-2); margin: 0 0 16px; }
+.lead { font-size: 1.1rem; line-height: 1.75; margin: 0 0 14px; }
+p { margin: 14px 0 0; }
+ul { margin: 10px 0 0; padding-left: 1.3em; }
+li + li { margin-top: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; line-height: 1.65; border: 1px solid var(--line); margin-top: 16px; }
+th, td { border-bottom: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+.scroll { overflow-x: auto; }
+.ln { display: block; }
+.ln + .ln { margin-top: 6px; }
+blockquote { margin: 14px 0 0; padding: 2px 0 2px 16px; border-left: 3px solid var(--line); }
+
+@media (max-width: 620px) { th, td { padding: 8px 8px; } }
+
+/* source label: the link to the source, and how far the research read it */
+.src { font: 500 .68rem/1 var(--font-code); padding: 3px 6px; border-radius: 3px; text-decoration: none; white-space: nowrap; vertical-align: .12em; }
+.src.p { background: var(--s2-soft); color: var(--s2); }
+.src.s { background: var(--s4-soft); color: var(--s4); }
+.src.u { background: var(--surface-2); color: var(--muted); }
+.src:hover { text-decoration: underline; }
+/* unverified facts: gray text plus the unverified label (operator choice 3) */
+.unv { color: var(--muted); }
+
+/* claim and reply: one shape for every accused party (operator rule) */
+.case { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 4px; margin-top: 12px; }
+.case p { margin: 0; padding: 10px 14px; font-size: .9rem; line-height: 1.7; }
+.case p + p { border-left: 1px solid var(--line); }
+.case b { display: block; font: 600 .72rem/1.6 var(--font-code); }
+@media (max-width: 620px) { .case { grid-template-columns: 1fr; } .case p + p { border-left: 0; border-top: 1px solid var(--line); } }
+
+/* fold card, copied from debug-panic-exit.html */
+details.fold { border: 1px solid var(--line); border-radius: 4px; margin: 16px 0 0; }
+details.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: .6em; padding: 12px 16px; font-weight: 600; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: ""; flex: none; width: .5em; height: .5em; border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); transform: rotate(-45deg); transition: transform .15s; align-self: center; }
+details.fold[open] > summary::before { transform: rotate(45deg); }
+details.fold > summary::after { content: "펼치기"; margin-left: auto; flex: none; font: 400 .75rem var(--font-code); color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; }
+details.fold[open] > summary::after { content: "접기"; }
+details.fold > summary:hover { background: var(--surface-2); }
+details.fold > summary:focus-visible { outline: 2px solid var(--s3); outline-offset: -2px; }
+details.fold[open] > summary { border-bottom: 1px solid var(--line); }
+details.fold > .in { padding: 4px 16px 16px; }
+
+/* charts: HTML and CSS, positions computed by gen.py, drawn to scale */
+.chart { border: 1px solid var(--line); border-radius: 4px; padding: 14px 18px 8px; margin-top: 12px; }
+.chart .row { display: grid; grid-template-columns: 8.5em 1fr 8em; gap: 10px; align-items: center; min-height: 30px; }
+.chart .nm, .chart .val { font: .78rem/1.4 var(--font-code); }
+.chart .val { text-align: right; }
+.chart .trk { position: relative; height: 22px; }
+.chart .gl { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.chart .ref { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--ink-2); }
+.chart .seg { position: absolute; top: 50%; height: 2px; margin-top: -1px; background: var(--muted); }
+.chart .pt { position: absolute; top: 50%; width: 11px; height: 11px; border-radius: 50%; background: var(--ink); transform: translate(-50%, -50%); }
+.chart .pt.jan { background: var(--bg); border: 2px solid var(--ink); }
+.chart .axis .trk { height: 22px; }
+.chart .axis .tk { position: absolute; top: 2px; transform: translateX(-50%); font: .7rem/1.4 var(--font-code); color: var(--ink-2); white-space: nowrap; }
+.chart .jan-v { color: var(--ink-2); }
+.key { font-size: .85rem; margin-top: 8px; }
+.key i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); margin: 0 4px 0 10px; }
+.key i.jan { background: var(--bg); border: 2px solid var(--ink); }
+.key i.ref { width: 2px; height: 12px; border-radius: 0; background: var(--ink-2); }
+@media (max-width: 620px) {
+  .chart { padding: 12px 10px 6px; }
+  .chart .row { grid-template-columns: 5.4em 1fr 6.4em; gap: 6px; }
+  .chart .nm, .chart .val { font-size: .68rem; }
+  .chart .axis .tk.minor { display: none; }
+}
+/* stacked bars: 100% wide, to scale */
+.stack { display: flex; height: 30px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; margin-top: 6px; font: .75rem/30px var(--font-code); }
+.stack span { padding: 0 8px; white-space: nowrap; overflow: hidden; }
+.stack .bot { background: var(--s1-soft); color: var(--s1); }
+.stack .hum { color: var(--ink-2); }
+.bar { height: 22px; background: var(--s1-soft); border: 1px solid var(--s1-rail); border-radius: 2px; margin-top: 6px; }
+.blabel { font-size: .85rem; margin-top: 12px; }
+
+/* long-tail concept figure: shapes only, words in HTML */
+.lt { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 8px; }
+.lt-h { font-size: .85rem; margin: 0 0 4px; }
+.lt svg { width: 100%; height: auto; display: block; }
+.lt .b { fill: var(--ink-2); }
+.lt .b.c { fill: var(--s1); }
+.lt .cz { fill: var(--s2-soft); }
+.lt .ax { stroke: var(--ink); stroke-width: 1; }
+@media (max-width: 620px) { .lt { grid-template-columns: 1fr; } }
+.cz-key { display: inline-block; width: 12px; height: 12px; background: var(--s2-soft); border: 1px solid var(--s2-rail); vertical-align: -1px; }
+
+/* diagrams: hand-written SVG from diagrams.py; colors are site tokens only,
+   so light and dark both work. One system for all: nodes rx 6 with a 1px
+   stroke; arrows are orthogonal with one marker set; arrow labels sit on a
+   paper mask. Sizes are viewBox units.
+   Color marks meaning only (DESIGN.md section 2), two meanings in all 25:
+   s1 = the crawler's path and where it ends (blocked, or a cost to the
+   server); s2 = the path that passes or is served cheaply. Everything else
+   is neutral: the focal node is an ink line on the one fill level, a plan
+   is a dashed gray line, and all text is ink or ink-2. */
+/* a figure on its own gets the panel line of .summary (box rule 1); inside a
+   card it stays bare. On a phone the frame would push SVG text under 11px, so
+   it drops there. */
+.wrap > .dgf, .wrap > .dg2 { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
+.wrap > .dgf svg.dg, .wrap > .dg2 svg.dg { margin: 0 auto; }
+@media (max-width: 620px) { .wrap > .dgf, .wrap > .dg2 { border: 0; padding: 0; } }
+.dgf { margin: 18px 0 0; }
+.dg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 620px) { .dg2 { grid-template-columns: 1fr; gap: 0; } }
+svg.dg { display: block; width: 100%; height: auto; font-size: 13px; }
+.dg text { font-family: var(--font-body); fill: var(--ink); }
+.dg .b { font-weight: 600; }
+.dg .mono { font-family: var(--font-code); }
+.dg .t2 { fill: var(--ink-2); }
+.dg .tr, .dg text.r, .dg .tg, .dg text.g, .dg .tp { fill: var(--ink-2); }
+.dg rect.bx { fill: var(--bg); stroke: var(--muted); stroke-width: 1; }
+.dg rect.ink { fill: var(--bg); stroke: var(--ink); stroke-width: 1.25; }
+.dg rect.cell, .dg rect.lane, .dg rect.band { fill: var(--surface-2); stroke: none; }
+.dg rect.sel { fill: var(--surface-2); stroke: none; }
+.dg rect.hl { fill: var(--surface-2); stroke: var(--ink); stroke-width: 1.25; }
+.dg rect.ok { fill: var(--s2-soft); stroke: var(--s2-rail); stroke-width: 1; }
+.dg rect.okf { fill: var(--s2-rail); stroke: none; }
+.dg rect.ng { fill: var(--s1-soft); stroke: var(--s1-rail); stroke-width: 1; }
+.dg rect.ng2 { fill: var(--s1-soft); stroke: var(--s1); stroke-width: 2; }
+.dg rect.ev { fill: var(--bg); stroke: var(--s1-rail); stroke-width: 1; }
+.dg rect.plan { fill: var(--bg); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 3; }
+.dg rect.trap { fill: var(--bg); stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; }
+.dg rect.zone { fill: none; stroke: var(--muted); stroke-width: 1; }
+.dg rect.mk { fill: var(--bg); }
+.dg rect.mk2 { fill: var(--surface-2); }
+.dg rect.drip { fill: var(--ink-2); }
+.dg .ln { stroke: var(--muted); stroke-width: 1.25; fill: none; }
+.dg .ah { fill: var(--muted); }
+.dg .ln.r { stroke: var(--s1); } .dg .ah.r { fill: var(--s1); }
+.dg .ln.g { stroke: var(--s2); } .dg .ah.g { fill: var(--s2); }
+.dg .ln.a { stroke: var(--ink-2); } .dg .ah.a { fill: var(--ink-2); }
+.dg .ln.p { stroke: var(--muted); stroke-dasharray: 5 3; } .dg .ah.p { fill: var(--muted); }
+.dg .ln.ret { stroke-dasharray: 5 4; }
+.dg .ln.fat { stroke-width: 5; }
+.dg .ln.dash { stroke-dasharray: 3 3; }
+.dg .rule { stroke: var(--line); stroke-width: 1; }
+.dg .life { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; }
+.dg .lim { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 5 3; }
+.dg .bucket { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
+.dg .tok { fill: var(--ink-2); }
+.dg a:hover rect, .dg a:focus-visible rect { stroke: var(--s2); stroke-width: 2; }
+.dg a:focus { outline: none; }
+
+/* links between the four crawler notes: the same quiet meta line as .home
+   (site.css: meta text uses the code slot) */
+.notes { display: flex; flex-wrap: wrap; gap: 0 14px; margin: 4px 0 0; font: 13px/1.8 var(--font-code); }
+.notes a { color: var(--muted); text-decoration: none; }
+.notes a:hover { color: var(--ink-2); text-decoration: underline; }
+.notes a[aria-current="page"] { color: var(--ink); }
+/* closing links, the shape of nav.links in l1-connection-setup.html */
+.pn { margin-top: 64px; font-size: .95rem; line-height: 2; }
+
+/* summary box at the top, copied from t2-echo-server.html: one outer line,
+   no fill (box rule 1); two sentences per row, each led by a bold label */
+.summary { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
+.summary table { margin-top: 0; }
+.summary td .ln + .ln { margin-top: 8px; }
+.summary td .ba { display: inline-block; min-width: 5.6em; font-family: var(--font-code); font-weight: 600; }
+.summary td:first-child { width: 34%; }
+</style>
+</head>
+<body>
+<main class="wrap">
+<a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
+<nav class="notes" aria-label="crawler 노트"><a href="00-overview.html">한눈에 보기</a><a href="01-cost.html" aria-current="page">01 비용</a><a href="02-history.html">02 역사</a><a href="03-layers.html">03 방어 layer</a><a href="04-reverse-proxy.html">04 우리 Reverse Proxy</a></nav>
+
+<h1>crawler 트래픽의 비용</h1>
+<p class="sub">사람은 인기 페이지를 읽음 → cache가 답함<br>crawler는 모든 페이지를 고르게 읽음 → cache miss가 upstream까지 감</p>
+<div class="summary">
+<div class="scroll">
+<table>
+<thead><tr><th>주제</th><th>요약</th></tr></thead>
+<tbody>
+<tr><td><a href="#wikimedia">Wikimedia: 같은 bot, 다른 비중</a></td><td><span class="ln"><strong class="ba">Observed</strong>2025년 Wikimedia 측정에서 bot은 페이지뷰의 약 35%였지만, 가장 비싼 트래픽의 65% 이상이었다.</span><span class="ln"><strong class="ba">Meaning</strong>드물게 읽히는 페이지는 edge cache에 없어서, crawler의 요청은 cache를 지나 핵심 데이터센터까지 간다.</span></td></tr>
+<tr><td><a href="#rtd">Read the Docs: 청구서</a></td><td><span class="ln"><strong class="ba">Before</strong>2024년 5월 AI crawler 하나가 한 달에 73 TB를 받아 갔고, 대역폭 요금은 5,000달러를 넘었다.</span><span class="ln"><strong class="ba">After</strong>AI crawler를 막은 뒤 하루 다운로드 대역폭은 약 800 GB에서 약 200 GB로 75% 줄었다.</span></td></tr>
+<tr><td><a href="#ratio">crawl-to-refer ratio</a></td><td><span class="ln"><strong class="ba">Observed</strong>2025년 7월 Cloudflare 숫자로, 방문자 한 명당 크롤링은 Anthropic 38,066번, OpenAI 1,091번, Google 5.4번이었다.</span><span class="ln"><strong class="ba">Meaning</strong>Cloudflare는 기간마다 다른 비율을 냈으므로, 비율을 옮길 때는 기간을 같이 적어야 한다.</span></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>출처 칩(<a class="src p" href="00-overview.html#src-note">primary</a>, <a class="src s" href="00-overview.html#src-note">secondary</a>, <a class="src u" href="00-overview.html#src-note">unverified</a>)의 뜻은 <a href="00-overview.html#src-note">한눈에 보기</a>에 있다.</p>
+
+<h2 id="paths">1. 사람의 요청과 crawler의 요청</h2>
+<!--GEN:dg-cost--><div class="dg2"><figure class="dgf"><svg class="dg" id="dg-cost-crawler" viewBox="0 0 300 352" style="max-width:420px" role="img" aria-labelledby="dg-cost-crawler-title dg-cost-crawler-desc"><title id="dg-cost-crawler-title">AI crawler의 요청</title><desc id="dg-cost-crawler-desc">AI crawler의 요청이 cache miss로 origin까지 가서 비용이 되는 길</desc><defs><marker id="dg-cost-crawler-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker></defs><text x="150" y="17.0" text-anchor="middle" class="b" font-size="13">AI crawler의 요청</text><path class="ln" d="M150 60 L150 76" marker-end="url(#dg-cost-crawler-ah)"/><path class="ln" d="M150 124 L150 140" marker-end="url(#dg-cost-crawler-ah)"/><path class="ln" d="M150 172 L150 188" marker-end="url(#dg-cost-crawler-ah)"/><path class="ln" d="M150 220 L150 236" marker-end="url(#dg-cost-crawler-ah)"/><line class="ln dash" x1="150" y1="284" x2="150" y2="300"/><rect class="bx" x="40" y="28" width="220" height="32" rx="6" fill="none" stroke="currentColor"/><text x="150" y="48.5" text-anchor="middle" font-size="13">crawler 요청</text><rect class="bx" x="40" y="76" width="220" height="48" rx="6" fill="none" stroke="currentColor"/><text x="150" y="96.0" text-anchor="middle" font-size="13">드문 페이지,</text><text x="150" y="113.0" text-anchor="middle" font-size="13">오래된 commit</text><rect class="ng" x="40" y="140" width="220" height="32" rx="6" fill="none" stroke="currentColor"/><text x="150" y="160.6" text-anchor="middle" font-size="13">cache miss</text><rect class="ng" x="40" y="188" width="220" height="32" rx="6" fill="none" stroke="currentColor"/><text x="150" y="208.6" text-anchor="middle" font-size="13">origin의 CPU, 대역폭</text><rect class="ng" x="40" y="236" width="220" height="48" rx="6" fill="none" stroke="currentColor"/><text x="150" y="256.1" text-anchor="middle" font-size="13">예: Read the Docs,</text><text x="150" y="273.1" text-anchor="middle" font-size="13">한 달 73 TB, 5,000달러+</text><rect class="hl" x="20" y="300" width="260" height="48" rx="6" fill="none" stroke="currentColor"/><text x="150" y="320.1" text-anchor="middle" class="b" font-size="13">돌아온 방문자, 2025-07</text><text x="150" y="337.1" text-anchor="middle" font-size="13">AI 3사: 195 ~ 38,066번에 1명</text></svg></figure><figure class="dgf"><svg class="dg" id="dg-cost-human" viewBox="0 0 300 352" style="max-width:420px" role="img" aria-labelledby="dg-cost-human-title dg-cost-human-desc"><title id="dg-cost-human-title">검색에서 온 사람</title><desc id="dg-cost-human-desc">검색에서 온 사람의 방문은 cache hit로 끝나고, 사이트에 돌아온 독자로 잡힌다</desc><defs><marker id="dg-cost-human-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker></defs><text x="150" y="17.0" text-anchor="middle" class="b" font-size="13">검색에서 온 사람</text><path class="ln" d="M150 60 L150 76" marker-end="url(#dg-cost-human-ah)"/><path class="ln" d="M150 124 L150 140" marker-end="url(#dg-cost-human-ah)"/><path class="ln" d="M150 172 L150 188" marker-end="url(#dg-cost-human-ah)"/><path class="ln" d="M150 220 L150 236" marker-end="url(#dg-cost-human-ah)"/><line class="ln dash" x1="150" y1="284" x2="150" y2="300"/><rect class="bx" x="40" y="28" width="220" height="32" rx="6" fill="none" stroke="currentColor"/><text x="150" y="48.5" text-anchor="middle" font-size="13">검색 결과에서 클릭</text><rect class="bx" x="40" y="76" width="220" height="48" rx="6" fill="none" stroke="currentColor"/><text x="150" y="96.0" text-anchor="middle" font-size="13">Referer header를</text><text x="150" y="113.0" text-anchor="middle" font-size="13">달고 옴</text><rect class="bx" x="40" y="140" width="220" height="32" rx="6" fill="none" stroke="currentColor"/><text x="150" y="160.6" text-anchor="middle" font-size="13">인기 페이지</text><rect class="ok" x="40" y="188" width="220" height="32" rx="6" fill="none" stroke="currentColor"/><text x="150" y="208.6" text-anchor="middle" font-size="13">cache hit</text><rect class="ok" x="40" y="236" width="220" height="48" rx="6" fill="none" stroke="currentColor"/><text x="150" y="264.6" text-anchor="middle" font-size="13">origin까지 안 감</text><rect class="hl" x="20" y="300" width="260" height="48" rx="6" fill="none" stroke="currentColor"/><text x="150" y="320.1" text-anchor="middle" class="b" font-size="13">돌아온 방문자, 2025-07</text><text x="150" y="337.1" text-anchor="middle" font-size="13">Google: 5.4번에 1명</text></svg></figure></div><!--/GEN:dg-cost-->
+<p>두 길은 개념도이고, 숫자는 예시다. 73 TB와 5,000달러는 Read the Docs의 2024년 5월 기록이다. <a class="src p" href="https://about.readthedocs.com/blog/2024/07/ai-crawlers-abuse/">primary</a> 돌아온 방문자는 2025년 7월 crawl-to-refer ratio다: AI 3사는 Perplexity 195, OpenAI 1,091, Anthropic 38,066번에 1명이고, Google은 5.4번에 1명이다. <a class="src p" href="https://blog.cloudflare.com/crawlers-click-ai-bots-training/">primary</a> 회사별 응답은 <a href="#ratio-replies">아래 표</a>에 있다.</p>
+
+<p>아래 그림은 개념도다. 실측값이 아니다. 가로축은 페이지를 인기 순으로 늘어놓은 것이고, 막대는 각 페이지가 받는 요청 수이다. <span class="cz-key"></span> 칸이 cache에 들어 있는 인기 페이지다.</p>
+<!--GEN:longtail--><div class="lt"><div><p class="lt-h">사람의 요청</p><svg viewBox="-2 0 292 82" role="img" aria-label="사람의 요청은 인기 페이지 몇 개에 몰린다"><rect class="cz" x="-1" y="0" width="60" height="80"/><rect class="b" x="0" y="8.0" width="10" height="72.0"/><rect class="b" x="12" y="46.4" width="10" height="33.6"/><rect class="b" x="24" y="58.5" width="10" height="21.5"/><rect class="b" x="36" y="64.3" width="10" height="15.7"/><rect class="b" x="48" y="67.7" width="10" height="12.3"/><rect class="b" x="60" y="70.0" width="10" height="10.0"/><rect class="b" x="72" y="71.5" width="10" height="8.5"/><rect class="b" x="84" y="72.7" width="10" height="7.3"/><rect class="b" x="96" y="73.6" width="10" height="6.4"/><rect class="b" x="108" y="74.3" width="10" height="5.7"/><rect class="b" x="120" y="74.9" width="10" height="5.1"/><rect class="b" x="132" y="75.3" width="10" height="4.7"/><rect class="b" x="144" y="75.7" width="10" height="4.3"/><rect class="b" x="156" y="76.1" width="10" height="3.9"/><rect class="b" x="168" y="76.3" width="10" height="3.7"/><rect class="b" x="180" y="76.6" width="10" height="3.4"/><rect class="b" x="192" y="76.8" width="10" height="3.2"/><rect class="b" x="204" y="77.0" width="10" height="3.0"/><rect class="b" x="216" y="77.2" width="10" height="2.8"/><rect class="b" x="228" y="77.3" width="10" height="2.7"/><rect class="b" x="240" y="77.5" width="10" height="2.5"/><rect class="b" x="252" y="77.6" width="10" height="2.4"/><rect class="b" x="264" y="77.7" width="10" height="2.3"/><rect class="b" x="276" y="77.8" width="10" height="2.2"/><line class="ax" x1="-1" y1="80.5" x2="288" y2="80.5"/></svg></div><div><p class="lt-h">crawler의 요청</p><svg viewBox="-2 0 292 82" role="img" aria-label="crawler의 요청은 모든 페이지에 고르게 퍼진다"><rect class="cz" x="-1" y="0" width="60" height="80"/><rect class="b c" x="0" y="68.0" width="10" height="12.0"/><rect class="b c" x="12" y="68.0" width="10" height="12.0"/><rect class="b c" x="24" y="68.0" width="10" height="12.0"/><rect class="b c" x="36" y="68.0" width="10" height="12.0"/><rect class="b c" x="48" y="68.0" width="10" height="12.0"/><rect class="b c" x="60" y="68.0" width="10" height="12.0"/><rect class="b c" x="72" y="68.0" width="10" height="12.0"/><rect class="b c" x="84" y="68.0" width="10" height="12.0"/><rect class="b c" x="96" y="68.0" width="10" height="12.0"/><rect class="b c" x="108" y="68.0" width="10" height="12.0"/><rect class="b c" x="120" y="68.0" width="10" height="12.0"/><rect class="b c" x="132" y="68.0" width="10" height="12.0"/><rect class="b c" x="144" y="68.0" width="10" height="12.0"/><rect class="b c" x="156" y="68.0" width="10" height="12.0"/><rect class="b c" x="168" y="68.0" width="10" height="12.0"/><rect class="b c" x="180" y="68.0" width="10" height="12.0"/><rect class="b c" x="192" y="68.0" width="10" height="12.0"/><rect class="b c" x="204" y="68.0" width="10" height="12.0"/><rect class="b c" x="216" y="68.0" width="10" height="12.0"/><rect class="b c" x="228" y="68.0" width="10" height="12.0"/><rect class="b c" x="240" y="68.0" width="10" height="12.0"/><rect class="b c" x="252" y="68.0" width="10" height="12.0"/><rect class="b c" x="264" y="68.0" width="10" height="12.0"/><rect class="b c" x="276" y="68.0" width="10" height="12.0"/><line class="ax" x1="-1" y1="80.5" x2="288" y2="80.5"/></svg></div></div><!--/GEN:longtail-->
+<p>사람의 요청은 대부분 왼쪽 칸에서 끝난다. crawler의 요청은 대부분 칸 밖으로 떨어져서 cache를 지나 upstream까지 간다. Wikimedia는 이 차이를 숫자로 재서 공개했다. 드물게 읽히는 페이지는 지역 edge cache에 없어서 요청이 핵심 데이터센터까지 가고, 그 요청이 훨씬 비싸다. <a class="src p" href="https://diff.wikimedia.org/2025/04/01/how-crawlers-impact-the-operations-of-the-wikimedia-projects/">primary</a></p>
+
+<h2 id="wikimedia">2. Wikimedia: 같은 bot, 다른 비중</h2>
+<p class="blabel">페이지뷰 (2025년 Wikimedia 측정)</p>
+<div class="stack" role="img" aria-label="bot 약 35%, 나머지 약 65%"><span class="bot" style="width:35%">bot 약 35%</span><span class="hum" style="width:65%">나머지</span></div>
+<p class="blabel">가장 비싼 트래픽 (cache miss로 핵심 데이터센터까지 간 요청)</p>
+<div class="stack" role="img" aria-label="bot 65% 이상, 나머지 35% 이하"><span class="bot" style="width:65%">bot 65% 이상</span><span class="hum" style="width:35%">나머지</span></div>
+<p>두 막대는 같은 눈금이다. 출처는 Wikimedia의 2025년 4월 1일 글이고, bot은 JavaScript를 실행하는 browser처럼 행동하지 않는 트래픽으로 골라냈다. <a class="src p" href="https://diff.wikimedia.org/2025/04/01/how-crawlers-impact-the-operations-of-the-wikimedia-projects/">primary</a> 같은 글에 따르면 멀티미디어 다운로드 대역폭은 2024년 1월 이후 50% 늘었다. 2024년 12월에는 Jimmy Carter 문서(하루 280만 뷰)와 crawler 부하가 겹쳐 일부 인터넷 회선이 약 1시간 동안 꽉 찼다. <a class="src p" href="https://diff.wikimedia.org/2025/04/01/how-crawlers-impact-the-operations-of-the-wikimedia-projects/">primary</a></p>
+<blockquote>"Our content is free, our infrastructure is not." <a class="src p" href="https://diff.wikimedia.org/2025/04/01/how-crawlers-impact-the-operations-of-the-wikimedia-projects/">primary</a></blockquote>
+<p>1년 뒤 Wikimedia는 자동 crawler 요청의 약 30%를 막거나 늦추고, 그 결과로 하루 약 15억 건의 4xx 응답을 보낸다. crawler 요청은 하루 "up to billions"에 이른다고 적었다. <a class="src p" href="https://diff.wikimedia.org/2026/03/26/quo-vadis-crawlers-progress-and-whats-next-on-safeguarding-our-infrastructure/">primary</a></p>
+
+<h2 id="rtd">3. Read the Docs: 청구서</h2>
+<p>2024년 5월, AI crawler 하나가 Read the Docs에서 압축 HTML을 한 달에 73 TB, 하루에만 거의 10 TB 받아 갔다. 대역폭 요금은 5,000달러를 넘었다. 이 crawler는 버그 때문에 같은 파일을 계속 다시 받았고, ETag도 Last-Modified도 쓰지 않았다. <a class="src p" href="https://about.readthedocs.com/blog/2024/07/ai-crawlers-abuse/">primary</a></p>
+<div class="case"><p><b>주장</b>Read the Docs: 이름을 밝히지 않은 AI 회사의 crawler가 73 TB를 받아 갔고, 6월에는 Facebook의 다운로더로 보이는 트래픽이 10 TB를 받아 갔다. <a class="src p" href="https://about.readthedocs.com/blog/2024/07/ai-crawlers-abuse/">primary</a></p><p><b>응답</b>73 TB의 회사는 요금을 돌려줬다. Facebook은 답하지 않았다고 Read the Docs가 적었다. <a class="src p" href="https://about.readthedocs.com/blog/2024/07/ai-crawlers-abuse/">primary</a></p></div>
+<p class="blabel">AI crawler를 막기 전과 후, 하루 다운로드 대역폭</p>
+<div class="bar" style="width:100%" role="img" aria-label="약 800 GB"></div><p class="blabel" style="margin-top:2px">막기 전: 약 800 GB/일</p>
+<div class="bar" style="width:25%" role="img" aria-label="약 200 GB"></div><p class="blabel" style="margin-top:2px">막은 뒤: 약 200 GB/일 (75% 감소) <a class="src p" href="https://about.readthedocs.com/blog/2024/07/ai-crawlers-abuse/">primary</a></p>
+<p>이 감소로 한 달에 약 1,500달러를 아꼈다는 계산이 보도에 나온다. 원문 글에서는 그 숫자를 찾지 못했다. <a class="src s" href="https://thelibre.news/foss-infrastructure-is-under-attack-by-ai-companies/">secondary</a></p>
+
+<h2>4. 작은 운영자들의 기록</h2>
+<div class="scroll">
+<table>
+<thead><tr><th>누가</th><th>언제</th><th>숫자</th></tr></thead>
+<tbody>
+<tr><td>SourceHut (Drew DeVault)</td><td>2025-03</td><td><span class="ln">"20-100% of my time in any given week"를 crawler 대응에 썼다.</span><span class="ln">"dozens of brief outages per week" <a class="src p" href="https://drewdevault.com/blog/Stop-externalizing-your-costs-on-me/">primary</a></span><span class="ln">상태 페이지의 장애 "LLM crawlers continue to DDoS SourceHut"는 168시간 30분 뒤 해결됐다. <a class="src p" href="https://status.sr.ht/issues/2025-03-17-git.sr.ht-llms/">primary</a></span></td></tr>
+<tr><td>diaspora* (Dennis Schubert)</td><td>2025-07</td><td><span class="ln">206시간 동안 약 270만 요청, 평균 초당 약 3.6개</span><span class="ln">서로 다른 IP 약 130만 개, IP당 2개 남짓, 176개국 <a class="src p" href="https://overengineer.dev/blog/2025/07/11/dynamic-denial-of-crawlers">primary</a></span></td></tr>
+<tr><td>GNOME GitLab</td><td>2025-03</td><td><span class="ln">약 2.5시간에 81,000 요청, 그중 3%만 Anubis의 proof of work를 통과 <a class="src s" href="https://thelibre.news/foss-infrastructure-is-under-attack-by-ai-companies/">secondary</a></span></td></tr>
+<tr><td>Fedora (pagure.io)</td><td>2025-03</td><td><span class="ln">여러 subnet을 막았다가 실제 사용자도 막혀 되돌리고, 브라질 전체를 막는다: "a desperate measure" <a class="src p" href="https://www.scrye.com/blogs/nirik/posts/2025/03/15/mid-march-infra-bits-2025/">primary</a></span></td></tr>
+</tbody>
+</table>
+</div>
+<p>위 넷은 crawler의 주인을 특정하지 않았다. 주인을 특정한 기록은 따로 적는다.</p>
+<div class="case"><p><b>주장</b>iFixit CEO Kyle Wiens(2024-07-24): Anthropic의 ClaudeBot이 "about a million times over a 24-hour period" 서버를 쳤고 devops 자원을 묶었다고 했다. <a class="src s" href="https://404media.co/anthropic-ai-scraper-hits-ifixits-website-a-million-times-in-a-day/">secondary</a></p><p><b>응답</b>Anthropic: robots.txt를 지키며, iFixit이 규칙을 넣은 뒤 crawler가 멈췄다고 The Verge에 답했다. Wiens도 "Based on our logs, they did stop after we added it to the robots.txt."라고 했고, "Anthropic never replied to me."라고도 했다. <a class="src s" href="https://www.theregister.com/2024/07/30/taming_ai_content_crawlers/">secondary</a></p></div>
+<div class="case"><p><b>주장</b><span class="unv">Freelancer.com(2024-07): 같은 crawler가 4시간에 약 400만 번 방문했다고 했다. Freelancer의 발표문은 읽지 못했다. <a class="src u" href="https://www.theregister.com/2024/07/30/taming_ai_content_crawlers/">unverified</a></span></p><p><b>응답</b>응답 기록 없음</p></div>
+<div class="case"><p><b>주장</b>Wikimedia(2026-10, Anadolu Agency 보도): OpenAI의 것으로 본다("we believe")는 agent들이 시험 편집을 하고, 수백만 건의 API 요청과 페이지 요청, 수십만 건의 Wikidata Query Service 질의를 보냈으며, 5월의 부분 장애에 영향을 줬을 수 있다고 했다. 보도는 이 agent가 신원을 숨겼다고 하지 않았다. <a class="src s" href="https://aa.com.tr/en/world/wikipedia-detects-rogue-openai-agent-activity-calls-on-developers-to-prevent-risks/4079452">secondary</a></p><p><b>응답</b>응답 기록 없음</p></div>
+
+<h2>5. 전체 웹에서 bot의 비율</h2>
+<p>업체마다 자기 고객의 트래픽만 보고, 세는 단위(전체 요청, HTML 요청)와 bot의 정의가 다르다. 그래서 한 숫자가 아니라 범위로 읽어야 한다. 막대는 0 ~ 100% 같은 눈금이다.</p>
+<p class="blabel">Imperva, 2024년 데이터: 자동화 트래픽 51% <a class="src p" href="https://www.imperva.com/blog/2025-imperva-bad-bot-report-how-ai-is-supercharging-the-bot-threat/">primary</a></p>
+<div class="bar" style="width:51%"></div>
+<p class="blabel">Imperva, 2025년 데이터: 자동화 트래픽 53% 이상 <a class="src p" href="https://www.imperva.com/blog/bad-bot-report-2026-bots-agentic-age/">primary</a></p>
+<div class="bar" style="width:53%"></div>
+<p class="blabel">Akamai, 2024년 6월 보고: bot 42% <a class="src p" href="https://www.akamai.com/newsroom/press-release/bots-compose-42-percent-of-web-traffic-nearly-two-thirds-are-malicious">primary</a></p>
+<div class="bar" style="width:42%"></div>
+<p class="blabel">Cloudflare, 2025-12-02 하루, HTML 요청만: 사람 47%, 나머지 53% <a class="src p" href="https://blog.cloudflare.com/radar-2025-year-in-review">primary</a></p>
+<div class="bar" style="width:53%"></div>
+<p>같은 Cloudflare 결산에서 AI bot은 2025년 평균 HTML 요청의 4.2%였고, Googlebot 혼자 4.5%였다. <a class="src p" href="https://blog.cloudflare.com/radar-2025-year-in-review">primary</a></p>
+
+<h2 id="ratio">6. crawl-to-refer ratio: 크롤링 몇 번에 방문자 한 명</h2>
+<p>검색 엔진과 사이트 사이의 옛 거래는 "크롤링하게 해 주면 독자를 보내 줄게"였다. crawl-to-refer ratio는 그 거래가 얼마나 지켜지는지 재는 숫자다. 한 회사의 crawler가 가져간 HTML 요청 수를, 그 회사를 Referer header에 적고 들어온 방문 수로 나눈다. <a class="src p" href="https://blog.cloudflare.com/ai-search-crawl-refer-ratio-on-radar">primary</a></p>
+<p class="key"><b>로그 눈금이다. 눈금 한 칸이 10배이다.</b> <i></i>2025년 7월 <i class="jan"></i>2025년 1월 <i class="ref"></i>1 : 1 (크롤링 1번에 방문 1번)</p>
+<!--GEN:ratio--><div class="chart log"><div class="row"><span class="nm">Anthropic</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:14.29%"></span><span class="gl" style="left:28.57%"></span><span class="gl" style="left:42.86%"></span><span class="gl" style="left:57.14%"></span><span class="gl" style="left:71.43%"></span><span class="gl" style="left:85.71%"></span><span class="gl" style="left:100.00%"></span><span class="ref" style="left:14.29%"></span><span class="seg" style="left:79.72%;width:12.53%"></span><span class="pt jan" style="left:92.25%" title="2025-01: 286,930 : 1"></span><span class="pt" style="left:79.72%" title="2025-07: 38,066 : 1"></span></span><span class="val">38,066 : 1<span class="ln jan-v">1월 286,930 : 1</span></span></div><div class="row"><span class="nm">OpenAI</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:14.29%"></span><span class="gl" style="left:28.57%"></span><span class="gl" style="left:42.86%"></span><span class="gl" style="left:57.14%"></span><span class="gl" style="left:71.43%"></span><span class="gl" style="left:85.71%"></span><span class="gl" style="left:100.00%"></span><span class="ref" style="left:14.29%"></span><span class="seg" style="left:57.69%;width:0.68%"></span><span class="pt jan" style="left:58.36%" title="2025-01: 1,217 : 1"></span><span class="pt" style="left:57.69%" title="2025-07: 1,091 : 1"></span></span><span class="val">1,091 : 1<span class="ln jan-v">1월 1,217 : 1</span></span></div><div class="row"><span class="nm">Perplexity</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:14.29%"></span><span class="gl" style="left:28.57%"></span><span class="gl" style="left:42.86%"></span><span class="gl" style="left:57.14%"></span><span class="gl" style="left:71.43%"></span><span class="gl" style="left:85.71%"></span><span class="gl" style="left:100.00%"></span><span class="ref" style="left:14.29%"></span><span class="seg" style="left:39.10%;width:7.89%"></span><span class="pt jan" style="left:39.10%" title="2025-01: 54.6 : 1"></span><span class="pt" style="left:46.99%" title="2025-07: 194.8 : 1"></span></span><span class="val">194.8 : 1<span class="ln jan-v">1월 54.6 : 1</span></span></div><div class="row"><span class="nm">Microsoft</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:14.29%"></span><span class="gl" style="left:28.57%"></span><span class="gl" style="left:42.86%"></span><span class="gl" style="left:57.14%"></span><span class="gl" style="left:71.43%"></span><span class="gl" style="left:85.71%"></span><span class="gl" style="left:100.00%"></span><span class="ref" style="left:14.29%"></span><span class="pt" style="left:37.28%" title="2025-07: 40.7 : 1"></span></span><span class="val">40.7 : 1</span></div><div class="row"><span class="nm">Yandex</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:14.29%"></span><span class="gl" style="left:28.57%"></span><span class="gl" style="left:42.86%"></span><span class="gl" style="left:57.14%"></span><span class="gl" style="left:71.43%"></span><span class="gl" style="left:85.71%"></span><span class="gl" style="left:100.00%"></span><span class="ref" style="left:14.29%"></span><span class="pt" style="left:33.29%" title="2025-07: 21.4 : 1"></span></span><span class="val">21.4 : 1</span></div><div class="row"><span class="nm">Google</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:14.29%"></span><span class="gl" style="left:28.57%"></span><span class="gl" style="left:42.86%"></span><span class="gl" style="left:57.14%"></span><span class="gl" style="left:71.43%"></span><span class="gl" style="left:85.71%"></span><span class="gl" style="left:100.00%"></span><span class="ref" style="left:14.29%"></span><span class="pt" style="left:24.75%" title="2025-07: 5.4 : 1"></span></span><span class="val">5.4 : 1</span></div><div class="row"><span class="nm">ByteDance</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:14.29%"></span><span class="gl" style="left:28.57%"></span><span class="gl" style="left:42.86%"></span><span class="gl" style="left:57.14%"></span><span class="gl" style="left:71.43%"></span><span class="gl" style="left:85.71%"></span><span class="gl" style="left:100.00%"></span><span class="ref" style="left:14.29%"></span><span class="pt" style="left:13.63%" title="2025-07: 0.9 : 1"></span></span><span class="val">0.9 : 1</span></div><div class="row"><span class="nm">Baidu</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:14.29%"></span><span class="gl" style="left:28.57%"></span><span class="gl" style="left:42.86%"></span><span class="gl" style="left:57.14%"></span><span class="gl" style="left:71.43%"></span><span class="gl" style="left:85.71%"></span><span class="gl" style="left:100.00%"></span><span class="ref" style="left:14.29%"></span><span class="pt" style="left:13.63%" title="2025-07: 0.9 : 1"></span></span><span class="val">0.9 : 1</span></div><div class="row"><span class="nm">DuckDuckGo</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:14.29%"></span><span class="gl" style="left:28.57%"></span><span class="gl" style="left:42.86%"></span><span class="gl" style="left:57.14%"></span><span class="gl" style="left:71.43%"></span><span class="gl" style="left:85.71%"></span><span class="gl" style="left:100.00%"></span><span class="ref" style="left:14.29%"></span><span class="pt" style="left:6.82%" title="2025-07: 0.3 : 1"></span></span><span class="val">0.3 : 1</span></div><div class="row axis"><span class="nm"></span><span class="trk"><span class="tk minor" style="left:0.00%">0.1</span><span class="tk" style="left:14.29%">1</span><span class="tk minor" style="left:28.57%">10</span><span class="tk" style="left:42.86%">100</span><span class="tk minor" style="left:57.14%">1천</span><span class="tk" style="left:71.43%">1만</span><span class="tk minor" style="left:85.71%">10만</span><span class="tk" style="left:100.00%">100만</span></span><span class="val"></span></div></div><!--/GEN:ratio-->
+<p>숫자는 모두 Cloudflare의 2025년 8월 29일 글에서 가져왔다. 채운 점은 2025년 7월, 빈 점은 2025년 1월 값이다. 1월 값은 Anthropic, OpenAI, Perplexity만 실려 있다. <a class="src p" href="https://blog.cloudflare.com/crawlers-click-ai-bots-training/">primary</a></p>
+<details class="fold">
+<summary><span>데이터에 대한 단서: 기간마다 다른 비율</span></summary>
+<div class="in">
+<p>Cloudflare는 기간마다 다른 비율을 냈다. 예를 들어 Anthropic은 다음 넷이다.</p>
+<ul>
+<li>70,900 : 1, 2025-06-19 ~ 06-26 <a class="src p" href="https://blog.cloudflare.com/ai-search-crawl-refer-ratio-on-radar">primary</a></li>
+<li>38,066 : 1, 2025년 7월 (위 차트의 값) <a class="src p" href="https://blog.cloudflare.com/crawlers-click-ai-bots-training/">primary</a></li>
+<li>147,755 : 1, 2025년 1 ~ 7월 평균 <a class="src p" href="https://blog.cloudflare.com/crawlers-click-ai-bots-training/">primary</a></li>
+<li>최대 약 500,000 : 1, 2025년 초 <a class="src p" href="https://blog.cloudflare.com/radar-2025-year-in-review">primary</a></li>
+</ul>
+<p>보도에서도 이 중 서로 다른 숫자가 인용됐다. 그래서 비율을 옮길 때는 기간을 꼭 같이 적어야 한다. 분모는 Referer header로만 세기 때문에, 앱처럼 Referer를 보내지 않는 경로로 온 방문은 빠진다. Cloudflare는 그 예로 Claude 앱을 들었다. <a class="src p" href="https://blog.cloudflare.com/ai-search-crawl-refer-ratio-on-radar">primary</a></p>
+</div>
+</details>
+<p id="ratio-replies">차트에 실린 회사마다 기록된 응답이다.</p>
+<div class="scroll">
+<table>
+<thead><tr><th>회사</th><th>차트의 값과 기간</th><th>응답</th></tr></thead>
+<tbody>
+<tr><td>Anthropic</td><td><span class="ln">2025-07: 38,066 : 1</span><span class="ln">2025-01: 286,930 : 1</span></td><td>Cloudflare의 숫자를 확인할 수 없고, 2025년 3월에 낸 웹 검색 기능이 보내는 유입이 빠르게 늘고 있다고 답했다. <a class="src s" href="https://dataconomy.com/2025/09/15/cloudflare-tracks-anthropics-claude-crawl-to-refer-ratio/">secondary</a></td></tr>
+<tr><td>OpenAI</td><td><span class="ln">2025-07: 1,091 : 1</span><span class="ln">2025-01: 1,217 : 1</span></td><td>응답 기록 없음</td></tr>
+<tr><td>Perplexity</td><td><span class="ln">2025-07: 194.8 : 1</span><span class="ln">2025-01: 54.6 : 1</span></td><td>응답 기록 없음</td></tr>
+<tr><td>Microsoft</td><td>2025-07: 40.7 : 1</td><td>응답 기록 없음</td></tr>
+<tr><td>Yandex</td><td>2025-07: 21.4 : 1</td><td>응답 기록 없음</td></tr>
+<tr><td>Google</td><td>2025-07: 5.4 : 1</td><td>응답 기록 없음</td></tr>
+<tr><td>ByteDance</td><td>2025-07: 0.9 : 1</td><td>응답 기록 없음</td></tr>
+<tr><td>Baidu</td><td>2025-07: 0.9 : 1</td><td>응답 기록 없음</td></tr>
+<tr><td>DuckDuckGo</td><td>2025-07: 0.3 : 1</td><td>응답 기록 없음</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>7. AI와 검색 crawler 사이의 몫</h2>
+<p>Cloudflare에서 AI와 검색 crawler 트래픽을 100으로 놓고 각 crawler가 차지한 몫이다. 빈 점은 2024년 7월, 채운 점은 2025년 7월이다. 눈금은 0 ~ 40% 직선 눈금이다. <a class="src p" href="https://blog.cloudflare.com/crawlers-click-ai-bots-training/">primary</a></p>
+<!--GEN:share--><div class="chart"><div class="row"><span class="nm">Googlebot</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="seg" style="left:93.75%;width:3.75%"></span><span class="pt jan" style="left:93.75%"></span><span class="pt" style="left:97.50%"></span></span><span class="val">37.5 → 39%</span></div><div class="row"><span class="nm">GPTBot</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="seg" style="left:11.75%;width:17.50%"></span><span class="pt jan" style="left:11.75%"></span><span class="pt" style="left:29.25%"></span></span><span class="val">4.7 → 11.7%</span></div><div class="row"><span class="nm">ClaudeBot</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="seg" style="left:15.00%;width:9.75%"></span><span class="pt jan" style="left:15.00%"></span><span class="pt" style="left:24.75%"></span></span><span class="val">6 → 9.9%</span></div><div class="row"><span class="nm">Meta-ExternalAgent</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="seg" style="left:2.25%;width:16.50%"></span><span class="pt jan" style="left:2.25%"></span><span class="pt" style="left:18.75%"></span></span><span class="val">0.9 → 7.5%</span></div><div class="row"><span class="nm">Amazonbot</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="seg" style="left:14.75%;width:10.75%"></span><span class="pt jan" style="left:25.50%"></span><span class="pt" style="left:14.75%"></span></span><span class="val">10.2 → 5.9%</span></div><div class="row"><span class="nm">Bytespider</span><span class="trk"><span class="gl" style="left:0.00%"></span><span class="gl" style="left:25.00%"></span><span class="gl" style="left:50.00%"></span><span class="gl" style="left:75.00%"></span><span class="gl" style="left:100.00%"></span><span class="seg" style="left:6.00%;width:29.25%"></span><span class="pt jan" style="left:35.25%"></span><span class="pt" style="left:6.00%"></span></span><span class="val">14.1 → 2.4%</span></div><div class="row axis"><span class="nm"></span><span class="trk"><span class="tk" style="left:0.00%">0%</span><span class="tk" style="left:25.00%">10%</span><span class="tk" style="left:50.00%">20%</span><span class="tk" style="left:75.00%">30%</span><span class="tk" style="left:100.00%">40%</span></span><span class="val"></span></div></div><!--/GEN:share-->
+<p>같은 글에서 AI 크롤링의 목적은 학습 80%, 검색 18%, 사용자 요청 2%였다(2024년 7월부터 12개월). <a class="src p" href="https://blog.cloudflare.com/crawlers-click-ai-bots-training/">primary</a></p>
+
+<nav class="pn" aria-label="이전, 다음 노트">이전: <a href="00-overview.html">한눈에 보기</a><br>다음: <a href="02-history.html">02 역사</a></nav>
+</main>
+</body>
+</html>

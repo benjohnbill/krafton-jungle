@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>crawler 트래픽과 서버의 방어</title>
+<link rel="stylesheet" href="https://benjohnbill.github.io/assets/site.css">
+<style>
+/* type and boxes follow DESIGN.md; shapes copied from t3-restart-sigpipe.html and debug-panic-exit.html */
+/* voice: headings and .lead stay telegraphic (DESIGN.md); body prose is 평서체, to match the summary boxes and the site (operator decided 2026-11-24) */
+html { font-size: 19px; }
+body { font-size: 1rem; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-family: var(--font-head); font-size: 1.95rem; line-height: 1.25; margin: 12px 0 4px; }
+
+h2 { font-family: var(--font-head); font-size: 1.56rem; line-height: 1.35; margin: 64px 0 14px; }
+
+.sub { color: var(--ink-2); margin: 0 0 16px; }
+.lead { font-size: 1.1rem; line-height: 1.75; margin: 0 0 14px; }
+p { margin: 14px 0 0; }
+ul { margin: 10px 0 0; padding-left: 1.3em; }
+li + li { margin-top: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; line-height: 1.65; border: 1px solid var(--line); margin-top: 16px; }
+th, td { border-bottom: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+.scroll { overflow-x: auto; }
+.ln { display: block; }
+.ln + .ln { margin-top: 6px; }
+blockquote { margin: 14px 0 0; padding: 2px 0 2px 16px; border-left: 3px solid var(--line); }
+
+/* source label: the link to the source, and how far the research read it */
+.src { font: 500 .68rem/1 var(--font-code); padding: 3px 6px; border-radius: 3px; text-decoration: none; white-space: nowrap; vertical-align: .12em; }
+.src.p { background: var(--s2-soft); color: var(--s2); }
+.src.s { background: var(--s4-soft); color: var(--s4); }
+.src.u { background: var(--surface-2); color: var(--muted); }
+.src:hover { text-decoration: underline; }
+/* unverified facts: gray text plus the unverified label (operator choice 3) */
+.unv { color: var(--muted); }
+
+/* diagrams: hand-written SVG from diagrams.py; colors are site tokens only,
+   so light and dark both work. One system for all: nodes rx 6 with a 1px
+   stroke; arrows are orthogonal with one marker set; arrow labels sit on a
+   paper mask. Sizes are viewBox units.
+   Color marks meaning only (DESIGN.md section 2), two meanings in all 25:
+   s1 = the crawler's path and where it ends (blocked, or a cost to the
+   server); s2 = the path that passes or is served cheaply. Everything else
+   is neutral: the focal node is an ink line on the one fill level, a plan
+   is a dashed gray line, and all text is ink or ink-2. */
+/* a figure on its own gets the panel line of .summary (box rule 1); inside a
+   card it stays bare. On a phone the frame would push SVG text under 11px, so
+   it drops there. */
+.wrap > .dgf, .wrap > .dg2 { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
+.wrap > .dgf svg.dg, .wrap > .dg2 svg.dg { margin: 0 auto; }
+@media (max-width: 620px) { .wrap > .dgf, .wrap > .dg2 { border: 0; padding: 0; } }
+.dgf { margin: 18px 0 0; }
+.dg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 620px) { .dg2 { grid-template-columns: 1fr; gap: 0; } }
+svg.dg { display: block; width: 100%; height: auto; font-size: 13px; }
+.dg text { font-family: var(--font-body); fill: var(--ink); }
+.dg .b { font-weight: 600; }
+.dg .mono { font-family: var(--font-code); }
+.dg .t2 { fill: var(--ink-2); }
+.dg .tr, .dg text.r, .dg .tg, .dg text.g, .dg .tp { fill: var(--ink-2); }
+.dg rect.bx { fill: var(--bg); stroke: var(--muted); stroke-width: 1; }
+.dg rect.ink { fill: var(--bg); stroke: var(--ink); stroke-width: 1.25; }
+.dg rect.cell, .dg rect.lane, .dg rect.band { fill: var(--surface-2); stroke: none; }
+.dg rect.sel { fill: var(--surface-2); stroke: none; }
+.dg rect.hl { fill: var(--surface-2); stroke: var(--ink); stroke-width: 1.25; }
+.dg rect.ok { fill: var(--s2-soft); stroke: var(--s2-rail); stroke-width: 1; }
+.dg rect.okf { fill: var(--s2-rail); stroke: none; }
+.dg rect.ng { fill: var(--s1-soft); stroke: var(--s1-rail); stroke-width: 1; }
+.dg rect.ng2 { fill: var(--s1-soft); stroke: var(--s1); stroke-width: 2; }
+.dg rect.ev { fill: var(--bg); stroke: var(--s1-rail); stroke-width: 1; }
+.dg rect.plan { fill: var(--bg); stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 3; }
+.dg rect.trap { fill: var(--bg); stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 4 3; }
+.dg rect.zone { fill: none; stroke: var(--muted); stroke-width: 1; }
+.dg rect.mk { fill: var(--bg); }
+.dg rect.mk2 { fill: var(--surface-2); }
+.dg rect.drip { fill: var(--ink-2); }
+.dg .ln { stroke: var(--muted); stroke-width: 1.25; fill: none; }
+.dg .ah { fill: var(--muted); }
+.dg .ln.r { stroke: var(--s1); } .dg .ah.r { fill: var(--s1); }
+.dg .ln.g { stroke: var(--s2); } .dg .ah.g { fill: var(--s2); }
+.dg .ln.a { stroke: var(--ink-2); } .dg .ah.a { fill: var(--ink-2); }
+.dg .ln.p { stroke: var(--muted); stroke-dasharray: 5 3; } .dg .ah.p { fill: var(--muted); }
+.dg .ln.ret { stroke-dasharray: 5 4; }
+.dg .ln.fat { stroke-width: 5; }
+.dg .ln.dash { stroke-dasharray: 3 3; }
+.dg .rule { stroke: var(--line); stroke-width: 1; }
+.dg .life { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; }
+.dg .lim { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 5 3; }
+.dg .bucket { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
+.dg .tok { fill: var(--ink-2); }
+.dg a:hover rect, .dg a:focus-visible rect { stroke: var(--s2); stroke-width: 2; }
+.dg a:focus { outline: none; }
+
+/* links between the four crawler notes: the same quiet meta line as .home
+   (site.css: meta text uses the code slot) */
+.notes { display: flex; flex-wrap: wrap; gap: 0 14px; margin: 4px 0 0; font: 13px/1.8 var(--font-code); }
+.notes a { color: var(--muted); text-decoration: none; }
+.notes a:hover { color: var(--ink-2); text-decoration: underline; }
+.notes a[aria-current="page"] { color: var(--ink); }
+/* closing links, the shape of nav.links in l1-connection-setup.html */
+.pn { margin-top: 64px; font-size: .95rem; line-height: 2; }
+
+/* summary box at the top, copied from t2-echo-server.html: one outer line,
+   no fill (box rule 1); two sentences per row, each led by a bold label */
+.summary { border: 1px solid var(--line); border-radius: 4px; padding: 22px 24px; margin-top: 20px; }
+.summary table { margin-top: 0; }
+.summary td .ln + .ln { margin-top: 8px; }
+.summary td .ba { display: inline-block; min-width: 5.6em; font-family: var(--font-code); font-weight: 600; }
+.summary td:first-child { width: 34%; }
+</style>
+</head>
+<body>
+<main class="wrap">
+<a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
+<nav class="notes" aria-label="crawler 노트"><a href="00-overview.html" aria-current="page">한눈에 보기</a><a href="01-cost.html">01 비용</a><a href="02-history.html">02 역사</a><a href="03-layers.html">03 방어 layer</a><a href="04-reverse-proxy.html">04 우리 Reverse Proxy</a></nav>
+
+<h1>crawler 트래픽과 서버의 방어</h1>
+<p class="sub">crawler가 서버에 떠넘기는 부하와 대역폭, 1993년부터 2026년까지<br>서버가 쌓은 방어 layer와 crawler가 그것을 넘는 방식</p>
+
+<div class="summary">
+<div class="scroll">
+<table>
+<thead><tr><th>노트</th><th>요약</th></tr></thead>
+<tbody>
+<tr><td><a href="01-cost.html">01 비용</a></td><td><span class="ln">crawler 요청이 cache를 지나 upstream까지 가는 이유</span><span class="ln">운영자들의 청구서</span><span class="ln">crawl-to-refer ratio</span></td></tr>
+<tr><td><a href="02-history.html">02 역사</a></td><td><span class="ln">1993년부터 2026년까지 방어와 우회의 11 라운드</span><span class="ln">이야기 다섯 개</span><span class="ln">연표 63개</span></td></tr>
+<tr><td><a href="03-layers.html">03 방어 layer</a></td><td><span class="ln">방법 14개를 layer별 카드로</span><span class="ln">crawler 넷이 가상의 서버를 지나는 <a href="03-layers.html#walk-h">요청 따라가기</a></span></td></tr>
+<tr><td><a href="04-reverse-proxy.html">04 우리 Reverse Proxy</a></td><td><span class="ln">layer 여덟 개를 <code>rproxy</code>의 두 Verdict 단계로</span><span class="ln">Crawler script 10개의 <a href="04-reverse-proxy.html#arena">경기장</a></span></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<h2 id="layers">1. 요청이 지나는 layer</h2>
+<!--GEN:dg-layers--><figure class="dgf"><svg class="dg" id="dg-layers" viewBox="0 0 400 584" style="max-width:520px" role="img" aria-labelledby="dg-layers-title dg-layers-desc"><title id="dg-layers-title">요청이 지나는 layer</title><desc id="dg-layers-desc">요청 하나가 지나는 layer 여덟 개. 왼쪽은 crawler의 우회, 오른쪽은 서버의 방어</desc><defs><marker id="dg-layers-ah" viewBox="0 0 8 6" markerWidth="8" markerHeight="6" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path class="ah" d="M0 0L8 3L0 6z"/></marker></defs><line class="rule" x1="0" y1="80" x2="400" y2="80"/><line class="rule" x1="0" y1="136" x2="400" y2="136"/><line class="rule" x1="0" y1="192" x2="400" y2="192"/><line class="rule" x1="0" y1="248" x2="400" y2="248"/><line class="rule" x1="0" y1="304" x2="400" y2="304"/><line class="rule" x1="0" y1="360" x2="400" y2="360"/><line class="rule" x1="0" y1="416" x2="400" y2="416"/><line class="rule" x1="0" y1="472" x2="400" y2="472"/><line class="rule" x1="0" y1="528" x2="400" y2="528"/><text x="64" y="18.0" text-anchor="middle" class="b tr" font-size="12.5">crawler의 우회</text><text x="200" y="18.0" text-anchor="middle" class="b" font-size="12.5">요청이 지나는 layer</text><text x="336" y="18.0" text-anchor="middle" class="b" font-size="12.5">서버의 방어</text><path class="ln" d="M200 60 L200 88" marker-end="url(#dg-layers-ah)"/><path class="ln" d="M200 128 L200 144" marker-end="url(#dg-layers-ah)"/><path class="ln" d="M200 184 L200 200" marker-end="url(#dg-layers-ah)"/><path class="ln" d="M200 240 L200 256" marker-end="url(#dg-layers-ah)"/><path class="ln" d="M200 296 L200 312" marker-end="url(#dg-layers-ah)"/><path class="ln" d="M200 352 L200 368" marker-end="url(#dg-layers-ah)"/><path class="ln" d="M200 408 L200 424" marker-end="url(#dg-layers-ah)"/><path class="ln" d="M200 464 L200 480" marker-end="url(#dg-layers-ah)"/><path class="ln" d="M200 520 L200 548" marker-end="url(#dg-layers-ah)"/><rect class="bx" x="148" y="28" width="104" height="32" rx="6" fill="none" stroke="currentColor"/><text x="200" y="48.5" text-anchor="middle" class="b" font-size="13">client 요청</text><a href="03-layers.html#m-ip"><rect class="bx" x="136" y="88" width="128" height="40" rx="6" fill="none" stroke="currentColor"/><text x="200" y="112.5" text-anchor="middle" class="b" font-size="13">IP, 네트워크</text></a><text x="64" y="104.4" text-anchor="middle" class="tr" font-size="12.5">residential</text><text x="64" y="120.4" text-anchor="middle" class="tr" font-size="12.5">proxy</text><text x="336" y="112.4" text-anchor="middle" font-size="12.5">IP, ASN 차단</text><a href="03-layers.html#m-tls"><rect class="bx" x="136" y="144" width="128" height="40" rx="6" fill="none" stroke="currentColor"/><text x="200" y="168.6" text-anchor="middle" class="b" font-size="13">TLS fingerprint</text></a><text x="64" y="160.4" text-anchor="middle" class="tr" font-size="12.5">browser</text><text x="64" y="176.4" text-anchor="middle" class="tr" font-size="12.5">handshake 복제</text><text x="336" y="168.4" text-anchor="middle" font-size="12.5">JA4 비교</text><a href="03-layers.html#m-ua"><rect class="bx" x="136" y="200" width="128" height="40" rx="6" fill="none" stroke="currentColor"/><text x="200" y="224.6" text-anchor="middle" class="b" font-size="13">HTTP header</text></a><text x="64" y="216.4" text-anchor="middle" class="tr" font-size="12.5">browser인 척 UA,</text><text x="64" y="232.4" text-anchor="middle" class="tr" font-size="12.5">robots.txt 무시</text><text x="336" y="216.4" text-anchor="middle" font-size="12.5">User-Agent 표,</text><text x="336" y="232.4" text-anchor="middle" font-size="12.5">robots.txt 부탁</text><a href="03-layers.html#m-rate"><rect class="bx" x="136" y="256" width="128" height="40" rx="6" fill="none" stroke="currentColor"/><text x="200" y="280.6" text-anchor="middle" class="b" font-size="13">양과 행동</text></a><text x="64" y="272.4" text-anchor="middle" class="tr" font-size="12.5">IP 수만 개에</text><text x="64" y="288.4" text-anchor="middle" class="tr" font-size="12.5">나눠 보냄</text><text x="336" y="272.4" text-anchor="middle" font-size="12.5">rate limit,</text><text x="336" y="288.4" text-anchor="middle" font-size="12.5">행동 카운터</text><a href="03-layers.html#m-pow"><rect class="bx" x="136" y="312" width="128" height="40" rx="6" fill="none" stroke="currentColor"/><text x="200" y="336.6" text-anchor="middle" class="b" font-size="13">시험</text></a><text x="64" y="328.4" text-anchor="middle" class="tr" font-size="12.5">headless browser,</text><text x="64" y="344.4" text-anchor="middle" class="tr" font-size="12.5">풀이 서비스</text><text x="336" y="328.4" text-anchor="middle" font-size="12.5">proof of work,</text><text x="336" y="344.4" text-anchor="middle" font-size="12.5">CAPTCHA</text><a href="03-layers.html#m-tarpit"><rect class="bx" x="136" y="368" width="128" height="40" rx="6" fill="none" stroke="currentColor"/><text x="200" y="392.6" text-anchor="middle" class="b" font-size="13">함정</text></a><text x="64" y="384.4" text-anchor="middle" class="tr" font-size="12.5">깊이 제한,</text><text x="64" y="400.4" text-anchor="middle" class="tr" font-size="12.5">숨은 링크 건너뜀</text><text x="336" y="384.4" text-anchor="middle" font-size="12.5">tarpit,</text><text x="336" y="400.4" text-anchor="middle" font-size="12.5">honeypot</text><a href="03-layers.html#m-pay"><rect class="hl" x="136" y="424" width="128" height="40" rx="6" fill="none" stroke="currentColor"/><text x="200" y="448.6" text-anchor="middle" class="b" font-size="13">거래</text></a><text x="64" y="440.4" text-anchor="middle" class="tr" font-size="12.5">서명 안 함,</text><text x="64" y="456.4" text-anchor="middle" class="tr" font-size="12.5">이름 숨김</text><text x="336" y="440.4" text-anchor="middle" font-size="12.5">402 요금,</text><text x="336" y="456.4" text-anchor="middle" font-size="12.5">Web Bot Auth</text><a href="03-layers.html#m-cache"><rect class="bx" x="136" y="480" width="128" height="40" rx="6" fill="none" stroke="currentColor"/><text x="200" y="504.6" text-anchor="middle" class="b" font-size="13">cache</text></a><text x="64" y="496.4" text-anchor="middle" class="tr" font-size="12.5">드문 페이지로</text><text x="64" y="512.4" text-anchor="middle" class="tr" font-size="12.5">cache miss</text><text x="336" y="504.4" text-anchor="middle" font-size="12.5">hit면 바로 응답</text><rect class="ink" x="148" y="548" width="104" height="32" rx="6" fill="none" stroke="currentColor"/><text x="200" y="568.5" text-anchor="middle" class="b" font-size="13">origin</text></svg></figure><!--/GEN:dg-layers-->
+<p>가운데 칸을 누르면 <a href="03-layers.html">03 방어 layer</a>의 카드로 간다. layer마다 crawler는 그 질문에 맞는 속성을 갖춰 넘어오고, 어느 layer도 crawler를 멈추지 못한다. 그래서 마지막 layer는 "누구이고, 누가 값을 내는가"를 묻는다. 이 정리는 리서치 파일의 해석이다.</p>
+
+<h2 id="src-note">2. 출처 등급에 대해</h2>
+<p>이 노트들은 Claude(Anthropic의 AI)가 리서치 파일 세 개만 보고 썼다. 숫자와 날짜마다 출처 링크와 등급을 붙였다. <span class="src p">primary</span>는 당사자의 원문을 읽은 것, <span class="src s">secondary</span>는 보도나 요약만 읽은 것, <span class="src u">unverified</span>는 확인하지 못한 것이고, unverified인 문장은 회색으로 적었다. 누군가를 비판하는 주장에는 같은 모양의 칸에 그 상대의 응답을 붙였고, 기록된 응답이 없으면 "응답 기록 없음"이라고 적었다.</p>
+<p>이 노트들의 사실은 2026년 11월 24일에 만든 리서치 파일 세 개(역사, 방어, 우회와 비용)에서만 가져왔다. 등급은 그 파일이 붙인 것을 그대로 옮겼다. 같은 사실에 두 파일이 다른 등급을 붙였으면 그 문장을 가져온 파일의 등급을 따랐다. Cloudflare, Fastly, Akamai, Imperva의 숫자는 각 업체가 자기 고객의 트래픽을 잰 것이고, 독립적으로 검증되지 않았다. 예외는 03 방어 layer의 우리 서버 칸이다. 그 칸은 리서치 파일이 아니라 mini-webserver CJG 브랜치의 코드와 ADR을 보고 적었다.</p>
+
+<nav class="pn" aria-label="이전, 다음 노트">다음: <a href="01-cost.html">01 비용</a></nav>
+</main>
+</body>
+</html>

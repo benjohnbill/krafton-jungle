@@ -199,21 +199,205 @@ dl.notable strong { display: inline-block; min-width: 3.5em; font-family: var(--
 <nav class="notes" aria-label="짝 노트">짝: <a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html">rproxy 요구분석</a></nav>
 
 <h1>rproxy 측정: 방어마다 아끼는 비용과 옮기는 비용</h1>
-<p class="sub">rate limit만 쓰면 Origin의 비용이 rproxy로 옮겨감<br>429를 반복해 받는 IP를 Block table에 올리면 그 비용도 사라짐<br>drop과 tarpit은 rproxy의 비용까지 줄임</p>
+<p class="sub">rate limit에 Block table을 더하면 Origin과 rproxy를 함께 아낌<br>drop과 tarpit은 rproxy의 비용까지 줄임<br>진짜 사용자는 어느 Scene에서도 막히지 않음</p>
 
-<h2 id="run-20261124-block">1. 2026-11-24: 429를 반복해 받는 IP를 Block table에</h2>
+<h2 id="run-20261124-current">1. 2026-11-24: Event loop, 방어 전부, 429 반복 IP는 Block table로</h2>
+<table>
+<thead><tr><th>항목</th><th>내용</th></tr></thead>
+<tbody>
+<tr><td>코드</td><td><span class="ln"><code>CJG</code> <code>77200d7</code> (CPU core마다 Event loop 하나)</span><span class="ln">window 안에 429를 5번 받은 IP가 또 한도를 넘으면 Block table에 올림 (<code>--rate-key ip</code>일 때만)</span><span class="ln">keep-alive 없음: client 연결 하나에 요청 하나</span></td></tr>
+<tr><td>비교</td><td><code>none</code> → <code>layers</code> preset, Crawler script 하나와 <code>human.py</code>를 나란히 10초</td></tr>
+<tr><td>잰 것</td><td><span class="ln">Origin이 보낸 MiB</span><span class="ln"><code>rproxy</code>와 Origin의 CPU 초 (<code>/proc/&lt;pid&gt;/stat</code>)</span><span class="ln">client마다 보낸 요청 수, 초당 응답, p95</span></td></tr>
+<tr><td>반복</td><td>Crawler script 10개 × 3회, 중앙값 <a class="src p" href="https://github.com/benjohnbill/mini-webserver/blob/294126e/docs/measurements/20261124-arena-layers-slowblock-all.md">primary</a></td></tr>
+<tr><td>읽는 법</td><td>client와 서버가 같은 PC에서 돌아서 client가 서버의 CPU를 나눠 씀. 절대값보다 비율로 읽음</td></tr>
+</tbody>
+</table>
+
+<h3 id="rate-limit">rate limit과 Block table: Origin도 rproxy도 아낌</h3>
+<!--GEN:m-rl-mib--><figure class="dgf"><svg class="dg" id="m-rl-mib" viewBox="0 0 400 232" style="max-width:560px" role="img" aria-labelledby="m-rl-mib-title m-rl-mib-desc"><title id="m-rl-mib-title">rate limit: Origin이 보낸 MiB</title><desc id="m-rl-mib-desc">repeat, revalidate, longtail. 로그 눈금</desc>
+<rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="ok" x="192" y="4" width="20" height="12" rx="2"/><text x="218" y="14.5" font-size="12">layers</text>
+<line class="rule" x1="92.0" y1="32" x2="92.0" y2="204"/><text x="92.0" y="220" text-anchor="middle" class="t2" font-size="12">0.10</text>
+<line class="rule" x1="139.6" y1="32" x2="139.6" y2="204"/><text x="139.6" y="220" text-anchor="middle" class="t2" font-size="12">1.0</text>
+<line class="rule" x1="187.2" y1="32" x2="187.2" y2="204"/><text x="187.2" y="220" text-anchor="middle" class="t2" font-size="12">10</text>
+<line class="rule" x1="234.8" y1="32" x2="234.8" y2="204"/><text x="234.8" y="220" text-anchor="middle" class="t2" font-size="12">100</text>
+<line class="rule" x1="282.4" y1="32" x2="282.4" y2="204"/><text x="282.4" y="220" text-anchor="middle" class="t2" font-size="12">1000</text>
+<line class="rule" x1="330.0" y1="32" x2="330.0" y2="204"/><text x="330.0" y="220" text-anchor="middle" class="t2" font-size="12">10000</text>
+<text x="0" y="220" class="t2" font-size="12">MiB, 로그</text>
+<text x="0" y="60.5" class="b mono" font-size="12">repeat</text>
+<text x="0" y="76" class="t2" font-size="11">× 1/584</text>
+<rect class="ng" x="92" y="40" width="222.3" height="16" rx="2"/><text x="320.3" y="52" class="mono" font-size="12">4672</text>
+<rect class="ok" x="92" y="60" width="90.6" height="16" rx="2"/><text x="188.6" y="72" class="mono" font-size="12">8.0</text>
+<text x="0" y="116.5" class="b mono" font-size="12">revalidate</text>
+<text x="0" y="132" class="t2" font-size="11">× 1/605</text>
+<rect class="ng" x="92" y="96" width="223.0" height="16" rx="2"/><text x="321.0" y="108" class="mono" font-size="12">4842</text>
+<rect class="ok" x="92" y="116" width="90.6" height="16" rx="2"/><text x="188.6" y="128" class="mono" font-size="12">8.0</text>
+<text x="0" y="172.5" class="b mono" font-size="12">longtail</text>
+<text x="0" y="188" class="t2" font-size="11">× 1/785</text>
+<rect class="ng" x="92" y="152" width="166.4" height="16" rx="2"/><text x="264.4" y="164" class="mono" font-size="12">314</text>
+<rect class="ok" x="92" y="172" width="28.7" height="16" rx="2"/><text x="126.7" y="184" class="mono" font-size="12">0.40</text>
+</svg></figure><!--/GEN:m-rl-mib-->
+<!--GEN:m-rl-cpu--><figure class="dgf"><svg class="dg" id="m-rl-cpu" viewBox="0 0 400 368" style="max-width:560px" role="img" aria-labelledby="m-rl-cpu-title m-rl-cpu-desc"><title id="m-rl-cpu-title">rate limit: rproxy의 CPU 초</title><desc id="m-rl-cpu-desc">none, Block table 추가 전 layers, 지금 layers. 비율은 none 대비 지금 layers</desc>
+<rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="bx" x="192" y="4" width="20" height="12" rx="2"/><text x="218" y="14.5" font-size="12">추가 전</text><rect class="ok" x="292" y="4" width="20" height="12" rx="2"/><text x="318" y="14.5" font-size="12">지금 layers</text>
+<line class="rule" x1="92.0" y1="32" x2="92.0" y2="340"/><text x="92.0" y="356" text-anchor="middle" class="t2" font-size="12">0</text>
+<line class="rule" x1="151.5" y1="32" x2="151.5" y2="340"/><text x="151.5" y="356" text-anchor="middle" class="t2" font-size="12">5</text>
+<line class="rule" x1="211.0" y1="32" x2="211.0" y2="340"/><text x="211.0" y="356" text-anchor="middle" class="t2" font-size="12">10</text>
+<line class="rule" x1="270.5" y1="32" x2="270.5" y2="340"/><text x="270.5" y="356" text-anchor="middle" class="t2" font-size="12">15</text>
+<line class="rule" x1="330.0" y1="32" x2="330.0" y2="340"/><text x="330.0" y="356" text-anchor="middle" class="t2" font-size="12">20</text>
+<text x="0" y="356" class="t2" font-size="12">CPU s</text>
+<text x="0" y="60.5" class="b mono" font-size="12">longtail</text>
+<text x="0" y="76" class="t2" font-size="11">× 0.90</text>
+<rect class="ng" x="92" y="40" width="50.2" height="16" rx="2"/><text x="148.2" y="52" class="mono" font-size="12">4.2</text>
+<rect class="bx" x="92" y="60" width="189.7" height="16" rx="2"/><text x="287.7" y="72" class="mono" font-size="12">15.9</text>
+<rect class="ok" x="92" y="80" width="45.3" height="16" rx="2"/><text x="143.3" y="92" class="mono" font-size="12">3.8</text>
+<text x="0" y="136.5" class="b mono" font-size="12">solver</text>
+<text x="0" y="152" class="t2" font-size="11">× 0.42</text>
+<rect class="ng" x="92" y="116" width="63.3" height="16" rx="2"/><text x="161.3" y="128" class="mono" font-size="12">5.3</text>
+<rect class="bx" x="92" y="136" width="189.3" height="16" rx="2"/><text x="287.3" y="148" class="mono" font-size="12">15.9</text>
+<rect class="ok" x="92" y="156" width="26.4" height="16" rx="2"/><text x="124.4" y="168" class="mono" font-size="12">2.2</text>
+<text x="0" y="212.5" class="b mono" font-size="12">repeat</text>
+<text x="0" y="228" class="t2" font-size="11">× 0.40</text>
+<rect class="ng" x="92" y="192" width="101.0" height="16" rx="2"/><text x="199.0" y="204" class="mono" font-size="12">8.5</text>
+<rect class="bx" x="92" y="212" width="137.0" height="16" rx="2"/><text x="235.0" y="224" class="mono" font-size="12">11.5</text>
+<rect class="ok" x="92" y="232" width="40.2" height="16" rx="2"/><text x="138.2" y="244" class="mono" font-size="12">3.4</text>
+<text x="0" y="288.5" class="b mono" font-size="12">revalidate</text>
+<text x="0" y="304" class="t2" font-size="11">× 0.42</text>
+<rect class="ng" x="92" y="268" width="95.7" height="16" rx="2"/><text x="193.7" y="280" class="mono" font-size="12">8.0</text>
+<rect class="bx" x="92" y="288" width="135.1" height="16" rx="2"/><text x="233.1" y="300" class="mono" font-size="12">11.3</text>
+<rect class="ok" x="92" y="308" width="40.6" height="16" rx="2"/><text x="138.6" y="320" class="mono" font-size="12">3.4</text>
+</svg></figure><!--/GEN:m-rl-cpu-->
+<!--GEN:m-rl-req--><figure class="dgf"><svg class="dg" id="m-rl-req" viewBox="0 0 400 288" style="max-width:560px" role="img" aria-labelledby="m-rl-req-title m-rl-req-desc"><title id="m-rl-req-title">rate limit: crawler가 보낸 요청 수</title><desc id="m-rl-req-desc">drop이 빨리 끝나서 요청이 늘어난다</desc>
+<rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="ok" x="192" y="4" width="20" height="12" rx="2"/><text x="218" y="14.5" font-size="12">layers</text>
+<line class="rule" x1="92.0" y1="32" x2="92.0" y2="260"/><text x="92.0" y="276" text-anchor="middle" class="t2" font-size="12">0</text>
+<line class="rule" x1="151.5" y1="32" x2="151.5" y2="260"/><text x="151.5" y="276" text-anchor="middle" class="t2" font-size="12">5000</text>
+<line class="rule" x1="211.0" y1="32" x2="211.0" y2="260"/><text x="211.0" y="276" text-anchor="middle" class="t2" font-size="12">10000</text>
+<line class="rule" x1="270.5" y1="32" x2="270.5" y2="260"/><text x="270.5" y="276" text-anchor="middle" class="t2" font-size="12">15000</text>
+<line class="rule" x1="330.0" y1="32" x2="330.0" y2="260"/><text x="330.0" y="276" text-anchor="middle" class="t2" font-size="12">20000</text>
+<text x="0" y="276" class="t2" font-size="12">요청 수</text>
+<text x="0" y="60.5" class="b mono" font-size="12">longtail</text>
+<text x="0" y="76" class="t2" font-size="11">× 3.82</text>
+<rect class="ng" x="92" y="40" width="44.9" height="16" rx="2"/><text x="142.9" y="52" class="mono" font-size="12">3770</text>
+<rect class="ok" x="92" y="60" width="171.5" height="16" rx="2"/><text x="269.5" y="72" class="mono" font-size="12">14410</text>
+<text x="0" y="116.5" class="b mono" font-size="12">solver</text>
+<text x="0" y="132" class="t2" font-size="11">× 6.41</text>
+<rect class="ng" x="92" y="96" width="33.3" height="16" rx="2"/><text x="131.3" y="108" class="mono" font-size="12">2801</text>
+<rect class="ok" x="92" y="116" width="213.5" height="16" rx="2"/><text x="311.5" y="128" class="mono" font-size="12">17941</text>
+<text x="0" y="172.5" class="b mono" font-size="12">repeat</text>
+<text x="0" y="188" class="t2" font-size="11">× 7.90</text>
+<rect class="ng" x="92" y="152" width="27.6" height="16" rx="2"/><text x="125.6" y="164" class="mono" font-size="12">2320</text>
+<rect class="ok" x="92" y="172" width="218.1" height="16" rx="2"/><text x="316.1" y="184" class="mono" font-size="12">18330</text>
+<text x="0" y="228.5" class="b mono" font-size="12">revalidate</text>
+<text x="0" y="244" class="t2" font-size="11">× 7.96</text>
+<rect class="ng" x="92" y="208" width="28.6" height="16" rx="2"/><text x="126.6" y="220" class="mono" font-size="12">2404</text>
+<rect class="ok" x="92" y="228" width="227.8" height="16" rx="2"/><text x="325.8" y="240" class="mono" font-size="12">19144</text>
+</svg></figure><!--/GEN:m-rl-req-->
+<dl class="notable">
+<dt>Origin</dt><dd><span class="ln"><strong>왜</strong> Origin MiB가 1/584 ~ 1/785, Origin CPU는 약 0</span><span class="ln"><strong>어떻게</strong> IP마다 burst 10번만 통과(④). <code>repeat</code>, <code>revalidate</code>는 그중 6번을 cache와 304가 답함(⑤)</span></dd>
+<dt>rproxy</dt><dd><span class="ln"><strong>왜</strong> <code>rproxy</code> CPU가 none의 0.4 ~ 0.9배. Block table 추가 전에는 1.3 ~ 3배였음</span><span class="ln"><strong>어떻게</strong> 429를 약 8번 받은 뒤 Block table에 올라 나머지 연결은 ②에서 drop: TLS 서명 없음</span></dd>
+<dt>crawler</dt><dd><span class="ln"><strong>왜</strong> 요청 수가 none의 3.8 ~ 8배</span><span class="ln"><strong>어떻게</strong> drop은 TLS 전에 끝나서 crawler가 더 빨리 다음 요청을 보냄. 거의 전부 drop이라 CPU는 그래도 줄어듦</span></dd>
+</dl>
+
+<h3 id="drop">drop: rproxy까지 아낌</h3>
+<!--GEN:m-drop-cpu--><figure class="dgf"><svg class="dg" id="m-drop-cpu" viewBox="0 0 400 176" style="max-width:560px" role="img" aria-labelledby="m-drop-cpu-title m-drop-cpu-desc"><title id="m-drop-cpu-title">drop: rproxy의 CPU 초</title><desc id="m-drop-cpu-desc">spread와 trapped</desc>
+<rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="ok" x="192" y="4" width="20" height="12" rx="2"/><text x="218" y="14.5" font-size="12">layers</text>
+<line class="rule" x1="92.0" y1="32" x2="92.0" y2="148"/><text x="92.0" y="164" text-anchor="middle" class="t2" font-size="12">0</text>
+<line class="rule" x1="151.5" y1="32" x2="151.5" y2="148"/><text x="151.5" y="164" text-anchor="middle" class="t2" font-size="12">5</text>
+<line class="rule" x1="211.0" y1="32" x2="211.0" y2="148"/><text x="211.0" y="164" text-anchor="middle" class="t2" font-size="12">10</text>
+<line class="rule" x1="270.5" y1="32" x2="270.5" y2="148"/><text x="270.5" y="164" text-anchor="middle" class="t2" font-size="12">15</text>
+<line class="rule" x1="330.0" y1="32" x2="330.0" y2="148"/><text x="330.0" y="164" text-anchor="middle" class="t2" font-size="12">20</text>
+<text x="0" y="164" class="t2" font-size="12">CPU s</text>
+<text x="0" y="60.5" class="b mono" font-size="12">spread</text>
+<text x="0" y="76" class="t2" font-size="11">× 0.71</text>
+<rect class="ng" x="92" y="40" width="185.9" height="16" rx="2"/><text x="283.9" y="52" class="mono" font-size="12">15.6</text>
+<rect class="ok" x="92" y="60" width="132.2" height="16" rx="2"/><text x="230.2" y="72" class="mono" font-size="12">11.1</text>
+<text x="0" y="116.5" class="b mono" font-size="12">trapped</text>
+<text x="0" y="132" class="t2" font-size="11">× 1.05</text>
+<rect class="ng" x="92" y="96" width="10.1" height="16" rx="2"/><text x="108.1" y="108" class="mono" font-size="12">0.85</text>
+<rect class="ok" x="92" y="116" width="10.6" height="16" rx="2"/><text x="108.6" y="128" class="mono" font-size="12">0.89</text>
+</svg></figure><!--/GEN:m-drop-cpu-->
+<dl class="notable">
+<dt><code>spread</code></dt><dd><span class="ln"><strong>왜</strong> <code>rproxy</code> CPU 15.6 → 11.1 s</span><span class="ln"><strong>어떻게</strong> 주소 32개 중 16개가 Block list에 걸려 ②에서 drop: TLS 서명 없음</span></dd>
+<dt><code>trapped</code></dt><dd><span class="ln"><strong>왜</strong> <code>rproxy</code> CPU 0.85 → 0.89 s로 차이 없음</span><span class="ln"><strong>어떻게</strong> Honeypot과 Block table은 <code>none</code>에서도 켜져 있음. 두 preset 모두 Honeypot 한 번 뒤 연결 약 5800개가 ②에서 drop</span></dd>
+</dl>
+
+<h3 id="tarpit">tarpit: crawler의 발을 묶음</h3>
+<!--GEN:m-tarpit--><figure class="dgf"><svg class="dg" id="m-tarpit" viewBox="0 0 400 176" style="max-width:560px" role="img" aria-labelledby="m-tarpit-title m-tarpit-desc"><title id="m-tarpit-title">tarpit: disguised</title><desc id="m-tarpit-desc">rproxy CPU와 Origin MiB</desc>
+<rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="ok" x="192" y="4" width="20" height="12" rx="2"/><text x="218" y="14.5" font-size="12">layers</text>
+<line class="rule" x1="92.0" y1="32" x2="92.0" y2="148"/><text x="92.0" y="164" text-anchor="middle" class="t2" font-size="12">0.10</text>
+<line class="rule" x1="151.5" y1="32" x2="151.5" y2="148"/><text x="151.5" y="164" text-anchor="middle" class="t2" font-size="12">1.0</text>
+<line class="rule" x1="211.0" y1="32" x2="211.0" y2="148"/><text x="211.0" y="164" text-anchor="middle" class="t2" font-size="12">10</text>
+<line class="rule" x1="270.5" y1="32" x2="270.5" y2="148"/><text x="270.5" y="164" text-anchor="middle" class="t2" font-size="12">100</text>
+<line class="rule" x1="330.0" y1="32" x2="330.0" y2="148"/><text x="330.0" y="164" text-anchor="middle" class="t2" font-size="12">1000</text>
+<text x="0" y="164" class="t2" font-size="12">로그</text>
+<text x="0" y="60.5" class="b mono" font-size="12">CPU s</text>
+<text x="0" y="76" class="t2" font-size="11">× 1/52</text>
+<rect class="ng" x="92" y="40" width="99.6" height="16" rx="2"/><text x="197.6" y="52" class="mono" font-size="12">4.7</text>
+<text x="98" y="72" class="t2" font-size="12">0</text>
+<text x="0" y="116.5" class="b mono" font-size="12">MiB</text>
+<text x="0" y="132" class="t2" font-size="11">× 0</text>
+<rect class="ng" x="92" y="96" width="208.2" height="16" rx="2"/><text x="306.2" y="108" class="mono" font-size="12">315</text>
+<text x="98" y="128" class="t2" font-size="12">0</text>
+</svg></figure><!--/GEN:m-tarpit-->
+<dl class="notable">
+<dt><code>disguised</code></dt><dd><span class="ln"><strong>왜</strong> <code>rproxy</code> CPU 4.7 → 0.09 s, Origin MiB 315 → 0</span><span class="ln"><strong>어떻게</strong> User-Agent와 JA4가 어긋나서 tarpit(④). 연결이 붙잡히니 crawler가 새 요청을 못 보냄. Event loop의 timer라 thread는 쥐지 않음</span></dd>
+</dl>
+
+<h3 id="users">사용자: 진짜 사용자와 착한 bot</h3>
+<!--GEN:m-human--><figure class="dgf"><svg class="dg" id="m-human" viewBox="0 0 400 400" style="max-width:560px" role="img" aria-labelledby="m-human-title m-human-desc"><title id="m-human-title">진짜 사용자: human.py의 p95</title><desc id="m-human-desc">Scene마다 none과 layers</desc>
+<rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="ok" x="192" y="4" width="20" height="12" rx="2"/><text x="218" y="14.5" font-size="12">layers</text>
+<line class="rule" x1="92.0" y1="32" x2="92.0" y2="372"/><text x="92.0" y="388" text-anchor="middle" class="t2" font-size="12">0</text>
+<line class="rule" x1="151.5" y1="32" x2="151.5" y2="372"/><text x="151.5" y="388" text-anchor="middle" class="t2" font-size="12">10</text>
+<line class="rule" x1="211.0" y1="32" x2="211.0" y2="372"/><text x="211.0" y="388" text-anchor="middle" class="t2" font-size="12">20</text>
+<line class="rule" x1="270.5" y1="32" x2="270.5" y2="372"/><text x="270.5" y="388" text-anchor="middle" class="t2" font-size="12">30</text>
+<line class="rule" x1="330.0" y1="32" x2="330.0" y2="372"/><text x="330.0" y="388" text-anchor="middle" class="t2" font-size="12">40</text>
+<text x="0" y="388" class="t2" font-size="12">p95 ms</text>
+<text x="0" y="60.5" class="b mono" font-size="12">repeat</text>
+<rect class="ng" x="92" y="40" width="101.1" height="16" rx="2"/><text x="199.1" y="52" class="mono" font-size="12">17</text>
+<rect class="ok" x="92" y="60" width="95.2" height="16" rx="2"/><text x="193.2" y="72" class="mono" font-size="12">16</text>
+<text x="0" y="116.5" class="b mono" font-size="12">longtail</text>
+<rect class="ng" x="92" y="96" width="184.5" height="16" rx="2"/><text x="282.5" y="108" class="mono" font-size="12">31</text>
+<rect class="ok" x="92" y="116" width="113.0" height="16" rx="2"/><text x="211.1" y="128" class="mono" font-size="12">19</text>
+<text x="0" y="172.5" class="b mono" font-size="12">disguised</text>
+<rect class="ng" x="92" y="152" width="178.5" height="16" rx="2"/><text x="276.5" y="164" class="mono" font-size="12">30</text>
+<rect class="ok" x="92" y="172" width="89.2" height="16" rx="2"/><text x="187.2" y="184" class="mono" font-size="12">15</text>
+<text x="0" y="228.5" class="b mono" font-size="12">spread</text>
+<rect class="ng" x="92" y="208" width="119.0" height="16" rx="2"/><text x="217.0" y="220" class="mono" font-size="12">20</text>
+<rect class="ok" x="92" y="228" width="107.1" height="16" rx="2"/><text x="205.1" y="240" class="mono" font-size="12">18</text>
+<text x="0" y="284.5" class="b mono" font-size="12">solver</text>
+<rect class="ng" x="92" y="264" width="101.1" height="16" rx="2"/><text x="199.1" y="276" class="mono" font-size="12">17</text>
+<rect class="ok" x="92" y="284" width="83.3" height="16" rx="2"/><text x="181.3" y="296" class="mono" font-size="12">14</text>
+<text x="0" y="340.5" class="b mono" font-size="12">signed</text>
+<rect class="ng" x="92" y="320" width="107.1" height="16" rx="2"/><text x="205.1" y="332" class="mono" font-size="12">18</text>
+<rect class="ok" x="92" y="340" width="125.0" height="16" rx="2"/><text x="222.9" y="352" class="mono" font-size="12">21</text>
+</svg></figure><!--/GEN:m-human-->
+<dl class="notable">
+<dt>진짜 사용자</dt><dd><span class="ln"><strong>왜</strong> 모든 Scene에서 <code>human.py</code>의 p95 14 ~ 21 ms, 초당 응답 2.6 ~ 3.6번: 오탐 없음</span><span class="ln"><strong>어떻게</strong> 사람은 429를 한 번도 받지 않아 Block table에 오르지 않음. 사람의 IP, JA4, 행동은 어느 규칙에도 맞지 않음</span></dd>
+<dt>착한 bot</dt><dd><span class="ln"><strong>왜</strong> <code>signed</code>의 Origin MiB 0 → 16.6: 의도한 증가</span><span class="ln"><strong>어떻게</strong> 서명이 확인되어 통과(④). 2414번은 cache가 답함(⑤)</span></dd>
+</dl>
+
+<h2 id="open">2. 열린 질문</h2>
+<table>
+<thead><tr><th>질문</th><th>다룰 곳</th></tr></thead>
+<tbody>
+<tr><td><span class="ln">연결을 다시 써서 TLS 서명 횟수를 줄이면 무엇이 바뀌나 (keep-alive, session resumption)</span><span class="ln">rate limit 비용은 1절의 Block table로 해결함. keep-alive는 crawler의 비용도 함께 줄이고, 모든 Scene의 기준선을 바꿈</span></td><td>L3 HTTP ①: 양, L4 HTTP ②: 시험과 비용 비대칭</td></tr>
+</tbody>
+</table>
+
+<h2 id="past">3. 예전 측정</h2>
+<details class="fold" id="run-20261124-block"><summary><span>2026-11-24: Block table 추가 직후, Scene 4개만 (<code>1170ba3</code>), 3회. keep-alive 없음</span></summary>
+<div class="in">
+<p>429를 받던 Scene 넷만 다시 잰 중간 기록. 1절이 같은 코드로 Scene 10개를 모두 다시 재서 대신함.</p>
 <table>
 <thead><tr><th>항목</th><th>내용</th></tr></thead>
 <tbody>
 <tr><td>코드</td><td><code>CJG</code> <code>1170ba3</code>. window 안에 429를 5번 받은 IP가 또 한도를 넘으면 429와 함께 Block table에 올림 (<code>--rate-key ip</code>일 때만)</td></tr>
-<tr><td>비교</td><td>none, 이전 layers (<a href="#run-20261124">2절</a>), 지금 layers</td></tr>
+<tr><td>비교</td><td>none, 이전 layers (아래 <code>48bf7a0</code> 기록), 지금 layers</td></tr>
 <tr><td>Scene</td><td>429를 받던 넷: <code>repeat</code>, <code>longtail</code>, <code>revalidate</code>, <code>solver</code>. 나머지 여섯은 429를 받지 않아 2절 결과가 그대로 유효함</td></tr>
 <tr><td>반복</td><td>3회, 중앙값 <a class="src p" href="https://github.com/benjohnbill/mini-webserver/blob/1e271c7/docs/measurements/20261124-arena-layers-slowblock.md">primary</a></td></tr>
 </tbody>
 </table>
 
-<h3 id="block-cpu">rproxy CPU: rate limit이 옮긴 비용이 사라짐</h3>
-<!--GEN:m-blk-cpu--><figure class="dgf"><svg class="dg" id="m-blk-cpu" viewBox="0 0 400 368" style="max-width:560px" role="img" aria-labelledby="m-blk-cpu-title m-blk-cpu-desc"><title id="m-blk-cpu-title">429 반복 client를 Block table에: rproxy의 CPU 초</title><desc id="m-blk-cpu-desc">Scene마다 none, 이전 layers, 지금 layers. 비율은 이전 layers 대비 지금 layers</desc>
+<h3 id="block-cpu-v2">rproxy CPU: rate limit이 옮긴 비용이 사라짐</h3>
+<!--GEN:v2-blk-cpu--><figure class="dgf"><svg class="dg" id="v2-blk-cpu" viewBox="0 0 400 368" style="max-width:560px" role="img" aria-labelledby="v2-blk-cpu-title v2-blk-cpu-desc"><title id="v2-blk-cpu-title">429 반복 client를 Block table에: rproxy의 CPU 초</title><desc id="v2-blk-cpu-desc">Scene마다 none, 이전 layers, 지금 layers. 비율은 이전 layers 대비 지금 layers</desc>
 <rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="bx" x="192" y="4" width="20" height="12" rx="2"/><text x="218" y="14.5" font-size="12">이전 layers</text><rect class="ok" x="292" y="4" width="20" height="12" rx="2"/><text x="318" y="14.5" font-size="12">지금 layers</text>
 <line class="rule" x1="92.0" y1="32" x2="92.0" y2="340"/><text x="92.0" y="356" text-anchor="middle" class="t2" font-size="12">0</text>
 <line class="rule" x1="151.5" y1="32" x2="151.5" y2="340"/><text x="151.5" y="356" text-anchor="middle" class="t2" font-size="12">5.0</text>
@@ -241,8 +425,8 @@ dl.notable strong { display: inline-block; min-width: 3.5em; font-family: var(--
 <rect class="ng" x="92" y="268" width="125.7" height="16" rx="2"/><text x="223.7" y="280" class="mono" font-size="12">10.6</text>
 <rect class="bx" x="92" y="288" width="135.1" height="16" rx="2"/><text x="233.1" y="300" class="mono" font-size="12">11.3</text>
 <rect class="ok" x="92" y="308" width="40.5" height="16" rx="2"/><text x="138.5" y="320" class="mono" font-size="12">3.4</text>
-</svg></figure><!--/GEN:m-blk-cpu-->
-<!--GEN:m-blk-req--><figure class="dgf"><svg class="dg" id="m-blk-req" viewBox="0 0 400 288" style="max-width:560px" role="img" aria-labelledby="m-blk-req-title m-blk-req-desc"><title id="m-blk-req-title">429 반복 client를 Block table에: crawler가 보낸 요청 수</title><desc id="m-blk-req-desc">이전 layers와 지금 layers. 지금은 거의 전부 drop</desc>
+</svg></figure><!--/GEN:v2-blk-cpu-->
+<!--GEN:v2-blk-req--><figure class="dgf"><svg class="dg" id="v2-blk-req" viewBox="0 0 400 288" style="max-width:560px" role="img" aria-labelledby="v2-blk-req-title v2-blk-req-desc"><title id="v2-blk-req-title">429 반복 client를 Block table에: crawler가 보낸 요청 수</title><desc id="v2-blk-req-desc">이전 layers와 지금 layers. 지금은 거의 전부 drop</desc>
 <rect class="bx" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">이전 layers</text><rect class="ok" x="192" y="4" width="20" height="12" rx="2"/><text x="218" y="14.5" font-size="12">지금 layers</text>
 <line class="rule" x1="92.0" y1="32" x2="92.0" y2="260"/><text x="92.0" y="276" text-anchor="middle" class="t2" font-size="12">0</text>
 <line class="rule" x1="151.5" y1="32" x2="151.5" y2="260"/><text x="151.5" y="276" text-anchor="middle" class="t2" font-size="12">5000</text>
@@ -266,14 +450,16 @@ dl.notable strong { display: inline-block; min-width: 3.5em; font-family: var(--
 <text x="0" y="244" class="t2" font-size="11">× 1.35</text>
 <rect class="bx" x="92" y="208" width="108.3" height="16" rx="2"/><text x="206.3" y="220" class="mono" font-size="12">9100</text>
 <rect class="ok" x="92" y="228" width="146.1" height="16" rx="2"/><text x="244.1" y="240" class="mono" font-size="12">12280</text>
-</svg></figure><!--/GEN:m-blk-req-->
+</svg></figure><!--/GEN:v2-blk-req-->
 <dl class="notable">
 <dt>아낀 것</dt><dd><span class="ln"><strong>왜</strong> <code>rproxy</code> CPU가 이전 layers의 1/3 ~ 1/7, none보다도 낮음</span><span class="ln"><strong>어떻게</strong> burst 10번 통과, 429 약 8번 뒤 Block table에 올라 나머지 연결은 ②에서 drop: TLS 서명 없음</span></dd>
 <dt>늘어난 것</dt><dd><span class="ln"><strong>왜</strong> crawler 요청 수가 1.3 ~ 2.1배</span><span class="ln"><strong>어떻게</strong> drop은 429보다도 빨리 끝나서 crawler가 더 보냄. 그래도 요청 하나가 handshake 전에 끝나서 CPU는 줄어듦</span></dd>
 <dt>그대로인 것</dt><dd><span class="ln"><strong>왜</strong> Origin CPU 약 0, Origin MiB는 이전 layers와 같은 수준 (<code>repeat</code> 8.0)</span><span class="ln"><strong>어떻게</strong> <code>human.py</code>는 429를 한 번도 받지 않아 Block table에 오르지 않음. p95 16 ~ 31 ms</span></dd>
 </dl>
-
-<h2 id="run-20261124">2. 2026-11-24: Event loop, 방어 전부</h2>
+</div>
+</details>
+<details class="fold" id="run-20261124"><summary><span>2026-11-24: Event loop (<code>48bf7a0</code>), 3회. 429 반복 IP의 Block table 추가 없음, keep-alive 없음</span></summary>
+<div class="in">
 <table>
 <thead><tr><th>항목</th><th>내용</th></tr></thead>
 <tbody>
@@ -285,8 +471,8 @@ dl.notable strong { display: inline-block; min-width: 3.5em; font-family: var(--
 </tbody>
 </table>
 
-<h3 id="rate-limit">rate limit: Origin은 아끼고, rproxy는 더 씀</h3>
-<!--GEN:m-rl-mib--><figure class="dgf"><svg class="dg" id="m-rl-mib" viewBox="0 0 400 232" style="max-width:560px" role="img" aria-labelledby="m-rl-mib-title m-rl-mib-desc"><title id="m-rl-mib-title">rate limit: Origin이 보낸 MiB</title><desc id="m-rl-mib-desc">repeat, revalidate, longtail. 로그 눈금</desc>
+<h3 id="rate-limit-v1">rate limit: Origin은 아끼고, rproxy는 더 씀</h3>
+<!--GEN:v1-rl-mib--><figure class="dgf"><svg class="dg" id="v1-rl-mib" viewBox="0 0 400 232" style="max-width:560px" role="img" aria-labelledby="v1-rl-mib-title v1-rl-mib-desc"><title id="v1-rl-mib-title">rate limit: Origin이 보낸 MiB</title><desc id="v1-rl-mib-desc">repeat, revalidate, longtail. 로그 눈금</desc>
 <rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="ok" x="180" y="4" width="20" height="12" rx="2"/><text x="206" y="14.5" font-size="12">layers</text>
 <line class="rule" x1="92.0" y1="32" x2="92.0" y2="204"/><text x="92.0" y="220" text-anchor="middle" class="t2" font-size="12">0.1</text>
 <line class="rule" x1="139.6" y1="32" x2="139.6" y2="204"/><text x="139.6" y="220" text-anchor="middle" class="t2" font-size="12">1</text>
@@ -307,8 +493,8 @@ dl.notable strong { display: inline-block; min-width: 3.5em; font-family: var(--
 <text x="0" y="188" class="t2" font-size="11">× 1/59</text>
 <rect class="ng" x="92" y="152" width="168.0" height="16" rx="2"/><text x="266.0" y="164" class="mono" font-size="12">338</text>
 <rect class="ok" x="92" y="172" width="83.6" height="16" rx="2"/><text x="181.6" y="184" class="mono" font-size="12">5.7</text>
-</svg></figure><!--/GEN:m-rl-mib-->
-<!--GEN:m-rl-cpu--><figure class="dgf"><svg class="dg" id="m-rl-cpu" viewBox="0 0 400 288" style="max-width:560px" role="img" aria-labelledby="m-rl-cpu-title m-rl-cpu-desc"><title id="m-rl-cpu-title">rate limit: rproxy의 CPU 초</title><desc id="m-rl-cpu-desc">rate limit을 받는 넷은 rproxy CPU가 늘어난다</desc>
+</svg></figure><!--/GEN:v1-rl-mib-->
+<!--GEN:v1-rl-cpu--><figure class="dgf"><svg class="dg" id="v1-rl-cpu" viewBox="0 0 400 288" style="max-width:560px" role="img" aria-labelledby="v1-rl-cpu-title v1-rl-cpu-desc"><title id="v1-rl-cpu-title">rate limit: rproxy의 CPU 초</title><desc id="v1-rl-cpu-desc">rate limit을 받는 넷은 rproxy CPU가 늘어난다</desc>
 <rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="ok" x="180" y="4" width="20" height="12" rx="2"/><text x="206" y="14.5" font-size="12">layers</text>
 <line class="rule" x1="92.0" y1="32" x2="92.0" y2="260"/><text x="92.0" y="276" text-anchor="middle" class="t2" font-size="12">0</text>
 <line class="rule" x1="151.5" y1="32" x2="151.5" y2="260"/><text x="151.5" y="276" text-anchor="middle" class="t2" font-size="12">5.0</text>
@@ -332,8 +518,8 @@ dl.notable strong { display: inline-block; min-width: 3.5em; font-family: var(--
 <text x="0" y="244" class="t2" font-size="11">× 1.36</text>
 <rect class="ng" x="92" y="208" width="99.2" height="16" rx="2"/><text x="197.2" y="220" class="mono" font-size="12">8.3</text>
 <rect class="ok" x="92" y="228" width="135.1" height="16" rx="2"/><text x="233.1" y="240" class="mono" font-size="12">11.3</text>
-</svg></figure><!--/GEN:m-rl-cpu-->
-<!--GEN:m-rl-req--><figure class="dgf"><svg class="dg" id="m-rl-req" viewBox="0 0 400 288" style="max-width:560px" role="img" aria-labelledby="m-rl-req-title m-rl-req-desc"><title id="m-rl-req-title">rate limit: crawler가 보낸 요청 수</title><desc id="m-rl-req-desc">429가 빨리 오니 요청이 늘어난다</desc>
+</svg></figure><!--/GEN:v1-rl-cpu-->
+<!--GEN:v1-rl-req--><figure class="dgf"><svg class="dg" id="v1-rl-req" viewBox="0 0 400 288" style="max-width:560px" role="img" aria-labelledby="v1-rl-req-title v1-rl-req-desc"><title id="v1-rl-req-title">rate limit: crawler가 보낸 요청 수</title><desc id="v1-rl-req-desc">429가 빨리 오니 요청이 늘어난다</desc>
 <rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="ok" x="180" y="4" width="20" height="12" rx="2"/><text x="206" y="14.5" font-size="12">layers</text>
 <line class="rule" x1="92.0" y1="32" x2="92.0" y2="260"/><text x="92.0" y="276" text-anchor="middle" class="t2" font-size="12">0</text>
 <line class="rule" x1="151.5" y1="32" x2="151.5" y2="260"/><text x="151.5" y="276" text-anchor="middle" class="t2" font-size="12">5000</text>
@@ -357,14 +543,14 @@ dl.notable strong { display: inline-block; min-width: 3.5em; font-family: var(--
 <text x="0" y="244" class="t2" font-size="11">× 4.52</text>
 <rect class="ng" x="92" y="208" width="27.7" height="16" rx="2"/><text x="125.7" y="220" class="mono" font-size="12">2324</text>
 <rect class="ok" x="92" y="228" width="125.1" height="16" rx="2"/><text x="223.1" y="240" class="mono" font-size="12">10514</text>
-</svg></figure><!--/GEN:m-rl-req-->
+</svg></figure><!--/GEN:v1-rl-req-->
 <dl class="notable">
 <dt>아낀 것</dt><dd><span class="ln"><strong>왜</strong> Origin MiB가 1/59 ~ 1/588, Origin CPU는 약 0</span><span class="ln"><strong>어떻게</strong> IP마다 10초에 59번만 통과(④). <code>repeat</code>, <code>revalidate</code>는 그중 55번을 cache와 304가 답함(⑤)</span></dd>
-<dt>옮긴 것</dt><dd><span class="ln"><strong>왜</strong> <code>rproxy</code> CPU가 1.3 ~ 3배</span><span class="ln"><strong>어떻게</strong> 429가 빨리 오니 crawler가 2.5 ~ 4.5배 더 보냄. <code>rproxy</code>에 keep-alive가 없어서 요청마다 TLS 서명(0.9 ms)을 다시 함</span><span class="ln"><strong>그 뒤</strong> <a href="#run-20261124-block">1절</a>: 429를 반복해 받는 IP를 Block table에 올려 이 비용을 없앰</span></dd>
+<dt>옮긴 것</dt><dd><span class="ln"><strong>왜</strong> <code>rproxy</code> CPU가 1.3 ~ 3배</span><span class="ln"><strong>어떻게</strong> 429가 빨리 오니 crawler가 2.5 ~ 4.5배 더 보냄. <code>rproxy</code>에 keep-alive가 없어서 요청마다 TLS 서명(0.9 ms)을 다시 함</span><span class="ln"><strong>그 뒤</strong> <a href="#rate-limit">1절</a>: 429를 반복해 받는 IP를 Block table에 올려 이 비용을 없앰</span></dd>
 </dl>
 
-<h3 id="drop">drop: rproxy까지 아낌</h3>
-<!--GEN:m-drop-cpu--><figure class="dgf"><svg class="dg" id="m-drop-cpu" viewBox="0 0 400 176" style="max-width:560px" role="img" aria-labelledby="m-drop-cpu-title m-drop-cpu-desc"><title id="m-drop-cpu-title">drop: rproxy의 CPU 초</title><desc id="m-drop-cpu-desc">spread와 trapped</desc>
+<h3 id="drop-v1">drop: rproxy까지 아낌</h3>
+<!--GEN:v1-drop-cpu--><figure class="dgf"><svg class="dg" id="v1-drop-cpu" viewBox="0 0 400 176" style="max-width:560px" role="img" aria-labelledby="v1-drop-cpu-title v1-drop-cpu-desc"><title id="v1-drop-cpu-title">drop: rproxy의 CPU 초</title><desc id="v1-drop-cpu-desc">spread와 trapped</desc>
 <rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="ok" x="180" y="4" width="20" height="12" rx="2"/><text x="206" y="14.5" font-size="12">layers</text>
 <line class="rule" x1="92.0" y1="32" x2="92.0" y2="148"/><text x="92.0" y="164" text-anchor="middle" class="t2" font-size="12">0</text>
 <line class="rule" x1="151.5" y1="32" x2="151.5" y2="148"/><text x="151.5" y="164" text-anchor="middle" class="t2" font-size="12">5.0</text>
@@ -380,14 +566,14 @@ dl.notable strong { display: inline-block; min-width: 3.5em; font-family: var(--
 <text x="0" y="132" class="t2" font-size="11">× 0.69</text>
 <rect class="ng" x="92" y="96" width="14.4" height="16" rx="2"/><text x="112.4" y="108" class="mono" font-size="12">1.2</text>
 <rect class="ok" x="92" y="116" width="9.9" height="16" rx="2"/><text x="107.9" y="128" class="mono" font-size="12">0.83</text>
-</svg></figure><!--/GEN:m-drop-cpu-->
+</svg></figure><!--/GEN:v1-drop-cpu-->
 <dl class="notable">
 <dt><code>spread</code></dt><dd><span class="ln"><strong>왜</strong> <code>rproxy</code> CPU 15.6 → 11.1 s</span><span class="ln"><strong>어떻게</strong> 주소 32개 중 16개가 Block list에 걸려 ②에서 drop: TLS 서명 없음</span></dd>
 <dt><code>trapped</code></dt><dd><span class="ln"><strong>왜</strong> <code>rproxy</code> CPU 1.2 → 0.8 s</span><span class="ln"><strong>어떻게</strong> Honeypot 한 번 뒤 Block table에 올라 연결 약 5700개가 ②에서 drop</span></dd>
 </dl>
 
-<h3 id="tarpit">tarpit: crawler의 발을 묶음</h3>
-<!--GEN:m-tarpit--><figure class="dgf"><svg class="dg" id="m-tarpit" viewBox="0 0 400 176" style="max-width:560px" role="img" aria-labelledby="m-tarpit-title m-tarpit-desc"><title id="m-tarpit-title">tarpit: disguised</title><desc id="m-tarpit-desc">rproxy CPU와 Origin MiB</desc>
+<h3 id="tarpit-v1">tarpit: crawler의 발을 묶음</h3>
+<!--GEN:v1-tarpit--><figure class="dgf"><svg class="dg" id="v1-tarpit" viewBox="0 0 400 176" style="max-width:560px" role="img" aria-labelledby="v1-tarpit-title v1-tarpit-desc"><title id="v1-tarpit-title">tarpit: disguised</title><desc id="v1-tarpit-desc">rproxy CPU와 Origin MiB</desc>
 <rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="ok" x="180" y="4" width="20" height="12" rx="2"/><text x="206" y="14.5" font-size="12">layers</text>
 <line class="rule" x1="92.0" y1="32" x2="92.0" y2="148"/><text x="92.0" y="164" text-anchor="middle" class="t2" font-size="12">0.1</text>
 <line class="rule" x1="151.5" y1="32" x2="151.5" y2="148"/><text x="151.5" y="164" text-anchor="middle" class="t2" font-size="12">1</text>
@@ -403,13 +589,13 @@ dl.notable strong { display: inline-block; min-width: 3.5em; font-family: var(--
 <text x="0" y="132" class="t2" font-size="11">× 0</text>
 <rect class="ng" x="92" y="96" width="207.9" height="16" rx="2"/><text x="305.9" y="108" class="mono" font-size="12">312</text>
 <text x="98" y="128" class="t2" font-size="12">0</text>
-</svg></figure><!--/GEN:m-tarpit-->
+</svg></figure><!--/GEN:v1-tarpit-->
 <dl class="notable">
 <dt><code>disguised</code></dt><dd><span class="ln"><strong>왜</strong> <code>rproxy</code> CPU 4.9 → 0.09 s, Origin MiB 312 → 0</span><span class="ln"><strong>어떻게</strong> User-Agent와 JA4가 어긋나서 tarpit(④). 연결이 붙잡히니 crawler가 새 요청을 못 보냄. Event loop의 timer라 thread는 쥐지 않음</span></dd>
 </dl>
 
-<h3 id="users">사용자: 진짜 사용자와 착한 bot</h3>
-<!--GEN:m-human--><figure class="dgf"><svg class="dg" id="m-human" viewBox="0 0 400 400" style="max-width:560px" role="img" aria-labelledby="m-human-title m-human-desc"><title id="m-human-title">진짜 사용자: human.py의 p95</title><desc id="m-human-desc">Scene마다 none과 layers</desc>
+<h3 id="users-v1">사용자: 진짜 사용자와 착한 bot</h3>
+<!--GEN:v1-human--><figure class="dgf"><svg class="dg" id="v1-human" viewBox="0 0 400 400" style="max-width:560px" role="img" aria-labelledby="v1-human-title v1-human-desc"><title id="v1-human-title">진짜 사용자: human.py의 p95</title><desc id="v1-human-desc">Scene마다 none과 layers</desc>
 <rect class="ng" x="92" y="4" width="20" height="12" rx="2"/><text x="118" y="14.5" font-size="12">none</text><rect class="ok" x="180" y="4" width="20" height="12" rx="2"/><text x="206" y="14.5" font-size="12">layers</text>
 <line class="rule" x1="92.0" y1="32" x2="92.0" y2="372"/><text x="92.0" y="388" text-anchor="middle" class="t2" font-size="12">0</text>
 <line class="rule" x1="151.5" y1="32" x2="151.5" y2="372"/><text x="151.5" y="388" text-anchor="middle" class="t2" font-size="12">7.5</text>
@@ -435,21 +621,13 @@ dl.notable strong { display: inline-block; min-width: 3.5em; font-family: var(--
 <text x="0" y="340.5" class="b mono" font-size="12">signed</text>
 <rect class="ng" x="92" y="320" width="150.7" height="16" rx="2"/><text x="248.7" y="332" class="mono" font-size="12">19</text>
 <rect class="ok" x="92" y="340" width="166.6" height="16" rx="2"/><text x="264.6" y="352" class="mono" font-size="12">21</text>
-</svg></figure><!--/GEN:m-human-->
+</svg></figure><!--/GEN:v1-human-->
 <dl class="notable">
 <dt>진짜 사용자</dt><dd><span class="ln"><strong>왜</strong> 모든 Scene에서 <code>human.py</code>의 p95 15 ~ 27 ms, 초당 응답 2.5 ~ 3번으로 거의 그대로: 오탐 없음</span><span class="ln"><strong>어떻게</strong> 사람의 IP, JA4, 행동은 어느 규칙에도 맞지 않음</span></dd>
 <dt>착한 bot</dt><dd><span class="ln"><strong>왜</strong> <code>signed</code>의 Origin MiB 0 → 16.6: 의도한 증가</span><span class="ln"><strong>어떻게</strong> 서명이 확인되어 통과(④). 1952번은 cache가 답함(⑤)</span></dd>
 </dl>
-
-<h2 id="open">3. 열린 질문</h2>
-<table>
-<thead><tr><th>질문</th><th>다룰 곳</th></tr></thead>
-<tbody>
-<tr><td><span class="ln">연결을 다시 써서 TLS 서명 횟수를 줄이면 무엇이 바뀌나 (keep-alive, session resumption)</span><span class="ln">Block table로 rate limit 비용은 1절에서 해결함. keep-alive는 crawler의 비용도 함께 줄이고, 모든 Scene의 기준선을 바꿈</span></td><td>L3 HTTP ①: 양, L4 HTTP ②: 시험과 비용 비대칭</td></tr>
-</tbody>
-</table>
-
-<h2 id="past">4. 예전 측정</h2>
+</div>
+</details>
 <details class="fold"><summary><span>2026-11-24: Worker pool (<code>f9dda4d</code>), 1회</span></summary>
 <div class="in">
 <p><code>human.py</code>는 <code>disguised</code> 옆에서 10초 동안 응답 0개. tarpit이 <code>sleep</code>으로 Worker 4개를 모두 붙잡았다. 그 밖의 Origin MiB는 위 결과와 비슷했다 (<code>repeat</code> 4896 → 8, <code>disguised</code> 275 → 0). <a class="src p" href="https://github.com/benjohnbill/mini-webserver/blob/f9dda4d/docs/measurements/20261124-arena-layers.md">primary</a></p>

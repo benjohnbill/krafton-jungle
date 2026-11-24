@@ -323,7 +323,7 @@ function mountQuiz(root, items, lesson) {
   <tr><td>왜 지금</td><td>User-Agent와 TLS를 둘 다 Chrome으로 맞춘 crawler도 요청의 양은 숨기지 못한다</td><td>L2 확인 질문의 답. ②가 못 잡는 crawler가 ④로 온다</td></tr>
   <tr><td>보는 것</td><td>key(기본은 client IP)마다 요청 수. 요청마다 token 하나를 쓰고, token은 일정한 속도로 찬다</td><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/03-layers.html#m-rate">노트 03 rate limit</a>의 token bucket 그림. 8번 규칙의 "token"이 이것이다</td></tr>
   <tr><td>거르는 것</td><td>token이 없으면 slow: 429와 <code>Retry-After</code></td><td>요구분석 ④ 카드의 "거르는 기준". Verdict 이름과 응답</td></tr>
-  <tr><td>비용</td><td>Origin 비용은 거의 0이 된다. 대신 429가 빨리 와서 crawler가 더 보내고, rproxy CPU가 는다</td><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-measurements.html#rate-limit">rproxy 측정 rate limit</a>. ④ 카드의 "서버 비용"을 Scene 숫자로 본 것</td></tr>
+  <tr><td>비용</td><td>rate limit만 쓰면 Origin 비용은 거의 0이 되지만, 429가 빨리 와서 crawler가 더 보내고 rproxy CPU가 는다. 429를 5번 받은 IP를 Block table에 올리면 그 뒤는 ②에서 drop되어 rproxy CPU도 none보다 줄어든다</td><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-measurements.html#rate-limit">rproxy 측정 rate limit</a>. ④ 카드의 "서버 비용"을 Scene 숫자로 본 것</td></tr>
 </table>
 
 <h2>2. 퀴즈</h2>

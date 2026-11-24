@@ -9,8 +9,14 @@ this script, then copy the outputs to study/week13/mini-webserver/lessons/.
 Base: ../teach/publish/build.py.
 """
 
+import html as htmllib
 import json
+import re
 from pathlib import Path
+
+from pygments import highlight
+from pygments.formatters import HtmlFormatter
+from pygments.lexers import CLexer
 
 TEACH = Path(__file__).resolve().parent.parent
 ASSETS = TEACH / "assets"
@@ -39,6 +45,16 @@ def rewrite_links(html: str) -> str:
     return html
 
 
+def color_code(match: re.Match) -> str:
+    """Color one <pre> block of C with Pygments token classes (see site-bridge.css)."""
+    code = htmllib.unescape(match.group(1))
+    spans = highlight(code, CLexer(), HtmlFormatter(nowrap=True)).rstrip("\n")
+    # VS Code colors storage words (struct, static) apart from flow words (if, return)
+    for word in ("struct", "static", "const", "enum", "sizeof"):
+        spans = spans.replace(f'<span class="k">{word}</span>', f'<span class="kd">{word}</span>')
+    return f'<pre class="hl">{spans}</pre>'
+
+
 def build(source: str, slug: str) -> None:
     html = (TEACH / source).read_text(encoding="utf-8")
     bridge = (ASSETS / "site-bridge.css").read_text(encoding="utf-8")
@@ -62,7 +78,8 @@ def build(source: str, slug: str) -> None:
             code = (ASSETS / script).read_text(encoding="utf-8")
             html = html.replace(tag, f"<script>\n{code}</script>")
     html = html.replace("<body>\n", f'<body>\n<div class="wrap">\n{HOME}\n', 1)
-    html = html.replace("\n<pre>", f"\n{HINT}\n<pre>")
+    html = re.sub(r"<pre>(.*?)</pre>", color_code, html, flags=re.S)
+    html = html.replace('\n<pre class="hl">', f'\n{HINT}\n<pre class="hl">')
     html = html.replace("</body>", "</div>\n</body>", 1)
     html = rewrite_links(html)
     if "../" in html:

@@ -49,6 +49,27 @@ h2 { margin: 64px 0 14px; }
 .callout + p, flow-lanes + p, table + p { margin-top: 16px; }
 th, td { padding: 10px 12px; }
 nav.links { line-height: 2; }
+
+/* code colors (Pygments classes, VS Code Light+ and Dark+) */
+.hl .k, .hl .kr { color: #af00db; }
+.hl .kt, .hl .kd { color: #0000ff; }
+.hl .nc { color: #267f99; }
+.hl .nf { color: #795e26; }
+.hl .n, .hl .nv { color: #001080; }
+.hl .s, .hl .s1, .hl .s2, .hl .sc { color: #a31515; }
+.hl .mi, .hl .mf, .hl .m { color: #098658; }
+.hl .c1, .hl .cm, .hl .c { color: #008000; }
+.hl .cp, .hl .cpf { color: #af00db; }
+@media (prefers-color-scheme: dark) {
+  .hl .k, .hl .kr, .hl .cp, .hl .cpf { color: #c586c0; }
+  .hl .kt, .hl .kd { color: #569cd6; }
+  .hl .nc { color: #4ec9b0; }
+  .hl .nf { color: #dcdcaa; }
+  .hl .n, .hl .nv { color: #9cdcfe; }
+  .hl .s, .hl .s1, .hl .s2, .hl .sc { color: #ce9178; }
+  .hl .mi, .hl .mf, .hl .m { color: #b5cea8; }
+  .hl .c1, .hl .cm, .hl .c { color: #6a9955; }
+}
 </style>
 <script>
 // Reusable quiz with immediate feedback, plus predictions and one copy block.
@@ -289,24 +310,24 @@ function mountQuiz(root, items, lesson) {
 
 <h2>3. 우리 코드: <code>rate_limit_take</code></h2>
 <p class="scroll-hint" data-scroll-hint>옆으로 밀어 보기 →</p>
-<pre>int rate_limit_take(struct rate_limit *limit, const char *key, double now)
-{
-    pthread_mutex_lock(&amp;limit-&gt;lock);
-    struct bucket *bucket = bucket_find(limit, key);
-    if (bucket == NULL) {
-        bucket = bucket_claim(limit, key, now);
-    }
-    bucket_refill(bucket, &amp;limit-&gt;options, now);
-    int wait = 0;
-    if (bucket-&gt;tokens &gt;= 1) {
-        bucket-&gt;tokens -= 1;
-    } else {
-        wait = bucket_get_wait(bucket, limit-&gt;options.rate);
-    }
-    pthread_mutex_unlock(&amp;limit-&gt;lock);
+<pre class="hl"><span class="kt">int</span><span class="w"> </span><span class="nf">rate_limit_take</span><span class="p">(</span><span class="kd">struct</span><span class="w"> </span><span class="nc">rate_limit</span><span class="w"> </span><span class="o">*</span><span class="n">limit</span><span class="p">,</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">now</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="w">    </span><span class="n">pthread_mutex_lock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">limit</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
+<span class="w">    </span><span class="kd">struct</span><span class="w"> </span><span class="nc">bucket</span><span class="w"> </span><span class="o">*</span><span class="n">bucket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bucket_find</span><span class="p">(</span><span class="n">limit</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">bucket</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">NULL</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">bucket</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bucket_claim</span><span class="p">(</span><span class="n">limit</span><span class="p">,</span><span class="w"> </span><span class="n">key</span><span class="p">,</span><span class="w"> </span><span class="n">now</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">bucket_refill</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">limit</span><span class="o">-&gt;</span><span class="n">options</span><span class="p">,</span><span class="w"> </span><span class="n">now</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">int</span><span class="w"> </span><span class="n">wait</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">bucket</span><span class="o">-&gt;</span><span class="n">tokens</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">bucket</span><span class="o">-&gt;</span><span class="n">tokens</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">wait</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bucket_get_wait</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span><span class="w"> </span><span class="n">limit</span><span class="o">-&gt;</span><span class="n">options</span><span class="p">.</span><span class="n">rate</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="n">pthread_mutex_unlock</span><span class="p">(</span><span class="o">&amp;</span><span class="n">limit</span><span class="o">-&gt;</span><span class="n">lock</span><span class="p">);</span>
 
-    return wait;
-}</pre>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">wait</span><span class="p">;</span>
+<span class="p">}</span></pre>
 <p class="cap"><a href="https://github.com/benjohnbill/mini-webserver/blob/eee7073/src/rproxy/rate_limit.c#L60-L77"><code>src/rproxy/rate_limit.c:60-77</code></a>. 8번 규칙의 "token 없음"을 정하는 함수다. 돌려준 초가 429의 <code>Retry-After</code>가 된다.</p>
 
 <nav class="links">

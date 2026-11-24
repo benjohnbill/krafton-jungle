@@ -41,3 +41,24 @@ h2 { margin: 64px 0 14px; }
 .callout + p, flow-lanes + p, table + p { margin-top: 16px; }
 th, td { padding: 10px 12px; }
 nav.links { line-height: 2; }
+
+/* code colors (Pygments classes, VS Code Light+ and Dark+) */
+.hl .k, .hl .kr { color: #af00db; }
+.hl .kt, .hl .kd { color: #0000ff; }
+.hl .nc { color: #267f99; }
+.hl .nf { color: #795e26; }
+.hl .n, .hl .nv { color: #001080; }
+.hl .s, .hl .s1, .hl .s2, .hl .sc { color: #a31515; }
+.hl .mi, .hl .mf, .hl .m { color: #098658; }
+.hl .c1, .hl .cm, .hl .c { color: #008000; }
+.hl .cp, .hl .cpf { color: #af00db; }
+@media (prefers-color-scheme: dark) {
+  .hl .k, .hl .kr, .hl .cp, .hl .cpf { color: #c586c0; }
+  .hl .kt, .hl .kd { color: #569cd6; }
+  .hl .nc { color: #4ec9b0; }
+  .hl .nf { color: #dcdcaa; }
+  .hl .n, .hl .nv { color: #9cdcfe; }
+  .hl .s, .hl .s1, .hl .s2, .hl .sc { color: #ce9178; }
+  .hl .mi, .hl .mf, .hl .m { color: #b5cea8; }
+  .hl .c1, .hl .cm, .hl .c { color: #6a9955; }
+}

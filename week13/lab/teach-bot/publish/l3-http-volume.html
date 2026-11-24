@@ -238,49 +238,56 @@ function mountQuiz(root, items, lesson) {
   }
 }
 </script>
+<style>
+.stages { display: flex; flex-wrap: wrap; gap: .3rem; margin: 1rem 0 .4rem; }
+.stages div { flex: 1 1 6.5rem; border: 1px solid var(--rule); border-radius: 6px; padding: .4rem .5rem; font-size: .9rem; }
+.stages div small { display: block; color: var(--muted); }
+.stages .on, tr.on td { border-color: var(--read); background: var(--read-soft, #e8f3f6); font-weight: 600; }
+.cap { color: var(--muted); font-size: .9rem; }
+</style>
 </head>
 <body>
 <div class="wrap">
 <a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
 
 <h1>L3 HTTP ①: 양</h1>
-<p class="sub">rproxy 방어 layer L3, 약 10분 (읽기 포함)<br>목표: token bucket이 무엇을 세고 언제 거절하는지, 그 비용이 어디로 옮겨 가는지 말하기</p>
+<p class="sub">rproxy 방어 layer L3, 약 5분<br>목표: 요구분석의 ④ HTTP 단계에서 rate limit이 무엇을 보고 무엇을 거르는지 말하기</p>
 
-<h2>1. 먼저 읽기</h2>
-<p>설명은 노트가 맡는다. 아래 세 절을 이 순서로 읽는다. 각 줄의 "볼 것"이 퀴즈에 나온다.</p>
+<h2>1. 이번 lesson의 자리</h2>
+<div class="stages">
+  <div>① TCP<small>L1</small></div>
+  <div>② ClientHello<small>L1, L2</small></div>
+  <div>③ ServerHello부터<small>거르지 않음</small></div>
+  <div class="on">④ HTTP<small>L3, L4, L5</small></div>
+  <div>⑤ Cache<small>L6</small></div>
+  <div>⑥ Origin<small>L6</small></div>
+</div>
 <table>
-  <tr><th>절</th><th>볼 것</th></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-http">rproxy 요구분석 ④ HTTP: Request Verdict 카드</a></td><td>rate limit이 규칙 표의 몇 번째이고, 무엇을 돌려주나</td></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/03-layers.html#m-rate">노트 03 rate limit</a></td><td>token bucket 그림, 열쇠, 뚫리는 방식, 사람이 치르는 값</td></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-measurements.html#rate-limit">rproxy 측정 rate limit</a></td><td>rate limit이 아낀 비용과 옮긴 비용</td></tr>
+  <tr><th>④의 규칙</th><th>맞는 조건</th><th>Verdict</th><th>lesson</th></tr>
+  <tr><td>1 Honeypot</td><td>target이 <code>/trap/</code>로 시작</td><td>tarpit</td><td>L5</td></tr>
+  <tr><td>2 scanner</td><td>404 응답 5번</td><td>403</td><td>L5</td></tr>
+  <tr><td>3 verified bot</td><td>Web Bot Auth 서명 통과</td><td>pass</td><td>L5</td></tr>
+  <tr><td>4 pay</td><td>crawler 이름, pay 경로</td><td>402</td><td>L5</td></tr>
+  <tr><td>5 crawler 이름</td><td>GPTBot, ClaudeBot 등 6개</td><td>403</td><td>L5</td></tr>
+  <tr><td>6 false browser</td><td><code>Chrome/</code>인데 JA4 label이 다름</td><td>tarpit</td><td>L4</td></tr>
+  <tr><td>7 Proof of work</td><td>대상 경로, 풀이 없음</td><td>401</td><td>L4</td></tr>
+  <tr class="on"><td>8 rate limit</td><td>key의 token 없음</td><td>429</td><td>L3</td></tr>
 </table>
-<p>L2에서 본 것: User-Agent와 TLS를 둘 다 Chrome으로 맞춘 crawler는 JA4로 못 잡는다. 그런 crawler에게도 남는 신호가 양과 행동이다. 이번에는 양을 본다.</p>
+<p class="cap">위에서부터 보고, 처음 맞는 규칙이 Verdict를 정한다. 출처: <a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-http">요구분석 ④ HTTP 카드</a>의 단계 그림과 "Request Verdict 규칙 순서". 이 lesson은 8번만 본다.</p>
 
-<h2>2. 우리 bucket의 숫자</h2>
-<p>노트의 token bucket이 우리 코드에서는 숫자 다섯 개다.</p>
 <table>
-  <tr><th>이름</th><th>어디</th><th>뜻</th></tr>
-  <tr><td><code>rate</code></td><td><code>struct rate_limit_options</code></td><td>1초마다 돌아오는 token 수 (<code>--rate</code>)</td></tr>
-  <tr><td><code>burst</code></td><td><code>struct rate_limit_options</code></td><td>key 하나가 가질 수 있는 token의 최대 (<code>--burst</code>). 새 key는 가득 찬 채로 시작한다</td></tr>
-  <tr><td><code>key_max</code></td><td><code>struct rate_limit_options</code></td><td>표에 둘 key 수. 차면 가장 오래 안 쓴 key를 잊는다</td></tr>
-  <tr><td><code>tokens</code></td><td><code>struct bucket</code></td><td>그 key에 지금 남은 token. 소수일 수 있다</td></tr>
-  <tr><td><code>last</code></td><td><code>struct bucket</code></td><td>그 key가 마지막으로 take한 시각 (초)</td></tr>
+  <tr><th></th><th>핵심</th><th>가져온 곳, 이유</th></tr>
+  <tr><td>왜 지금</td><td>User-Agent와 TLS를 둘 다 Chrome으로 맞춘 crawler도 요청의 양은 숨기지 못한다</td><td>L2 확인 질문의 답. ②가 못 잡는 crawler가 ④로 온다</td></tr>
+  <tr><td>보는 것</td><td>key(기본은 client IP)마다 요청 수. 요청마다 token 하나를 쓰고, token은 일정한 속도로 찬다</td><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/03-layers.html#m-rate">노트 03 rate limit</a>의 token bucket 그림. 8번 규칙의 "token"이 이것이다</td></tr>
+  <tr><td>거르는 것</td><td>token이 없으면 slow: 429와 <code>Retry-After</code></td><td>요구분석 ④ 카드의 "거르는 기준". Verdict 이름과 응답</td></tr>
+  <tr><td>비용</td><td>Origin 비용은 거의 0이 된다. 대신 429가 빨리 와서 crawler가 더 보내고, rproxy CPU가 는다</td><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-measurements.html#rate-limit">rproxy 측정 rate limit</a>. ④ 카드의 "서버 비용"을 Scene 숫자로 본 것</td></tr>
 </table>
-<p>key는 기본이 client IP다 (<code>--rate-key ip</code>). <code>rate_limit_take</code>는 통과면 <code>0</code>을, 거절이면 다음 token까지의 초(최소 1)를 돌려준다. 이 값이 429의 <code>Retry-After</code>가 된다. 아래는 <code>burst</code> 3, <code>rate</code> 1일 때 key 하나의 시간 그림이다 (<code>tests/test_rate_limit.c</code>의 첫 테스트와 같은 숫자).</p>
-<p class="scroll-hint" data-scroll-hint>옆으로 밀어 보기 →</p>
-<pre>시각(초)  요청   take 전 tokens          돌려주는 값   take 뒤 tokens
-0.0       1번    3 (새 key, 가득)        0  통과       2
-0.0       2번    2                       0  통과       1
-0.0       3번    1                       0  통과       0
-0.0       4번    0                       1  거절 (429)  0
-1.0       5번    0 + (1.0 - 0.0) × 1 = 1  0  통과       0</pre>
-<p>5번 줄을 본다. token을 채우는 timer는 따로 없다. take가 불릴 때 <code>(now - last) × rate</code>를 한 번에 더한다.</p>
 
-<h2>3. 퀴즈</h2>
-<p>1절의 노트와 2절의 그림을 읽어야 풀린다. 막히면 해설 끝의 링크로 돌아간다.</p>
+<h2>2. 퀴즈</h2>
+<p>1절과 그 링크를 읽어야 풀린다. 막히면 해설 끝의 링크로 돌아간다.</p>
 <div id="quiz"></div>
 
-<h2>4. 우리 코드: <code>rate_limit_take</code></h2>
+<h2>3. 우리 코드: <code>rate_limit_take</code></h2>
 <table>
   <tr><th>위치</th><th>무엇</th></tr>
   <tr><td><code>src/rproxy/rate_limit.h</code></td><td><code>struct rate_limit_options</code>와 <code>rate_limit_take</code>의 선언, 돌려주는 값의 약속. 먼저 읽기만 한다.</td></tr>
@@ -296,36 +303,28 @@ function mountQuiz(root, items, lesson) {
   지식: <a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html">rproxy 요구분석</a>
 </nav>
 
-<div class="ask">막히는 곳이 있으면 절 번호와 함께 에이전트에게 물어보자. 예: "2절 그림에서 5번 요청이 0.5초에 왔다면?"</div>
+<div class="ask">막히는 곳이 있으면 절 번호와 함께 에이전트에게 물어보자. 예: "1절 표에서 rate limit은 왜 마지막이야?"</div>
 
 <script>
 const NHTTP = "https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-http";
 const NRATE = "https://benjohnbill.github.io/study/week13/mini-webserver/notes/03-layers.html#m-rate";
 mountQuiz(document.getElementById("quiz"), [
-  { q: "rate limit은 Request Verdict 규칙 표에서 어디에 있고, 무엇을 돌려주나?",
-    options: ["첫 번째 규칙, 403", "마지막 규칙, 429", "네 번째 규칙, 402"],
+  { q: "<code>/trap/</code>을 요청한 IP의 token도 0이다. Verdict는?",
+    options: ["429: token이 없어서", "tarpit: 1번이 먼저", "403: scanner라서"],
     answer: 1,
-    why: `규칙 8번, 마지막이다. token이 없으면 slow(429)와 <code>Retry-After</code>. 첫 매치가 이기므로, 앞 규칙이 먼저 정한 요청은 429까지 오지 않는다. <a href="${NHTTP}">④ HTTP 카드</a>의 규칙 순서 그림.` },
+    why: `규칙은 위에서부터 보고, 처음 맞는 규칙이 이긴다. Honeypot은 1번, rate limit은 8번이다. 그래서 앞 규칙이 정한 요청은 429까지 오지 않는다. <a href="${NHTTP}">④ HTTP 카드</a>의 규칙 순서.` },
   { q: "IP마다 token bucket을 두는 서버를 crawler가 피해 가는 방식은?",
     options: ["User-Agent를 매번 바꿈", "요청 사이에 1초씩 쉼", "IP 수만 개에 나눠 보냄"],
     answer: 2,
-    why: `열쇠가 IP라서, IP 하나당 요청이 한도 아래면 모두 통과한다. residential proxy로 IP 수만 개에 나누면 된다. <a href="${NRATE}">노트 03 rate limit</a>의 "뚫리는 방식".` },
-  { q: "IP를 열쇠로 한 rate limit에서 사람이 치르는 값이 커지는 때는?",
+    why: `key가 IP라서, IP 하나당 요청이 한도 아래면 모두 통과한다. residential proxy로 IP 수만 개에 나누면 된다. <a href="${NRATE}">노트 03 rate limit</a>의 "뚫리는 방식".` },
+  { q: "IP를 key로 한 rate limit에서 사람이 치르는 값이 커지는 때는?",
     options: ["공유 NAT 뒤에 여럿일 때", "browser를 새로 깔았을 때", "같은 파일을 받을 때"],
     answer: 0,
     why: `여러 사람이 IP 하나를 나눠 쓰면 bucket 하나를 나눠 쓴다. 한도가 낮으면 사람도 429를 본다. <a href="${NRATE}">노트 03 rate limit</a>의 "사람이 치르는 값".` },
-  { q: "<code>burst</code> 2, <code>rate</code> 1. 0초에 1번 요청, 100초에 3번 연달아 요청. 100초의 세 번째는?",
-    options: ["통과: 100초에 100개 쌓임", "거절: token은 2개까지만", "통과: 새 key라 가득 참"],
-    answer: 1,
-    why: `채울 때 <code>burst</code>에서 자른다. 오래 쉬어도 한 번에 쓸 수 있는 것은 <code>burst</code>개다. 테스트 <code>tokens_do_not_grow_over_the_burst</code>. 2절의 표, <code>burst</code> 줄.` },
-  { q: "<code>burst</code> 1, <code>rate</code> 1. 0초 통과, 0.5초 거절. 1.0초의 요청은?",
-    options: ["통과: 거절은 token을 안 씀", "거절: 0.5초에 token을 씀", "거절: Retry-After가 남음"],
-    answer: 0,
-    why: `거절된 요청은 token을 빼지 않는다. 0초에서 1초 사이에 token 하나가 돌아와서 1.0초는 통과한다. 테스트 <code>a_refused_request_takes_no_token</code>. 2절 그림의 4번과 5번 줄.` },
   { q: "<code>--rate-key ja4</code>로 바꾸면 bucket은 어떻게 나뉘나?",
-    options: ["IP 하나에 bucket 하나", "요청 하나에 bucket 하나", "JA4 하나에 bucket 하나"],
-    answer: 2,
-    why: `JA4가 같은 client는 IP가 달라도 bucket 하나를 나눠 쓴다. L2에서 본 "IP를 돌리는 crawler를 묶는 키"가 여기서 쓰인다. 대신 같은 TLS 라이브러리를 쓰는 사람도 같은 bucket에 들어간다. <code>docs/spec-cjg.md</code> §11, 2절의 key 문단.` },
+    options: ["IP 하나에 bucket 하나", "JA4 하나에 bucket 하나", "요청 하나에 bucket 하나"],
+    answer: 1,
+    why: `JA4가 같은 client는 IP가 달라도 bucket 하나를 나눠 쓴다. L2에서 본 "IP를 돌리는 crawler를 묶는 키"가 여기서 쓰인다. 대신 같은 TLS 라이브러리를 쓰는 사람도 같은 bucket에 들어간다. <code>docs/spec-cjg.md</code> §11.` },
 ], {
   id: "w13-bot-l3",
   title: "L3 HTTP ①: 양",

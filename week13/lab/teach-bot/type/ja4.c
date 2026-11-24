@@ -1,4 +1,5 @@
 #include "ja4.h"
+#include "client_hello.h"
 
 #include <ctype.h>
 #include <stdbool.h>
@@ -32,7 +33,33 @@ static bool extensions_has(const uint16_t *extensions, size_t count,
 static const char *version_get_text(const struct client_hello *hello);
 static size_t count_get_capped(size_t count);
 
-/* [따라치기] ja4_format: ja4.c:35-58 */
+/* ======================== Main Function ================================= */
+
+void ja4_format(const struct client_hello *hello, char *ja4)
+{
+    uint16_t ciphers[CLIENT_HELLO_CIPHER_MAX];
+    size_t cipher_count =
+        list_copy_without_grease(ciphers, hello->ciphers, hello->cipher_count);
+    uint16_t extensions[CLIENT_HELLO_EXTENSION_MAX];
+    size_t extension_count = list_copy_without_grease(
+        extensions, hello->extensions, hello->extension_count);
+
+    char alpn[3];
+    alpn_format(hello, alpn);
+    char cipher_hash[HASH_LEN + 1];
+    cipher_hash_format(ciphers, cipher_count, cipher_hash);
+    char extension_hash[HASH_LEN + 1];
+    extension_hash_format(hello, extensions, extension_count, extension_hash);
+
+    char sni =
+        extensions_has(extensions, extension_count, EXTENSION_SNI) ? 'd' : 'i';
+    snprintf(ja4, JA4_LEN + 1, "t%s%c%02zu%02zu%s_%s_%s",
+             version_get_text(hello), sni, count_get_capped(cipher_count),
+             count_get_capped(extension_count), alpn, cipher_hash,
+             extension_hash);
+}
+
+/* ======================== Helper Function ================================= */
 
 static size_t list_copy_without_grease(uint16_t *list, const uint16_t *values,
                                        size_t count)

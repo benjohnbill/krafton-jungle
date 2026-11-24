@@ -7,3 +7,5 @@
 Evidence: L2 퀴즈 5/6. 예측(`disguised`의 200)은 0으로 맞혔고, 이유도 "User-Agent는 Chrome인데 TLS가 curl이면 거짓말이 걸린다"로 맞다. 틀린 것: Chrome이 extension 순서를 섞을 때 JA3가 "모두 같은 값이 된다"고 골랐다. 실제로는 JA3가 받은 순서대로 hash해서 연결마다 값이 바뀌고, JA4는 정렬해서 이 문제를 고쳤다.
 
 Implications: 순서와 정렬이 hash 값에 주는 영향이 아직 약하다. `ja4_format` 따라치기에서 `qsort` 줄(`extension_hash_format`)을 지날 때 이것을 다시 묻는다. TLS handshake의 ServerHello 이후 메시지는 그가 원한 대로 깊이 다루지 않는다 (user said "엄청나게 자세하게 적을 필요는 없어").
+
+L2 확인 질문 (따라치기 뒤): "disguised가 다음 날 피해 가려면?" 그는 "User-Agent하고 TLS를 둘 다 Chrome으로 맞추면 JA4로는 못 잡지"라고 답했다. 맞다. 남는 것(양과 행동을 보는 HTTP 단계의 규칙)은 agent가 L3로 이어 주었다. 그는 User-Agent가 HTTP header라는 것을 확인했다: TLS 안에서 암호화되어 오므로 Connection Verdict는 볼 수 없고, 규칙 6이 Request Verdict에 있는 이유가 이것이다.

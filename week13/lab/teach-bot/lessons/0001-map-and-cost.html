@@ -53,7 +53,13 @@
   <tr><td><code>src/rproxy/event_loop.c:572-586</code></td><td><code>connection_verdict_apply</code>: drop이면 <code>STEP_CLOSE</code>, pass면 <code>handshake_start</code>. 읽기만 한다.</td></tr>
 </table>
 <p>따라칠 때 두 가지를 본다. 첫째, 규칙은 코드의 <code>if</code>가 아니라 표의 행이다. 둘째, 표 순서대로 보고 처음 맞은 행이 이긴다. 이 "첫 매치가 이긴다"는 nginx의 접근 규칙과 같다 (<a href="https://nginx.org/en/docs/http/ngx_http_access_module.html">ngx_http_access_module</a>: "The rules are checked in sequence until the first match is found"). L5의 <code>verdict_decide</code>도 같은 모양이다.</p>
-<p>따라친 뒤 혼자 하는 과제: 이 표에 JA4 label 규칙 한 행(예: label이 있으면 <code>CONN_TARPIT</code>)을 넣는다면 어느 줄에 넣어야 하나? 맨 위와 맨 아래 중 하나를 고르고, 그 이유를 한 문장으로 세션에 말한다. 코드는 바꾸지 않는다.</p>
+<p>따라친 뒤 혼자 하는 과제. 규칙 표에 세 번째 행 <code>{ja4_has_label, CONN_TARPIT}</code>(JA4 table에 label이 있는 연결은 tarpit)을 넣는다고 하자. 표의 맨 위에 넣을 때와 맨 아래에 넣을 때, block list에도 있고 JA4 label도 있는 연결 하나는 각각 어떤 Verdict를 받나? 둘 중 어느 쪽을 고르고, 그 이유를 3절의 비용으로 한 문장 말한다. 코드는 바꾸지 않는다.</p>
+<pre>static const struct connection_rule connection_rules[] = {
+    /* 맨 위에 넣으면 여기 */
+    {ip_is_listed, CONN_DROP},
+    {key_is_blocked, CONN_DROP},
+    /* 맨 아래에 넣으면 여기 */
+};</pre>
 
 <h2>5. 답안 복사</h2>
 <p>퀴즈 아래의 답안 칸에 예측을 적고 복사 버튼을 누른다. 세션에 붙여 넣으면 에이전트가 <code>learning-records/</code>에 기록한다.</p>
@@ -109,7 +115,7 @@ mountQuiz(document.getElementById("quiz"), [
   record: "teach-bot/learning-records/0001-map-and-cost.md",
   predictions: [
     "<code>layers</code> preset에서 <code>spread</code>(주소 32개, 요청 10240개)의 <code>000</code>은 몇 개일까? 이유 한 줄.",
-    "4절 과제: JA4 label 규칙 한 행을 규칙 표의 맨 위와 맨 아래 중 어디에 넣나? 이유 한 문장.",
+    "4절 과제: <code>{ja4_has_label, CONN_TARPIT}</code>을 맨 위와 맨 아래 중 어디에 넣나? 두 경우의 Verdict와 이유 한 문장.",
   ],
 });
 </script>

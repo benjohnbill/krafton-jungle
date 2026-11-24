@@ -50,26 +50,20 @@ h2 { margin: 64px 0 14px; }
 th, td { padding: 10px 12px; }
 nav.links { line-height: 2; }
 
-/* code colors (Pygments classes, VS Code Light+ and Dark+) */
-.hl .k, .hl .kr { color: #af00db; }
-.hl .kt, .hl .kd { color: #0000ff; }
-.hl .nc { color: #267f99; }
-.hl .nf { color: #795e26; }
-.hl .n, .hl .nv { color: #001080; }
-.hl .s, .hl .s1, .hl .s2, .hl .sc { color: #a31515; }
-.hl .mi, .hl .mf, .hl .m { color: #098658; }
-.hl .c1, .hl .cm, .hl .c { color: #008000; }
-.hl .cp, .hl .cpf { color: #af00db; }
-@media (prefers-color-scheme: dark) {
-  .hl .k, .hl .kr, .hl .cp, .hl .cpf { color: #c586c0; }
-  .hl .kt, .hl .kd { color: #569cd6; }
-  .hl .nc { color: #4ec9b0; }
-  .hl .nf { color: #dcdcaa; }
-  .hl .n, .hl .nv { color: #9cdcfe; }
-  .hl .s, .hl .s1, .hl .s2, .hl .sc { color: #ce9178; }
-  .hl .mi, .hl .mf, .hl .m { color: #b5cea8; }
-  .hl .c1, .hl .cm, .hl .c { color: #6a9955; }
-}
+/* code colors: his Neovim theme orchid (~/.config/nvim/colors/orchid.lua), dark in both site modes */
+pre.hl { background: #141414; color: #f7f7f8; }
+.hl .k, .hl .kd, .hl .kr, .hl .kt, .hl .cp, .hl .cpf { color: #bf8fef; }
+.hl .nc { color: #ef8f93; }
+.hl .nf { color: #ef8fd7; }
+.hl .n, .hl .nv { color: #f7f7f8; }
+.hl .no { color: #e7c5c0; }
+.hl .s, .hl .s1, .hl .s2, .hl .sc { color: #8fef8f; }
+.hl .mi, .hl .mf, .hl .m { color: #efb78f; }
+.hl .c1, .hl .cm, .hl .c { color: #c7b6d8; font-style: italic; }
+.hl .o, .hl .p { color: #e4c0e7; }
+.hl .b0 { color: #179fff; }
+.hl .b1 { color: #ffd700; }
+.hl .b2 { color: #da70d6; }
 </style>
 <script>
 // Reusable quiz with immediate feedback, plus predictions and one copy block.
@@ -306,30 +300,30 @@ function mountQuiz(root, items, lesson) {
 
 <h2>3. 우리 코드: <code>ja4_format</code></h2>
 <p class="scroll-hint" data-scroll-hint>옆으로 밀어 보기 →</p>
-<pre class="hl"><span class="kt">void</span><span class="w"> </span><span class="nf">ja4_format</span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">client_hello</span><span class="w"> </span><span class="o">*</span><span class="n">hello</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">ja4</span><span class="p">)</span>
-<span class="p">{</span>
-<span class="w">    </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">ciphers</span><span class="p">[</span><span class="n">CLIENT_HELLO_CIPHER_MAX</span><span class="p">];</span>
+<pre class="hl"><span class="kt">void</span><span class="w"> </span><span class="nf">ja4_format</span><span class="b0">(</span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">client_hello</span><span class="w"> </span><span class="o">*</span><span class="n">hello</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">ja4</span><span class="b0">)</span>
+<span class="b0">{</span>
+<span class="w">    </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">ciphers</span><span class="b1">[</span><span class="no">CLIENT_HELLO_CIPHER_MAX</span><span class="b1">]</span><span class="p">;</span>
 <span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">cipher_count</span><span class="w"> </span><span class="o">=</span>
-<span class="w">        </span><span class="n">list_copy_without_grease</span><span class="p">(</span><span class="n">ciphers</span><span class="p">,</span><span class="w"> </span><span class="n">hello</span><span class="o">-&gt;</span><span class="n">ciphers</span><span class="p">,</span><span class="w"> </span><span class="n">hello</span><span class="o">-&gt;</span><span class="n">cipher_count</span><span class="p">);</span>
-<span class="w">    </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">extensions</span><span class="p">[</span><span class="n">CLIENT_HELLO_EXTENSION_MAX</span><span class="p">];</span>
-<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">extension_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">list_copy_without_grease</span><span class="p">(</span>
-<span class="w">        </span><span class="n">extensions</span><span class="p">,</span><span class="w"> </span><span class="n">hello</span><span class="o">-&gt;</span><span class="n">extensions</span><span class="p">,</span><span class="w"> </span><span class="n">hello</span><span class="o">-&gt;</span><span class="n">extension_count</span><span class="p">);</span>
+<span class="w">        </span><span class="n">list_copy_without_grease</span><span class="b1">(</span><span class="n">ciphers</span><span class="p">,</span><span class="w"> </span><span class="n">hello</span><span class="o">-&gt;</span><span class="n">ciphers</span><span class="p">,</span><span class="w"> </span><span class="n">hello</span><span class="o">-&gt;</span><span class="n">cipher_count</span><span class="b1">)</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">extensions</span><span class="b1">[</span><span class="no">CLIENT_HELLO_EXTENSION_MAX</span><span class="b1">]</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">extension_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">list_copy_without_grease</span><span class="b1">(</span>
+<span class="w">        </span><span class="n">extensions</span><span class="p">,</span><span class="w"> </span><span class="n">hello</span><span class="o">-&gt;</span><span class="n">extensions</span><span class="p">,</span><span class="w"> </span><span class="n">hello</span><span class="o">-&gt;</span><span class="n">extension_count</span><span class="b1">)</span><span class="p">;</span>
 
-<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">alpn</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span>
-<span class="w">    </span><span class="n">alpn_format</span><span class="p">(</span><span class="n">hello</span><span class="p">,</span><span class="w"> </span><span class="n">alpn</span><span class="p">);</span>
-<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">cipher_hash</span><span class="p">[</span><span class="n">HASH_LEN</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">];</span>
-<span class="w">    </span><span class="n">cipher_hash_format</span><span class="p">(</span><span class="n">ciphers</span><span class="p">,</span><span class="w"> </span><span class="n">cipher_count</span><span class="p">,</span><span class="w"> </span><span class="n">cipher_hash</span><span class="p">);</span>
-<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">extension_hash</span><span class="p">[</span><span class="n">HASH_LEN</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">];</span>
-<span class="w">    </span><span class="n">extension_hash_format</span><span class="p">(</span><span class="n">hello</span><span class="p">,</span><span class="w"> </span><span class="n">extensions</span><span class="p">,</span><span class="w"> </span><span class="n">extension_count</span><span class="p">,</span><span class="w"> </span><span class="n">extension_hash</span><span class="p">);</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">alpn</span><span class="b1">[</span><span class="mi">3</span><span class="b1">]</span><span class="p">;</span>
+<span class="w">    </span><span class="n">alpn_format</span><span class="b1">(</span><span class="n">hello</span><span class="p">,</span><span class="w"> </span><span class="n">alpn</span><span class="b1">)</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">cipher_hash</span><span class="b1">[</span><span class="no">HASH_LEN</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="b1">]</span><span class="p">;</span>
+<span class="w">    </span><span class="n">cipher_hash_format</span><span class="b1">(</span><span class="n">ciphers</span><span class="p">,</span><span class="w"> </span><span class="n">cipher_count</span><span class="p">,</span><span class="w"> </span><span class="n">cipher_hash</span><span class="b1">)</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">extension_hash</span><span class="b1">[</span><span class="no">HASH_LEN</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="b1">]</span><span class="p">;</span>
+<span class="w">    </span><span class="n">extension_hash_format</span><span class="b1">(</span><span class="n">hello</span><span class="p">,</span><span class="w"> </span><span class="n">extensions</span><span class="p">,</span><span class="w"> </span><span class="n">extension_count</span><span class="p">,</span><span class="w"> </span><span class="n">extension_hash</span><span class="b1">)</span><span class="p">;</span>
 
 <span class="w">    </span><span class="cm">/* &quot;d&quot;: the SNI extension is there (a domain); &quot;i&quot;: it is not (an IP). */</span>
 <span class="w">    </span><span class="kt">char</span><span class="w"> </span><span class="n">sni</span><span class="w"> </span><span class="o">=</span>
-<span class="w">        </span><span class="n">extensions_has</span><span class="p">(</span><span class="n">extensions</span><span class="p">,</span><span class="w"> </span><span class="n">extension_count</span><span class="p">,</span><span class="w"> </span><span class="n">EXTENSION_SNI</span><span class="p">)</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="sc">&#39;d&#39;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="sc">&#39;i&#39;</span><span class="p">;</span>
-<span class="w">    </span><span class="n">snprintf</span><span class="p">(</span><span class="n">ja4</span><span class="p">,</span><span class="w"> </span><span class="n">JA4_LEN</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;t%s%c%02zu%02zu%s_%s_%s&quot;</span><span class="p">,</span>
-<span class="w">             </span><span class="n">version_get_text</span><span class="p">(</span><span class="n">hello</span><span class="p">),</span><span class="w"> </span><span class="n">sni</span><span class="p">,</span><span class="w"> </span><span class="n">count_get_capped</span><span class="p">(</span><span class="n">cipher_count</span><span class="p">),</span>
-<span class="w">             </span><span class="n">count_get_capped</span><span class="p">(</span><span class="n">extension_count</span><span class="p">),</span><span class="w"> </span><span class="n">alpn</span><span class="p">,</span><span class="w"> </span><span class="n">cipher_hash</span><span class="p">,</span>
-<span class="w">             </span><span class="n">extension_hash</span><span class="p">);</span>
-<span class="p">}</span></pre>
+<span class="w">        </span><span class="n">extensions_has</span><span class="b1">(</span><span class="n">extensions</span><span class="p">,</span><span class="w"> </span><span class="n">extension_count</span><span class="p">,</span><span class="w"> </span><span class="no">EXTENSION_SNI</span><span class="b1">)</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="sc">&#39;d&#39;</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="sc">&#39;i&#39;</span><span class="p">;</span>
+<span class="w">    </span><span class="n">snprintf</span><span class="b1">(</span><span class="n">ja4</span><span class="p">,</span><span class="w"> </span><span class="no">JA4_LEN</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;t%s%c%02zu%02zu%s_%s_%s&quot;</span><span class="p">,</span>
+<span class="w">             </span><span class="n">version_get_text</span><span class="b2">(</span><span class="n">hello</span><span class="b2">)</span><span class="p">,</span><span class="w"> </span><span class="n">sni</span><span class="p">,</span><span class="w"> </span><span class="n">count_get_capped</span><span class="b2">(</span><span class="n">cipher_count</span><span class="b2">)</span><span class="p">,</span>
+<span class="w">             </span><span class="n">count_get_capped</span><span class="b2">(</span><span class="n">extension_count</span><span class="b2">)</span><span class="p">,</span><span class="w"> </span><span class="n">alpn</span><span class="p">,</span><span class="w"> </span><span class="n">cipher_hash</span><span class="p">,</span>
+<span class="w">             </span><span class="n">extension_hash</span><span class="b1">)</span><span class="p">;</span>
+<span class="b0">}</span></pre>
 <p class="cap"><a href="https://github.com/benjohnbill/mini-webserver/blob/eee7073/src/rproxy/ja4.c#L35-L58"><code>src/rproxy/ja4.c:35-58</code></a>. GREASE를 뺀 cipher와 extension 목록을 정렬해 hash하고, 한 문자열로 잇는다. 정렬하기 때문에 순서를 섞어도 JA4는 같다.</p>
 
 <nav class="links">

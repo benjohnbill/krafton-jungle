@@ -50,26 +50,20 @@ h2 { margin: 64px 0 14px; }
 th, td { padding: 10px 12px; }
 nav.links { line-height: 2; }
 
-/* code colors (Pygments classes, VS Code Light+ and Dark+) */
-.hl .k, .hl .kr { color: #af00db; }
-.hl .kt, .hl .kd { color: #0000ff; }
-.hl .nc { color: #267f99; }
-.hl .nf { color: #795e26; }
-.hl .n, .hl .nv { color: #001080; }
-.hl .s, .hl .s1, .hl .s2, .hl .sc { color: #a31515; }
-.hl .mi, .hl .mf, .hl .m { color: #098658; }
-.hl .c1, .hl .cm, .hl .c { color: #008000; }
-.hl .cp, .hl .cpf { color: #af00db; }
-@media (prefers-color-scheme: dark) {
-  .hl .k, .hl .kr, .hl .cp, .hl .cpf { color: #c586c0; }
-  .hl .kt, .hl .kd { color: #569cd6; }
-  .hl .nc { color: #4ec9b0; }
-  .hl .nf { color: #dcdcaa; }
-  .hl .n, .hl .nv { color: #9cdcfe; }
-  .hl .s, .hl .s1, .hl .s2, .hl .sc { color: #ce9178; }
-  .hl .mi, .hl .mf, .hl .m { color: #b5cea8; }
-  .hl .c1, .hl .cm, .hl .c { color: #6a9955; }
-}
+/* code colors: his Neovim theme orchid (~/.config/nvim/colors/orchid.lua), dark in both site modes */
+pre.hl { background: #141414; color: #f7f7f8; }
+.hl .k, .hl .kd, .hl .kr, .hl .kt, .hl .cp, .hl .cpf { color: #bf8fef; }
+.hl .nc { color: #ef8f93; }
+.hl .nf { color: #ef8fd7; }
+.hl .n, .hl .nv { color: #f7f7f8; }
+.hl .no { color: #e7c5c0; }
+.hl .s, .hl .s1, .hl .s2, .hl .sc { color: #8fef8f; }
+.hl .mi, .hl .mf, .hl .m { color: #efb78f; }
+.hl .c1, .hl .cm, .hl .c { color: #c7b6d8; font-style: italic; }
+.hl .o, .hl .p { color: #e4c0e7; }
+.hl .b0 { color: #179fff; }
+.hl .b1 { color: #ffd700; }
+.hl .b2 { color: #da70d6; }
 </style>
 <script>
 // Reusable quiz with immediate feedback, plus predictions and one copy block.
@@ -307,31 +301,31 @@ function mountQuiz(root, items, lesson) {
 
 <h2>3. 우리 코드: <code>connection_decide</code></h2>
 <p class="scroll-hint" data-scroll-hint>옆으로 밀어 보기 →</p>
-<pre class="hl"><span class="kd">struct</span><span class="w"> </span><span class="nc">connection_rule</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">matches</span><span class="p">)(</span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">connection_signals</span><span class="w"> </span><span class="o">*</span><span class="n">signals</span><span class="p">);</span>
+<pre class="hl"><span class="kd">struct</span><span class="w"> </span><span class="nc">connection_rule</span><span class="w"> </span><span class="b0">{</span>
+<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="b1">(</span><span class="o">*</span><span class="n">matches</span><span class="b1">)</span><span class="b1">(</span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">connection_signals</span><span class="w"> </span><span class="o">*</span><span class="n">signals</span><span class="b1">)</span><span class="p">;</span>
 <span class="w">    </span><span class="kd">enum</span><span class="w"> </span><span class="n">connection_verdict</span><span class="w"> </span><span class="n">verdict</span><span class="p">;</span>
-<span class="p">};</span>
+<span class="b0">}</span><span class="p">;</span>
 
-<span class="kd">static</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="nf">ip_is_listed</span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">connection_signals</span><span class="w"> </span><span class="o">*</span><span class="n">signals</span><span class="p">);</span>
-<span class="kd">static</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="nf">key_is_blocked</span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">connection_signals</span><span class="w"> </span><span class="o">*</span><span class="n">signals</span><span class="p">);</span>
+<span class="kd">static</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="nf">ip_is_listed</span><span class="b0">(</span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">connection_signals</span><span class="w"> </span><span class="o">*</span><span class="n">signals</span><span class="b0">)</span><span class="p">;</span>
+<span class="kd">static</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="nf">key_is_blocked</span><span class="b0">(</span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">connection_signals</span><span class="w"> </span><span class="o">*</span><span class="n">signals</span><span class="b0">)</span><span class="p">;</span>
 
-<span class="kd">static</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">connection_rule</span><span class="w"> </span><span class="n">connection_rules</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="p">{</span><span class="n">ip_is_listed</span><span class="p">,</span><span class="w"> </span><span class="n">CONN_DROP</span><span class="p">},</span>
-<span class="w">    </span><span class="p">{</span><span class="n">key_is_blocked</span><span class="p">,</span><span class="w"> </span><span class="n">CONN_DROP</span><span class="p">},</span>
-<span class="p">};</span>
+<span class="kd">static</span><span class="w"> </span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">connection_rule</span><span class="w"> </span><span class="n">connection_rules</span><span class="b0">[</span><span class="b0">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="b0">{</span>
+<span class="w">    </span><span class="b1">{</span><span class="n">ip_is_listed</span><span class="p">,</span><span class="w"> </span><span class="no">CONN_DROP</span><span class="b1">}</span><span class="p">,</span>
+<span class="w">    </span><span class="b1">{</span><span class="n">key_is_blocked</span><span class="p">,</span><span class="w"> </span><span class="no">CONN_DROP</span><span class="b1">}</span><span class="p">,</span>
+<span class="b0">}</span><span class="p">;</span>
 
 <span class="kd">enum</span><span class="w"> </span><span class="n">connection_verdict</span>
-<span class="nf">connection_decide</span><span class="p">(</span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">connection_signals</span><span class="w"> </span><span class="o">*</span><span class="n">signals</span><span class="p">)</span>
-<span class="p">{</span>
-<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kd">sizeof</span><span class="p">(</span><span class="n">connection_rules</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="kd">sizeof</span><span class="p">(</span><span class="n">connection_rules</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
-<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">count</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">connection_rules</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">matches</span><span class="p">(</span><span class="n">signals</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">connection_rules</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">verdict</span><span class="p">;</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">}</span>
+<span class="nf">connection_decide</span><span class="b0">(</span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">connection_signals</span><span class="w"> </span><span class="o">*</span><span class="n">signals</span><span class="b0">)</span>
+<span class="b0">{</span>
+<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kd">sizeof</span><span class="b1">(</span><span class="n">connection_rules</span><span class="b1">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="kd">sizeof</span><span class="b1">(</span><span class="n">connection_rules</span><span class="b2">[</span><span class="mi">0</span><span class="b2">]</span><span class="b1">)</span><span class="p">;</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="b1">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">count</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="b1">)</span><span class="w"> </span><span class="b1">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="b2">(</span><span class="n">connection_rules</span><span class="b0">[</span><span class="n">i</span><span class="b0">]</span><span class="p">.</span><span class="n">matches</span><span class="b0">(</span><span class="n">signals</span><span class="b0">)</span><span class="b2">)</span><span class="w"> </span><span class="b2">{</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">connection_rules</span><span class="b0">[</span><span class="n">i</span><span class="b0">]</span><span class="p">.</span><span class="n">verdict</span><span class="p">;</span>
+<span class="w">        </span><span class="b2">}</span>
+<span class="w">    </span><span class="b1">}</span>
 
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">CONN_PASS</span><span class="p">;</span>
-<span class="p">}</span></pre>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="no">CONN_PASS</span><span class="p">;</span>
+<span class="b0">}</span></pre>
 <p class="cap"><a href="https://github.com/benjohnbill/mini-webserver/blob/eee7073/src/rproxy/connection_verdict.c#L10-L34"><code>src/rproxy/connection_verdict.c:10-34</code></a>. 1절 표의 ② 두 줄이 <code>connection_rules[]</code>이고, 처음 맞는 규칙이 이긴다.</p>
 
 <nav class="links">

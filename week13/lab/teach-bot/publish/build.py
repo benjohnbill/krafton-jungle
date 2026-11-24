@@ -45,13 +45,31 @@ def rewrite_links(html: str) -> str:
     return html
 
 
+RAINBOW = 3  # bracket colors b0..b2 by depth, as in his editor
+
+
 def color_code(match: re.Match) -> str:
-    """Color one <pre> block of C with Pygments token classes (see site-bridge.css)."""
+    """Color one <pre> block of C like his Neovim theme orchid (see site-bridge.css)."""
     code = htmllib.unescape(match.group(1))
     spans = highlight(code, CLexer(), HtmlFormatter(nowrap=True)).rstrip("\n")
-    # VS Code colors storage words (struct, static) apart from flow words (if, return)
+    # orchid colors storage words like flow words, and constants (CONN_DROP) apart
     for word in ("struct", "static", "const", "enum", "sizeof"):
         spans = spans.replace(f'<span class="k">{word}</span>', f'<span class="kd">{word}</span>')
+    spans = re.sub(r'<span class="n">([A-Z][A-Z0-9_]+)</span>', r'<span class="no">\1</span>', spans)
+    depth = 0
+
+    def bracket(char: str) -> str:
+        nonlocal depth
+        if char in "([{":
+            depth += 1
+            return f'<span class="b{(depth - 1) % RAINBOW}">{char}</span>'
+        depth -= 1
+        return f'<span class="b{depth % RAINBOW}">{char}</span>'
+
+    def punct(m: re.Match) -> str:
+        return "".join(bracket(ch) if ch in "()[]{}" else f'<span class="p">{ch}</span>' for ch in m.group(1))
+
+    spans = re.sub(r'<span class="p">(.*?)</span>', punct, spans)
     return f'<pre class="hl">{spans}</pre>'
 
 

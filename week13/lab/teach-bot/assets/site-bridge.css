@@ -49,6 +49,7 @@ pre.hl { background: #141414; color: #f7f7f8; }
 .hl .nf { color: #ef8fd7; }
 .hl .n, .hl .nv { color: #f7f7f8; }
 .hl .no { color: #e7c5c0; }
+.hl .py { color: #e7c0da; }
 .hl .s, .hl .s1, .hl .s2, .hl .sc { color: #8fef8f; }
 .hl .mi, .hl .mf, .hl .m { color: #efb78f; }
 .hl .c1, .hl .cm, .hl .c { color: #c7b6d8; font-style: italic; }

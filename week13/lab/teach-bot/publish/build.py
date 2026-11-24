@@ -56,6 +56,13 @@ def color_code(match: re.Match) -> str:
     for word in ("struct", "static", "const", "enum", "sizeof"):
         spans = spans.replace(f'<span class="k">{word}</span>', f'<span class="kd">{word}</span>')
     spans = re.sub(r'<span class="n">([A-Z][A-Z0-9_]+)</span>', r'<span class="no">\1</span>', spans)
+    # a name before "(" is a function; a name after "->" or "." is a member
+    spans = re.sub(
+        r'<span class="nf?">(\w+)</span>(?=(?:<span class="w">\s*</span>)?<span class="p">\()',
+        r'<span class="nf">\1</span>', spans)
+    spans = re.sub(
+        r'(-&gt;</span>|\.</span>)<span class="n">(\w+)</span>',
+        r'\1<span class="py">\2</span>', spans)
     depth = 0
 
     def bracket(char: str) -> str:

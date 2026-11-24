@@ -57,6 +57,7 @@ pre.hl { background: #141414; color: #f7f7f8; }
 .hl .nf { color: #ef8fd7; }
 .hl .n, .hl .nv { color: #f7f7f8; }
 .hl .no { color: #e7c5c0; }
+.hl .py { color: #e7c0da; }
 .hl .s, .hl .s1, .hl .s2, .hl .sc { color: #8fef8f; }
 .hl .mi, .hl .mf, .hl .m { color: #efb78f; }
 .hl .c1, .hl .cm, .hl .c { color: #c7b6d8; font-style: italic; }
@@ -319,8 +320,8 @@ function mountQuiz(root, items, lesson) {
 <span class="b0">{</span>
 <span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kd">sizeof</span><span class="b1">(</span><span class="n">connection_rules</span><span class="b1">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="kd">sizeof</span><span class="b1">(</span><span class="n">connection_rules</span><span class="b2">[</span><span class="mi">0</span><span class="b2">]</span><span class="b1">)</span><span class="p">;</span>
 <span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="b1">(</span><span class="kt">size_t</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">count</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="b1">)</span><span class="w"> </span><span class="b1">{</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="b2">(</span><span class="n">connection_rules</span><span class="b0">[</span><span class="n">i</span><span class="b0">]</span><span class="p">.</span><span class="n">matches</span><span class="b0">(</span><span class="n">signals</span><span class="b0">)</span><span class="b2">)</span><span class="w"> </span><span class="b2">{</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">connection_rules</span><span class="b0">[</span><span class="n">i</span><span class="b0">]</span><span class="p">.</span><span class="n">verdict</span><span class="p">;</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="b2">(</span><span class="n">connection_rules</span><span class="b0">[</span><span class="n">i</span><span class="b0">]</span><span class="p">.</span><span class="nf">matches</span><span class="b0">(</span><span class="n">signals</span><span class="b0">)</span><span class="b2">)</span><span class="w"> </span><span class="b2">{</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">connection_rules</span><span class="b0">[</span><span class="n">i</span><span class="b0">]</span><span class="p">.</span><span class="py">verdict</span><span class="p">;</span>
 <span class="w">        </span><span class="b2">}</span>
 <span class="w">    </span><span class="b1">}</span>
 

@@ -50,21 +50,48 @@ h2 { margin: 64px 0 14px; }
 th, td { padding: 10px 12px; }
 nav.links { line-height: 2; }
 
-/* code colors: his Neovim theme orchid (~/.config/nvim/colors/orchid.lua), dark in both site modes */
-pre.hl { background: #141414; color: #f7f7f8; }
-.hl .k, .hl .kd, .hl .kr, .hl .kt, .hl .cp, .hl .cpf { color: #bf8fef; }
-.hl .nc { color: #ef8f93; }
-.hl .nf { color: #ef8fd7; }
-.hl .n, .hl .nv { color: #f7f7f8; }
-.hl .no { color: #e7c5c0; }
-.hl .py { color: #e7c0da; }
-.hl .s, .hl .s1, .hl .s2, .hl .sc { color: #8fef8f; }
-.hl .mi, .hl .mf, .hl .m { color: #efb78f; }
-.hl .c1, .hl .cm, .hl .c { color: #c7b6d8; font-style: italic; }
-.hl .o, .hl .p { color: #e4c0e7; }
-.hl .b0 { color: #179fff; }
-.hl .b1 { color: #ffd700; }
-.hl .b2 { color: #da70d6; }
+/* code window: Carbon-style frame. Light mode: Ayu Light colors.
+   Dark mode: his Neovim theme orchid (~/.config/nvim/colors/orchid.lua). */
+.win { margin: 1.2rem 0 .6rem; border-radius: 10px; background: #fcfcfc; border: 1px solid #ececec;
+  box-shadow: 0 10px 28px rgba(30, 40, 60, .10), 0 2px 6px rgba(0, 0, 0, .05); overflow: hidden; }
+.win .bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px 0; position: relative; }
+.win .bar i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+.win .bar i:nth-child(1) { background: #ff5f56; }
+.win .bar i:nth-child(2) { background: #ffbd2e; }
+.win .bar i:nth-child(3) { background: #27c93f; }
+.win .bar span { position: absolute; left: 0; right: 0; text-align: center; color: #8a9199; font: 13px var(--font-block, var(--font-code)); pointer-events: none; }
+.win pre.hl { background: transparent; color: #5c6166; margin: 0; padding: .9rem 1.2rem 1.1rem; border-radius: 0; }
+.hl .k, .hl .kd, .hl .kr, .hl .kt, .hl .cp, .hl .cpf { color: #fa8d3e; }
+.hl .nc { color: #399ee6; }
+.hl .nf { color: #eba400; }
+.hl .n, .hl .nv { color: #5c6166; }
+.hl .py { color: #f07171; }
+.hl .no, .hl .mi, .hl .mf, .hl .m { color: #a37acc; }
+.hl .s, .hl .s1, .hl .s2, .hl .sc { color: #86b300; }
+.hl .c1, .hl .cm, .hl .c { color: #a0a3a8; font-style: italic; }
+.hl .o { color: #ed9366; }
+.hl .p { color: #5c6166; }
+.hl .b0 { color: #399ee6; }
+.hl .b1 { color: #d4a000; }
+.hl .b2 { color: #a37acc; }
+@media (prefers-color-scheme: dark) {
+  .win { background: #1a1820; border-color: #26232e; box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
+  .win .bar span { color: #8d8796; }
+  .win pre.hl { color: #f7f7f8; }
+  .hl .k, .hl .kd, .hl .kr, .hl .kt, .hl .cp, .hl .cpf { color: #bf8fef; }
+  .hl .nc { color: #ef8f93; }
+  .hl .nf { color: #ef8fd7; }
+  .hl .n, .hl .nv { color: #f7f7f8; }
+  .hl .py { color: #e7c0da; }
+  .hl .no { color: #e7c5c0; }
+  .hl .mi, .hl .mf, .hl .m { color: #efb78f; }
+  .hl .s, .hl .s1, .hl .s2, .hl .sc { color: #8fef8f; }
+  .hl .c1, .hl .cm, .hl .c { color: #c7b6d8; }
+  .hl .o, .hl .p { color: #e4c0e7; }
+  .hl .b0 { color: #179fff; }
+  .hl .b1 { color: #ffd700; }
+  .hl .b2 { color: #da70d6; }
+}
 </style>
 <script>
 // Reusable quiz with immediate feedback, plus predictions and one copy block.
@@ -301,7 +328,7 @@ function mountQuiz(root, items, lesson) {
 
 <h2>3. 우리 코드: <code>ja4_format</code></h2>
 <p class="scroll-hint" data-scroll-hint>옆으로 밀어 보기 →</p>
-<pre class="hl"><span class="kt">void</span><span class="w"> </span><span class="nf">ja4_format</span><span class="b0">(</span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">client_hello</span><span class="w"> </span><span class="o">*</span><span class="n">hello</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">ja4</span><span class="b0">)</span>
+<div class="win"><div class="bar"><i></i><i></i><i></i><span>src/rproxy/ja4.c</span></div><pre class="hl"><span class="kt">void</span><span class="w"> </span><span class="nf">ja4_format</span><span class="b0">(</span><span class="kd">const</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="nc">client_hello</span><span class="w"> </span><span class="o">*</span><span class="n">hello</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="o">*</span><span class="n">ja4</span><span class="b0">)</span>
 <span class="b0">{</span>
 <span class="w">    </span><span class="kt">uint16_t</span><span class="w"> </span><span class="n">ciphers</span><span class="b1">[</span><span class="no">CLIENT_HELLO_CIPHER_MAX</span><span class="b1">]</span><span class="p">;</span>
 <span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">cipher_count</span><span class="w"> </span><span class="o">=</span>
@@ -324,8 +351,8 @@ function mountQuiz(root, items, lesson) {
 <span class="w">             </span><span class="nf">version_get_text</span><span class="b2">(</span><span class="n">hello</span><span class="b2">)</span><span class="p">,</span><span class="w"> </span><span class="n">sni</span><span class="p">,</span><span class="w"> </span><span class="nf">count_get_capped</span><span class="b2">(</span><span class="n">cipher_count</span><span class="b2">)</span><span class="p">,</span>
 <span class="w">             </span><span class="nf">count_get_capped</span><span class="b2">(</span><span class="n">extension_count</span><span class="b2">)</span><span class="p">,</span><span class="w"> </span><span class="n">alpn</span><span class="p">,</span><span class="w"> </span><span class="n">cipher_hash</span><span class="p">,</span>
 <span class="w">             </span><span class="n">extension_hash</span><span class="b1">)</span><span class="p">;</span>
-<span class="b0">}</span></pre>
-<p class="cap"><a href="https://github.com/benjohnbill/mini-webserver/blob/eee7073/src/rproxy/ja4.c#L35-L58"><code>src/rproxy/ja4.c:35-58</code></a>. GREASE를 뺀 cipher와 extension 목록을 정렬해 hash하고, 한 문자열로 잇는다. 정렬하기 때문에 순서를 섞어도 JA4는 같다.</p>
+<span class="b0">}</span></pre></div>
+<p class="cap"><a href="https://github.com/benjohnbill/mini-webserver/blob/eee7073/src/rproxy/ja4.c#L35-L58">GitHub에서 보기 (35–58행)</a>. GREASE를 뺀 cipher와 extension 목록을 정렬해 hash하고, 한 문자열로 잇는다. 정렬하기 때문에 순서를 섞어도 JA4는 같다.</p>
 
 <nav class="links">
   이전: <a href="l1-map-and-cost.html">L1 TCP, ClientHello: 규칙 표</a><br>

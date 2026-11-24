@@ -50,7 +50,7 @@
 <div id="quiz"></div>
 
 <h2>3. 우리 코드: <code>connection_decide</code></h2>
-<pre>struct connection_rule {
+<pre data-file="src/rproxy/connection_verdict.c">struct connection_rule {
     bool (*matches)(const struct connection_signals *signals);
     enum connection_verdict verdict;
 };
@@ -75,7 +75,7 @@ connection_decide(const struct connection_signals *signals)
 
     return CONN_PASS;
 }</pre>
-<p class="cap"><a href="https://github.com/benjohnbill/mini-webserver/blob/eee7073/src/rproxy/connection_verdict.c#L10-L34"><code>src/rproxy/connection_verdict.c:10-34</code></a>. 1절 표의 ② 두 줄이 <code>connection_rules[]</code>이고, 처음 맞는 규칙이 이긴다.</p>
+<p class="cap"><a href="https://github.com/benjohnbill/mini-webserver/blob/eee7073/src/rproxy/connection_verdict.c#L10-L34">GitHub에서 보기 (10–34행)</a>. 1절 표의 ② 두 줄이 <code>connection_rules[]</code>이고, 처음 맞는 규칙이 이긴다.</p>
 
 <nav class="links">
   다음: <code>connection_decide</code> 따라치기 → 질문, 그 뒤 <a href="0002-clienthello-fingerprint.html">L2 ClientHello: 지문</a> (<code>ja4_format</code>)<br>

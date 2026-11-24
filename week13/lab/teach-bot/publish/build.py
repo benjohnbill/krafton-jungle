@@ -49,8 +49,8 @@ RAINBOW = 3  # bracket colors b0..b2 by depth, as in his editor
 
 
 def color_code(match: re.Match) -> str:
-    """Color one <pre> block of C like his Neovim theme orchid (see site-bridge.css)."""
-    code = htmllib.unescape(match.group(1))
+    """Color one <pre> block of C and frame it as an editor window (see site-bridge.css)."""
+    path, code = match.group(1) or "", htmllib.unescape(match.group(2))
     spans = highlight(code, CLexer(), HtmlFormatter(nowrap=True)).rstrip("\n")
     # orchid colors storage words like flow words, and constants (CONN_DROP) apart
     for word in ("struct", "static", "const", "enum", "sizeof"):
@@ -77,7 +77,8 @@ def color_code(match: re.Match) -> str:
         return "".join(bracket(ch) if ch in "()[]{}" else f'<span class="p">{ch}</span>' for ch in m.group(1))
 
     spans = re.sub(r'<span class="p">(.*?)</span>', punct, spans)
-    return f'<pre class="hl">{spans}</pre>'
+    bar = f'<div class="bar"><i></i><i></i><i></i><span>{path}</span></div>'
+    return f'<div class="win">{bar}<pre class="hl">{spans}</pre></div>'
 
 
 def build(source: str, slug: str) -> None:
@@ -103,8 +104,8 @@ def build(source: str, slug: str) -> None:
             code = (ASSETS / script).read_text(encoding="utf-8")
             html = html.replace(tag, f"<script>\n{code}</script>")
     html = html.replace("<body>\n", f'<body>\n<div class="wrap">\n{HOME}\n', 1)
-    html = re.sub(r"<pre>(.*?)</pre>", color_code, html, flags=re.S)
-    html = html.replace('\n<pre class="hl">', f'\n{HINT}\n<pre class="hl">')
+    html = re.sub(r'<pre(?: data-file="([^"]*)")?>(.*?)</pre>', color_code, html, flags=re.S)
+    html = html.replace('\n<div class="win">', f'\n{HINT}\n<div class="win">')
     html = html.replace("</body>", "</div>\n</body>", 1)
     html = rewrite_links(html)
     if "../" in html:

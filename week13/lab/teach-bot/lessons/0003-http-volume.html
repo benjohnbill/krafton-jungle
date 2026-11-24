@@ -53,7 +53,7 @@
 <div id="quiz"></div>
 
 <h2>3. 우리 코드: <code>rate_limit_take</code></h2>
-<pre>int rate_limit_take(struct rate_limit *limit, const char *key, double now)
+<pre data-file="src/rproxy/rate_limit.c">int rate_limit_take(struct rate_limit *limit, const char *key, double now)
 {
     pthread_mutex_lock(&amp;limit-&gt;lock);
     struct bucket *bucket = bucket_find(limit, key);
@@ -71,7 +71,7 @@
 
     return wait;
 }</pre>
-<p class="cap"><a href="https://github.com/benjohnbill/mini-webserver/blob/eee7073/src/rproxy/rate_limit.c#L60-L77"><code>src/rproxy/rate_limit.c:60-77</code></a>. 8번 규칙의 "token 없음"을 정하는 함수다. 돌려준 초가 429의 <code>Retry-After</code>가 된다.</p>
+<p class="cap"><a href="https://github.com/benjohnbill/mini-webserver/blob/eee7073/src/rproxy/rate_limit.c#L60-L77">GitHub에서 보기 (60–77행)</a>. 8번 규칙의 "token 없음"을 정하는 함수다. 돌려준 초가 429의 <code>Retry-After</code>가 된다.</p>
 
 <nav class="links">
   이전: <a href="0002-clienthello-fingerprint.html">L2 ClientHello: 지문</a><br>

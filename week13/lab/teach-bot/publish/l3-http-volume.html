@@ -244,14 +244,15 @@ function mountQuiz(root, items, lesson) {
 <a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
 
 <h1>L3 HTTP ①: 양</h1>
-<p class="sub">rproxy 방어 layer L3, 약 10분 (읽기 포함)<br>목표: <code>repeat</code>가 10초에 <code>200</code>을 59번 받은 이유를 token bucket으로 말하기</p>
+<p class="sub">rproxy 방어 layer L3, 약 10분 (읽기 포함)<br>목표: token bucket이 무엇을 세고 언제 거절하는지, 그 비용이 어디로 옮겨 가는지 말하기</p>
 
 <h2>1. 먼저 읽기</h2>
-<p>설명은 노트가 맡는다. 아래 두 절을 이 순서로 읽는다. 각 줄의 "볼 것"이 퀴즈에 나온다.</p>
+<p>설명은 노트가 맡는다. 아래 세 절을 이 순서로 읽는다. 각 줄의 "볼 것"이 퀴즈에 나온다.</p>
 <table>
   <tr><th>절</th><th>볼 것</th></tr>
   <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-http">rproxy 요구분석 ④ HTTP: Request Verdict 카드</a></td><td>rate limit이 규칙 표의 몇 번째이고, 무엇을 돌려주나</td></tr>
   <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/03-layers.html#m-rate">노트 03 rate limit</a></td><td>token bucket 그림, 열쇠, 뚫리는 방식, 사람이 치르는 값</td></tr>
+  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-measurements.html#rate-limit">rproxy 측정 rate limit</a></td><td>rate limit이 아낀 비용과 옮긴 비용</td></tr>
 </table>
 <p>L2의 마지막 질문에서 오라버니가 답했다: User-Agent와 TLS를 둘 다 Chrome으로 맞춘 crawler는 JA4로 못 잡는다. 그런 crawler에게도 남는 신호가 양과 행동이다. 이번에는 양을 본다.</p>
 
@@ -275,20 +276,11 @@ function mountQuiz(root, items, lesson) {
 1.0       5번    0 + (1.0 - 0.0) × 1 = 1  0  통과       0</pre>
 <p>5번 줄을 본다. token을 채우는 timer는 따로 없다. take가 불릴 때 <code>(now - last) × rate</code>를 한 번에 더한다.</p>
 
-<h2>3. 예측: <code>repeat</code>는 <code>200</code>을 몇 번 받나</h2>
-<p>퀴즈 전에 숫자 두 개를 예측한다. 먼저 낱말:</p>
-<ul>
-  <li><strong>Scene</strong>: <code>bench/arena/scene.sh</code>를 한 번 돌린 실험. rproxy와 Origin을 띄우고, Crawler script 하나와 사람 역할 <code>human.py</code>를 10초 동안 함께 보낸 뒤 상태 코드를 센다.</li>
-  <li><strong>preset</strong>: Scene에서 rproxy에 주는 flag 묶음. <code>none</code>은 rate limit이 꺼진 묶음이다. <code>layers</code>는 방어를 모두 켠 묶음이고, rate limit은 <code>--rate 5 --burst 10</code>, key는 IP다.</li>
-  <li><strong><code>repeat</code></strong>: 같은 2 MiB 파일 <code>/bench/f019.txt</code>를 쉬지 않고 받는 Crawler script. IP 하나(<code>127.0.0.1</code>)에서 4개 loop로 동시에 보낸다.</li>
-</ul>
-<p>예측 하나: <code>layers</code>에서 10초 동안 <code>repeat</code>가 받은 <code>200</code>은 몇 개일까? 예측 둘: <code>none</code>에서 <code>repeat</code>는 10초에 요청 약 2,300개를 보냈다. <code>layers</code>에서 보낸 요청 수는 이보다 많을까, 적을까? 맨 아래 답안 칸에 숫자와 이유 한 줄씩 적는다. 정답은 6절에서 연다.</p>
-
-<h2>4. 퀴즈</h2>
+<h2>3. 퀴즈</h2>
 <p>1절의 노트와 2절의 그림을 읽어야 풀린다. 막히면 해설 끝의 링크로 돌아간다.</p>
 <div id="quiz"></div>
 
-<h2>5. 우리 코드: <code>rate_limit_take</code></h2>
+<h2>4. 우리 코드: <code>rate_limit_take</code></h2>
 <table>
   <tr><th>위치</th><th>무엇</th></tr>
   <tr><td><code>src/rproxy/rate_limit.h</code></td><td><code>struct rate_limit_options</code>와 <code>rate_limit_take</code>의 선언, 돌려주는 값의 약속. 먼저 읽기만 한다.</td></tr>
@@ -297,14 +289,6 @@ function mountQuiz(root, items, lesson) {
   <tr><td><code>src/rproxy/event_loop.c:881-886</code></td><td>호출하는 곳: key를 IP나 JA4로 고르고, 지금 시각을 넘긴다.</td></tr>
   <tr><td><code>tests/test_rate_limit.c</code></td><td>테스트 7개. 이름이 곧 edge case 목록이다. 예: <code>a_refused_request_takes_no_token</code>.</td></tr>
 </table>
-
-<h2>6. 예측의 답</h2>
-<details>
-<summary>예측을 적은 뒤 열기</summary>
-<p><strong>하나: <code>200=59</code>.</strong> 나머지 요청은 모두 <code>429</code>를 받았다. key가 IP라서 loop 4개가 bucket 하나를 나눠 쓴다. 처음에 <code>burst</code> 10개를 바로 쓰고, 그 뒤로는 1초에 5개씩 돌아온다. 10 + 5 × 10 = 60이 상한이다. 60번째 token은 첫 요청에서 정확히 10초 뒤에 돌아오는데, Scene은 그 전에 끝나서 59가 되었다. 출처: <code>mini-webserver/docs/measurements/20261124-arena-layers.md</code>의 "What limits each number".</p>
-<p><strong>둘: 더 많다.</strong> 2,280개에서 8,860개로 약 3.9배다. <code>429</code>는 짧은 응답 한 줄이라 2 MiB를 받는 것보다 훨씬 빨리 끝나고, <code>repeat</code>는 기다리지 않고 바로 다음 요청을 보낸다. 그래서 Origin이 보낸 양은 4,564 MiB에서 8 MiB로 줄었지만, rproxy의 CPU는 1.3배로 늘었다. 요청마다 TLS handshake를 새로 하기 때문이다. rate limit은 비용을 없애지 않고 Origin에서 rproxy로 옮긴다. 출처: <a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-measurements.html#rate-limit">rproxy 측정 rate limit</a> (Scene 3회의 중앙값).</p>
-<p>이 옮긴 비용을 줄이는 법은 측정 노트의 "열린 질문"에 있다. 따라치기 뒤에 이야기해도 좋다.</p>
-</details>
 
 <nav class="links">
   이전: <a href="l2-clienthello-fingerprint.html">L2 ClientHello: 지문</a><br>
@@ -347,10 +331,6 @@ mountQuiz(document.getElementById("quiz"), [
   title: "L3 HTTP ①: 양",
   next: "rate_limit_take 따라치기",
   record: "teach-bot/learning-records/",
-  predictions: [
-    "<code>layers</code> preset(<code>--rate 5 --burst 10</code>, key는 IP)에서 <code>repeat</code>는 10초에 <code>200</code>을 몇 번 받나? 이유 한 줄.",
-    "<code>none</code>에서 <code>repeat</code>는 10초에 약 2,300개를 보냈다. <code>layers</code>에서는 더 많이 보낼까, 적게 보낼까? 이유 한 줄.",
-  ],
 });
 </script>
 </div>

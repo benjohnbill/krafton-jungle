@@ -271,15 +271,13 @@ function mountQuiz(root, items, lesson) {
   <li><code>layers</code> preset의 block list(<code>bench/arena/layers-block.txt</code>)에는 <code>127.0.0.16/28</code> 한 줄이 있다.</li>
   <li>10초 동안 보낸 요청은 모두 10240개다.</li>
 </ul>
-<p>curl은 HTTP 응답을 하나도 못 받으면 상태를 <code>000</code>으로 적는다. <code>000</code>은 몇 개일까? 맨 아래 답안 칸에 숫자와 이유 한 줄을 적는다. 정답은 퀴즈를 다 푼 뒤 7절에서 연다.</p>
+<p>curl은 HTTP 응답을 하나도 못 받으면 상태를 <code>000</code>으로 적는다. <code>000</code>은 몇 개일까? 맨 아래 답안 칸에 숫자와 이유 한 줄을 적는다. 정답은 퀴즈를 다 푼 뒤 5절에서 연다.</p>
 
 <h2>3. 퀴즈</h2>
 <p>1절의 노트를 읽어야 풀린다. 막히면 해설 끝의 링크로 돌아간다.</p>
 <div id="quiz"></div>
 
 <h2>4. 우리 코드: <code>connection_decide</code></h2>
-<div class="callout write"><strong>이 함수가 답하는 질문.</strong> TLS handshake를 치르기 전에 서버는 무엇을 정할 수 있나? (SPEC §11 "Code the owner types" row 4)</div>
-<p>따라칠 곳은 <code>mini-webserver</code>, branch <code>CJG</code>, commit <code>a1e0984</code> 기준이다.</p>
 <table>
   <tr><th>위치</th><th>무엇</th></tr>
   <tr><td><code>src/rproxy/connection_verdict.h</code> 전체</td><td><code>enum connection_verdict</code> 세 값과 <code>struct connection_signals</code> 세 칸. 먼저 읽기만 한다.</td></tr>
@@ -287,23 +285,8 @@ function mountQuiz(root, items, lesson) {
   <tr><td><code>src/rproxy/event_loop.c:590-606</code></td><td><code>connection_verdict_get</code>: 신호 세 칸을 채우는 곳. 읽기만 한다.</td></tr>
   <tr><td><code>src/rproxy/event_loop.c:572-586</code></td><td><code>connection_verdict_apply</code>: drop이면 <code>STEP_CLOSE</code>, pass면 <code>handshake_start</code>. 읽기만 한다.</td></tr>
 </table>
-<p>따라칠 때 두 가지를 본다. 첫째, 규칙은 코드의 <code>if</code>가 아니라 표의 행이다. 둘째, 표 순서대로 보고 처음 맞은 행이 이긴다. 이 "첫 매치가 이긴다"는 nginx의 접근 규칙과 같다 (<a href="https://nginx.org/en/docs/http/ngx_http_access_module.html">ngx_http_access_module</a>: "The rules are checked in sequence until the first match is found"). L5의 <code>verdict_decide</code>도 같은 모양이다.</p>
-<p>따라친 뒤 혼자 하는 과제. 규칙 표에 세 번째 행 <code>{ja4_has_label, CONN_TARPIT}</code>(JA4 table에 label이 있는 연결은 tarpit)을 넣는다고 하자. 표의 맨 위에 넣을 때와 맨 아래에 넣을 때, block list에도 있고 JA4 label도 있는 연결 하나는 각각 어떤 Verdict를 받나? 둘 중 어느 쪽을 고르고, 그 이유를 3절의 비용으로 한 문장 말한다. 코드는 바꾸지 않는다.</p>
-<p class="scroll-hint" data-scroll-hint>옆으로 밀어 보기 →</p>
-<pre>static const struct connection_rule connection_rules[] = {
-    /* 맨 위에 넣으면 여기 */
-    {ip_is_listed, CONN_DROP},
-    {key_is_blocked, CONN_DROP},
-    /* 맨 아래에 넣으면 여기 */
-};</pre>
 
-<h2>5. 답안 복사</h2>
-<p>퀴즈 아래의 답안 칸에 예측을 적고 복사 버튼을 누른다. 세션에 붙여 넣으면 에이전트가 <code>learning-records/</code>에 기록한다.</p>
-
-<h2>6. 주 자료</h2>
-<p><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-hello">rproxy 요구분석 ② ClientHello 카드</a>와 ③ TLS 카드. ③의 "②에서 drop하면 이 비용을 통째로 아낀다"가 이 lesson의 한 줄이다.</p>
-
-<h2>7. 예측의 답</h2>
+<h2>5. 예측의 답</h2>
 <details>
 <summary>예측을 적은 뒤 열기</summary>
 <p><code>000=5120</code>. <code>127.0.0.16/28</code>은 .16부터 .31까지 주소 16개다. 16개가 모두 <code>spread</code>의 32개 안에 있으니 요청의 절반이 TLS handshake 전에 닫힌다. 10240 ÷ 2 = 5120. 나머지 절반은 Request Verdict까지 가서 402를 받았다 (402는 L5). 출처: <code>mini-webserver/docs/measurements/20261124-arena-layers.md</code>의 <code>spread</code> 행.</p>
@@ -311,7 +294,7 @@ function mountQuiz(root, items, lesson) {
 </details>
 
 <nav class="links">
-  다음: <code>connection_decide</code> 따라치기 → 질문, 그 뒤 L2 신원 묻기 (<code>ja4_format</code>)<br>
+  다음: <code>connection_decide</code> 따라치기 → 질문, 그 뒤 <a href="l2-clienthello-fingerprint.html">L2 ClientHello: 지문</a> (<code>ja4_format</code>)<br>
   지식: <a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html">rproxy 요구분석</a>
 </nav>
 
@@ -352,7 +335,6 @@ mountQuiz(document.getElementById("quiz"), [
   record: "teach-bot/learning-records/0001-map-and-cost.md",
   predictions: [
     "<code>layers</code> preset에서 <code>spread</code>(주소 32개, 요청 10240개)의 <code>000</code>은 몇 개일까? 이유 한 줄.",
-    "4절 과제: <code>{ja4_has_label, CONN_TARPIT}</code>을 맨 위와 맨 아래 중 어디에 넣나? 두 경우의 Verdict와 이유 한 문장.",
   ],
 });
 </script>

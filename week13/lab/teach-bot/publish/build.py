@@ -21,6 +21,7 @@ SITE_CSS = '<link rel="stylesheet" href="https://benjohnbill.github.io/assets/si
 # source file (relative to TEACH) -> published slug
 PAGES = {
     "lessons/0001-map-and-cost.html": "l1-map-and-cost.html",
+    "lessons/0002-clienthello-fingerprint.html": "l2-clienthello-fingerprint.html",
 }
 # quiz answers he gave in his local lesson pages, if any (publish/answers.json)
 ANSWERS_FILE = Path(__file__).resolve().parent / "answers.json"

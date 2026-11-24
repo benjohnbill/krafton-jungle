@@ -41,15 +41,13 @@
   <li>Request Verdict의 규칙 6 "false browser": User-Agent에 <code>Chrome/</code>이 있는데 JA4 table의 label이 <code>browser</code>가 아니면 tarpit이다.</li>
   <li><strong>tarpit</strong>: 연결을 <code>--tarpit</code>초(기본 10초) 붙잡은 뒤 응답 없이 닫는다.</li>
 </ul>
-<p>10초 동안 <code>disguised</code>가 받은 <code>200</code>은 몇 개일까? 맨 아래 답안 칸에 숫자와 이유 한 줄을 적는다. 정답은 8절에서 연다.</p>
+<p>10초 동안 <code>disguised</code>가 받은 <code>200</code>은 몇 개일까? 맨 아래 답안 칸에 숫자와 이유 한 줄을 적는다. 정답은 6절에서 연다.</p>
 
 <h2>4. 퀴즈</h2>
 <p>1절의 노트와 2절의 표를 읽어야 풀린다. 막히면 해설 끝의 링크로 돌아간다.</p>
 <div id="quiz"></div>
 
 <h2>5. 우리 코드: <code>ja4_format</code></h2>
-<div class="callout write"><strong>이 함수가 답하는 질문.</strong> ClientHello의 어느 칸을 모아 이 client의 지문을 만드나? (SPEC §11 "Code the owner types" row 1)</div>
-<p>따라칠 곳은 <code>mini-webserver</code>, branch <code>CJG</code>, commit <code>48bf7a0</code> 기준이다.</p>
 <table>
   <tr><th>위치</th><th>무엇</th></tr>
   <tr><td><code>src/rproxy/ja4.h</code></td><td><code>JA4_LEN</code>(36)과 <code>ja4_format</code>의 선언. 먼저 읽기만 한다.</td></tr>
@@ -57,15 +55,8 @@
   <tr><td><code>src/rproxy/ja4.c:60-229</code></td><td>helper 함수들. 뼈대 파일에 미리 들어 있다. 따라칠 때 이름이 나오면 그 함수를 찾아 읽는다.</td></tr>
   <tr><td><code>tests/test_ja4.c</code></td><td>테스트 17개. 이름이 곧 edge case 목록이다. 예: <code>grease_values_do_not_change_the_fingerprint</code>.</td></tr>
 </table>
-<p>따라친 뒤 혼자 하는 과제. Chrome은 연결마다 extension 순서를 섞는다(1절, 노트 03). 그래도 우리 JA4의 c 부분이 바뀌지 않게 하는 줄은 <code>ja4.c</code>의 어디인가? 줄 번호와 이유 한 문장을 말한다. 코드는 바꾸지 않는다.</p>
 
-<h2>6. 답안 복사</h2>
-<p>퀴즈 아래의 답안 칸에 예측과 과제의 답을 적고 복사 버튼을 누른다. 세션에 붙여 넣으면 에이전트가 <code>learning-records/</code>에 기록한다.</p>
-
-<h2>7. 주 자료</h2>
-<p><a href="https://github.com/FoxIO-LLC/ja4/blob/main/technical_details/JA4.md">FoxIO JA4 technical details</a>. 2절 표의 원본이다. 처음의 그림 한 장과 "JA4 Algorithm" 절만 보면 된다. 실제 bot 관리에서 JA4를 어떻게 쓰는지는 <a href="https://blog.cloudflare.com/ja4-signals/">Cloudflare: JA4 Signals</a>.</p>
-
-<h2>8. 예측의 답</h2>
+<h2>6. 예측의 답</h2>
 <details>
 <summary>예측을 적은 뒤 열기</summary>
 <p><code>200=0</code>. 요청이 하나도 끝나지 않았다 (Sent 0). <code>disguised</code>의 JA4는 curl의 JA4라서 label이 <code>curl</code>이고, User-Agent에는 <code>Chrome/</code>이 있다. 그래서 규칙 6에 걸려 tarpit을 받는다. 연결 8개가 각각 10초 붙잡혔고 Scene도 10초라서, 끝날 때까지 응답을 하나도 받지 못했다. <code>rproxy</code> 로그에는 tarpit Verdict가 8번 찍혔다. 출처: <code>mini-webserver/docs/measurements/20261124-arena-disguised-v3.md</code>.</p>
@@ -116,7 +107,6 @@ mountQuiz(document.getElementById("quiz"), [
   record: "teach-bot/learning-records/",
   predictions: [
     "<code>layers</code> preset에서 <code>disguised</code>(Chrome User-Agent, curl의 TLS, 연결 8개, 10초)는 <code>200</code>을 몇 번 받나? 이유 한 줄.",
-    "5절 과제: extension 순서가 섞여도 c 부분이 같게 하는 줄은 <code>ja4.c</code>의 어디인가? 줄 번호와 이유 한 문장.",
   ],
 });
 </script>

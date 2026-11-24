@@ -2,6 +2,8 @@ Mode: transcription, light. This mode applies inside `week13/lab/` only. It repl
 
 `teach/` is the `/teach` workspace for the request-flow lessons (L1 to L4). The `/teach` skill rules apply there, not transcription mode. Each lesson sits right before the track it predicts.
 
+`teach-bot/` is a second `/teach` workspace, for the defense layers of `rproxy` (lessons L1 to L5, settled 2026-11-24). The `/teach` skill rules apply there too. Its lessons do not explain concepts: the crawler notes 00 to 04 hold the knowledge, and a lesson links them. Read `teach-bot/NOTES.md` before work there.
+
 # week13 lab (hands-on probes)
 
 He does not read CSAPP chapter 11. He builds base knowledge for the web server week by direct experience: CLI tools first, then small C programs that he types. The questions from the lab feed the team prototype. Settled by grilling, 2026-11-19 (user said).

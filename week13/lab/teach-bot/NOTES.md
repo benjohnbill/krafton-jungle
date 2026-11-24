@@ -38,7 +38,7 @@
 
 ## 주의
 
-- `mini-webserver/`는 Event loop 재작성(SPEC §11 step 13)이 push될 때까지 읽기만 한다. `event_loop.c`의 `tarpit_start`는 `a1e0984`에서 642줄이다. push 전이라 GitHub 링크는 걸 수 없다.
+- `mini-webserver/`의 SPEC §11 1~13단계는 모두 `origin/CJG`에 올라가 있다 (2026-11-24 확인, `968f2bd`, 단위 테스트 15개 통과). lesson의 코드 위치에는 commit을 고정한 GitHub 링크를 걸 수 있다. `event_loop.c`의 `tarpit_start`는 `a1e0984`에서 642줄이다.
 - 알려진 버그: Origin이 query string이 붙은 정적 경로에 404를 준다. lesson 문제에 query string을 쓰지 않는다.
 - 사이트 게시는 `../teach/publish/build.py`의 방식을 따른다: 원본 lesson → `publish/` 사본 → 사이트 `study/week13/mini-webserver/lessons/` (노트는 `study/week13/mini-webserver/notes/`, 2026-11-24 user said). 사이트에 올리기 전에 `benjohnbill.github.io/AGENTS.md`의 "Site rules"를 읽는다. `assets/`는 `../teach/assets/`에서 복사했다 (`flow-lanes.js`는 요청 흐름 전용이라 빼고).
 

@@ -250,7 +250,7 @@ function mountQuiz(root, items, lesson) {
 <p>설명은 노트가 맡는다. 아래 세 절을 이 순서로 읽는다. 각 줄의 "볼 것"이 퀴즈에 나온다.</p>
 <table>
   <tr><th>절</th><th>볼 것</th></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-hello">rproxy 요구분석 ② ClientHello 카드</a></td><td>JA4가 무엇의 지문인가, JA4로 막을 때의 약점</td></tr>
+  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-hello">rproxy 요구분석 ② TLS handshake: ClientHello 카드</a></td><td>JA4가 무엇의 지문인가, JA4로 막을 때의 약점</td></tr>
   <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/03-layers.html#m-ua">노트 03 User-Agent 차단</a></td><td>User-Agent가 왜 싸게 뚫리나</td></tr>
   <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/03-layers.html#m-tls">노트 03 TLS fingerprint: JA3에서 JA4로</a></td><td>JA3가 Chrome 때문에 무너진 이유, JA4가 고친 방법, 뚫리는 방식</td></tr>
 </table>
@@ -331,7 +331,7 @@ mountQuiz(document.getElementById("quiz"), [
   { q: "JA4 하나를 Block table에 넣어 막으면 생기는 부작용은?",
     options: ["IP를 바꾸면 바로 다 풀림", "같은 라이브러리 사람도 막힘", "TLS 서명 비용이 더 늘어남"],
     answer: 1,
-    why: `JA4는 소프트웨어의 지문이라, 같은 TLS 라이브러리를 쓰는 사람도 같은 JA4를 낸다. <a href="${NHELLO}">② ClientHello 카드</a>의 "거르는 기준" 약점.` },
+    why: `JA4는 소프트웨어의 지문이라, 같은 TLS 라이브러리를 쓰는 사람도 같은 JA4를 낸다. <a href="${NHELLO}">② TLS handshake: ClientHello 카드</a>의 "거르는 기준" 약점.` },
   { q: "curl <code>t13i3012h2_1d37bd780c83_…</code>, Python <code>t13i301100_1d37bd780c83_…</code>. b가 같은 이유는?",
     options: ["cipher 목록이 같아서", "ALPN 문자열이 같아서", "SNI 표시 글자가 같아서"],
     answer: 0,

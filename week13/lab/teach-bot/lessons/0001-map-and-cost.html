@@ -18,7 +18,7 @@
   <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/00-overview.html#layers">노트 00 §1 요청이 지나는 layer</a></td><td>layer 여덟 개의 순서, 마지막 layer가 묻는 질문</td></tr>
   <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/01-cost.html#paths">노트 01 §1 사람의 요청과 crawler의 요청</a></td><td>crawler의 요청이 비싼 이유: 어느 칸을 지나치나</td></tr>
   <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/02-history.html#rounds">노트 02 §1 방어와 우회의 11 라운드</a></td><td>라운드 4: IP 차단에 crawler가 무엇으로 답했나</td></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-tcp">rproxy 요구분석 ① TCP, ② ClientHello, ③ TLS 카드</a></td><td>Connection Verdict가 보는 것, drop이 치르지 않는 비용</td></tr>
+  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-tcp">rproxy 요구분석 ① TCP, ② TLS handshake: ClientHello, ③ TLS handshake: ServerHello부터 카드</a></td><td>Connection Verdict가 보는 것, drop이 치르지 않는 비용</td></tr>
 </table>
 <p>rproxy 요구분석의 카드 ①~③이 이 lesson의 중심이다. 나머지 셋은 "왜 막나"와 "막으면 crawler가 어떻게 하나"를 준다.</p>
 
@@ -72,19 +72,19 @@ mountQuiz(document.getElementById("quiz"), [
   { q: "Connection Verdict는 TLS handshake 전에 돈다. 이때 서버가 볼 수 있는 신호는?",
     options: ["User-Agent, target", "IP, JA4, Block table", "PoW 풀이, bot 서명"],
     answer: 1,
-    why: `ClientHello를 엿본 뒤라 IP와 JA4는 있지만, HTTP request는 아직 암호 안에도 오지 않았다. User-Agent와 서명은 Request Verdict의 몫이다. <a href="${N04}">② ClientHello 카드</a>의 "보이는 신호".` },
+    why: `ClientHello를 엿본 뒤라 IP와 JA4는 있지만, HTTP request는 아직 암호 안에도 오지 않았다. User-Agent와 서명은 Request Verdict의 몫이다. <a href="${N04}">② TLS handshake: ClientHello 카드</a>의 "보이는 신호".` },
   { q: "Connection Verdict가 403 대신 drop만 고를 수 있는 이유는?",
     options: ["403이 더 비싸서", "TLS가 막고 있어서", "HTTP가 아직 없어서"],
     answer: 2,
-    why: `403은 HTTP 응답이다. handshake 전에는 HTTP가 없으니 닫거나 붙잡는 것만 할 수 있다. <a href="${N04}">② ClientHello 카드</a>의 "고려할 점" 첫 줄.` },
+    why: `403은 HTTP 응답이다. handshake 전에는 HTTP가 없으니 닫거나 붙잡는 것만 할 수 있다. <a href="${N04}">② TLS handshake: ClientHello 카드</a>의 "고려할 점" 첫 줄.` },
   { q: "drop된 연결과 403을 받은 연결을 비교하면, drop이 서버에 아껴 주는 비용은?",
     options: ["TLS handshake 서명", "Origin까지의 왕복", "cache를 찾는 시간"],
     answer: 0,
-    why: `403도 Origin에는 가지 않는다. 차이는 handshake의 RSA-2048 서명이다: 요청 하나의 CPU 2.1 ms 중 0.9 ms. <a href="${NTLS}">③ TLS 카드</a>의 "서버 비용".` },
+    why: `403도 Origin에는 가지 않는다. 차이는 handshake의 RSA-2048 서명이다: 요청 하나의 CPU 2.1 ms 중 0.9 ms. <a href="${NTLS}">③ TLS handshake: ServerHello부터 카드</a>의 "서버 비용".` },
   { q: "drop은 엿본 ClientHello를 읽지 않은 채 socket을 닫는다. client 쪽에 오는 것은?",
     options: ["TLS alert 한 개", "RST, TLS 바이트 0", "빈 HTTP 응답 한 개"],
     answer: 1,
-    why: `MSG_PEEK는 바이트를 Receive Buffer에 남긴다. 읽지 않은 바이트가 남은 채 close하면 kernel이 RST를 보낸다. nginx의 <code>return 444</code>를 본뜬 것이다. <a href="${N04}">② ClientHello 카드</a>의 "서버 비용".` },
+    why: `MSG_PEEK는 바이트를 Receive Buffer에 남긴다. 읽지 않은 바이트가 남은 채 close하면 kernel이 RST를 보낸다. nginx의 <code>return 444</code>를 본뜬 것이다. <a href="${N04}">② TLS handshake: ClientHello 카드</a>의 "서버 비용".` },
   { q: "crawler의 요청이 사람의 요청보다 서버에 비싼 까닭은?",
     options: ["드문 페이지라 cache miss", "header가 훨씬 커서", "TLS를 매번 새로 맺어서"],
     answer: 0,

@@ -34,6 +34,8 @@
 | L5 HTTP ③: 신원, 거래, 규칙 순서 | `#s-http`, `#rules`, 03 `#m-honey`, `#m-pay`, `#m-wba` | 착한 bot을 통과시키는 법과 `verdict_decide`의 규칙 8개 순서를 말한다 | `signed` 대 `named`, `trapped` 6860 | `verdict_decide` (`src/rproxy/verdict.c:52`) |
 | L6 Cache, Origin: 통과한 요청의 비용 | `#s-cache`, `#s-origin`, `#arena` | cache가 crawler 비용을 줄이지 못하는 이유와 304를 말한다 | `revalidate` 304=55, `repeat` MiB | `cache_find` (`src/rproxy/event_loop.c:996` 호출부) |
 
+단계 이름 변경 (user said 2026-11-24 "응, 그게 맞아"): ClientHello는 TLS handshake의 첫 메시지라서, 카드 ②와 ③은 TLS 안을 나눈 두 장이다. 이름은 "② TLS handshake: ClientHello"(엿보고 판정, 평문)와 "③ TLS handshake: ServerHello부터"(서버가 답하고 서명)다. "② ClientHello → ③ TLS"는 ClientHello가 TLS 밖에 있는 것처럼 읽혀서 그가 헷갈렸다. 반영함 (2026-11-24): 요구분석 노트의 카드 제목과 단계 그림, L1과 L2의 링크 글. lesson 제목(L1 "TCP, ClientHello", L2 "ClientHello: 지문")과 사용자 표 머리("② Hello", "③ TLS")는 그대로 두었다.
+
 줄 번호는 `CJG` commit `a1e0984`(Event loop) 기준이다. lesson을 만들 때 다시 확인한다.
 
 ## 주의

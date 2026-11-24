@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://benjohnbill.github.io/assets/site.css">
 <style>
 /* type and boxes follow DESIGN.md (reference: study/week07/debug-panic-exit.html) */
-/* same structure as t2-echo-server.html and t3-restart-sigpipe.html (user asked 2026-11-20): summary first, then glossary, then one story per probe */
+/* same structure as t2-echo-server.html and t3-restart-sigpipe.html (user asked 2026-11-20): summary first, then one story per probe; plan, glossary, and flow moved to t0-overview.html (2026-11-24) */
 html { font-size: 19px; }
 body { font-size: 1rem; }
 .wrap { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
@@ -65,59 +65,9 @@ th, td { overflow-wrap: anywhere; }
 </div>
 </div>
 
-<h2>1. 앞 이야기와 용어</h2>
-<p class="lead">읽고 나서 만들기 대신 겪고 나서 만들기<br>관찰에서 생긴 질문을 팀 프로토타입으로</p>
-<p>웹 서버 주차의 출발점을 책 대신 명령으로 정함. curl, telnet, nc, strace로 요청 하나를 직접 따라가고, 다음 트랙부터는 작은 C 코드를 손으로 따라 침. 각 프로브의 끝은 힌트 없이 혼자 하는 변경 과제 하나.</p>
-<div class="scroll">
-<table>
-<thead><tr><th>트랙</th><th>겪어 볼 것</th><th>기록</th></tr></thead>
-<tbody>
-<tr><td>T1 CLI</td><td>이름 → IP, HTTP의 모양, socket → bind → listen → accept</td><td>이 페이지</td></tr>
-<tr><td>T2 socket C</td><td>echo 서버 따라치기, 두 번째 client가 멈추는 이유</td><td><a href="https://benjohnbill.github.io/study/week13/t2-echo-server.html">한 번에 한 client만 받는 echo 서버</a></td></tr>
-<tr><td>T3 TCP</td><td>SO_REUSEADDR, TIME-WAIT, SIGPIPE</td><td><a href="https://benjohnbill.github.io/study/week13/t3-restart-sigpipe.html">서버 재시작과 응답 도중 떠난 client</a></td></tr>
-<tr><td>T4 HTTP</td><td>정적 GET, MIME, 404, keep-alive, 깨진 요청</td><td>다음</td></tr>
-<tr><td>T5 concurrency</td><td>fork, pthread, epoll을 wrk로 비교</td><td></td></tr>
-<tr><td>T6 proxy</td><td>Reverse Proxy, 중계, C Forward Proxy</td><td></td></tr>
-</tbody>
-</table>
-</div>
-<div class="scroll">
-<table>
-<thead><tr><th>용어</th><th>뜻</th></tr></thead>
-<tbody>
-<tr><td>client</td><td><span class="ln">서버에 연결하는 프로그램</span><span class="ln">이 페이지에서는 curl, telnet, nc, 브라우저</span></td></tr>
-<tr><td>DNS</td><td>이름을 물으면 IP를 알려 주는 서버와 그 규칙</td></tr>
-<tr><td><code>/etc/hosts</code></td><td><span class="ln">이름과 IP를 직접 적어 둔 파일</span><span class="ln">DNS보다 먼저 봄</span></td></tr>
-<tr><td>요청 줄</td><td>요청의 첫 줄: 메서드, 경로, 버전 (<code>GET / HTTP/1.1</code>)</td></tr>
-<tr><td>상태 줄</td><td>응답의 첫 줄: 버전, 상태 코드, 설명 (<code>HTTP/1.1 200 OK</code>)</td></tr>
-<tr><td>빈 줄</td><td>헤더가 끝났다는 표시</td></tr>
-<tr><td>keep-alive</td><td>응답 뒤에도 연결을 닫지 않고 다음 요청을 받는 방식</td></tr>
-<tr><td>Content-Length</td><td>body가 몇 바이트인지 알리는 헤더</td></tr>
-<tr><td>시스템콜</td><td>프로그램이 커널에 일을 부탁하는 호출 (<code>socket</code>, <code>bind</code>, <code>listen</code>, <code>accept</code>, <code>connect</code>)</td></tr>
-<tr><td>fd</td><td>프로세스가 커널 안의 파일이나 소켓을 가리키는 번호</td></tr>
-<tr><td>listen 소켓</td><td><code>listen</code>을 부른 소켓, 새 연결만 받음</td></tr>
-<tr><td>연결 소켓</td><td><code>accept</code>가 client마다 새로 만든 소켓, 대화는 여기로</td></tr>
-</tbody>
-</table>
-</div>
+<p>트랙 순서, 용어, 요청 하나의 흐름: <a href="https://benjohnbill.github.io/study/week13/t0-overview.html">웹서버 사전 학습 개괄 (00)</a></p>
 
-<h2>2. 요청 하나의 흐름</h2>
-<p class="lead">다섯 단계<br>단계마다 본 프로브와 출력의 자리가 다름</p>
-<div class="scroll">
-<table class="flow">
-<thead><tr><th></th><th>오가는 것</th><th>누가 → 누구에게</th><th>본 곳</th></tr></thead>
-<tbody>
-<tr><td>1</td><td>IP 주소는? → IP 목록</td><td>curl과 DNS 서버</td><td><span class="ln">01</span><span class="ln">curl의 <code>*</code> 줄</span></td></tr>
-<tr><td>2</td><td>TCP 연결</td><td>내 커널과 서버 커널</td><td><span class="ln">05</span><span class="ln"><code>connect</code>, <code>accept</code></span></td></tr>
-<tr><td>3</td><td><code>GET / HTTP/1.1</code>, 헤더, 빈 줄</td><td>curl → 서버 프로그램</td><td><span class="ln">02, 03</span><span class="ln"><code>&gt;</code> 줄</span></td></tr>
-<tr><td>4</td><td><code>HTTP/1.1 200 OK</code>, 헤더, 빈 줄</td><td>서버 프로그램 → curl</td><td><span class="ln">02, 03</span><span class="ln"><code>&lt;</code> 줄</span></td></tr>
-<tr><td>5</td><td>body (HTML)</td><td>서버 프로그램 → curl</td><td><span class="ln">04</span><span class="ln">브라우저가 받는 대로 그림</span></td></tr>
-</tbody>
-</table>
-</div>
-<p>웹 서버를 만든다 = 3을 읽고 4와 5를 쓰는 일. 1은 client가, 2는 커널이 처리하고, 서버는 <code>listen</code>과 <code>accept</code>로 준비만 함.</p>
-
-<h2 id="s3">3. DNS: 이름 → IP (01)</h2>
+<h2 id="s3">1. DNS: 이름 → IP (01)</h2>
 <p class="lead">이름이 IP로 바뀌는 곳은 두 군데<br><code>/etc/hosts</code>가 먼저, 없으면 DNS 서버</p>
 <section class="story">
 <dl>
@@ -136,7 +86,7 @@ cat /etc/hosts /etc/resolv.conf</pre>
 </dl>
 </section>
 
-<h2 id="s4">4. curl: HTTP의 모양 (02)</h2>
+<h2 id="s4">2. curl: HTTP의 모양 (02)</h2>
 <p class="lead">연결이 먼저, 요청 텍스트는 그 위로<br>무엇을 돌려줄지는 서버 프로그램이 정함</p>
 <section class="story">
 <dl>
@@ -154,7 +104,7 @@ curl -sv http://localhost/ -o /dev/null 2&gt;&amp;1 | bat -l http
 </dl>
 </section>
 
-<h2 id="s5">5. telnet: HTTP를 손으로 (03)</h2>
+<h2 id="s5">3. telnet: HTTP를 손으로 (03)</h2>
 <p class="lead">요청의 끝은 빈 줄<br>깨진 요청은 읽는 단계마다 다른 때에 걸러짐</p>
 <section class="story">
 <dl>
@@ -186,7 +136,7 @@ nc localhost 80                <span class="cm"># 줄 끝 \n만 (nc -C면 \r\n)<
 </dl>
 </section>
 
-<h2 id="s6">6. nc: 내가 서버 (04)</h2>
+<h2 id="s6">4. nc: 내가 서버 (04)</h2>
 <p class="lead">역할 바꾸기: 브라우저가 client, 내가 서버<br>브라우저는 응답의 끝을 Content-Length나 연결의 끝으로 앎</p>
 <section class="story">
 <dl>
@@ -205,7 +155,7 @@ Content-Type: text/html
 </dl>
 </section>
 
-<h2 id="s7">7. strace: 서버와 커널 사이 (05)</h2>
+<h2 id="s7">5. strace: 서버와 커널 사이 (05)</h2>
 <p class="lead">서버는 <code>socket</code> → <code>bind</code> → <code>listen</code> 다음 <code>accept4</code>에서 멈춤<br>접속이 오면 새 fd</p>
 <section class="story">
 <dl>
@@ -224,7 +174,7 @@ strace -f -e trace=network curl -s http://example.com/ -o /dev/null</pre>
 </dl>
 </section>
 
-<h2>8. 다음으로 미룬 것</h2>
+<h2>6. 다음으로 미룬 것</h2>
 <div class="scroll">
 <table>
 <thead><tr><th>질문</th><th>갈 곳</th></tr></thead>

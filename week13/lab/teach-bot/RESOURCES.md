@@ -14,6 +14,8 @@
   layer 0~5와 방법마다 우회 방식. Use for: L2~L5의 지식 본문 (`#m-*` 앵커).
 - [rproxy 요구분석: 단계마다 무엇을 보고 누구를 거르나](https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html)
   목표, 사용자 셋, 단계 카드 ①~⑥, Not-Goal, Scene, 대가와 한계. 2026-11-24에 노트 04를 이 형태로 다시 썼다. Use for: 모든 lesson의 지식 본문과 "우리 코드" 쪽 (`#s-*` 카드 앵커).
+- [rproxy 측정: 방어마다 아끼는 비용과 옮기는 비용](https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-measurements.html)
+  Scene 3회 중앙값(Event loop, `968f2bd`): rate limit은 Origin 비용을 rproxy로 옮기고, drop과 tarpit은 rproxy 비용까지 줄인다. 열린 질문(rate limit의 rproxy 비용 줄이기)이 있다. Use for: L3, L4의 예측 문제와 열린 질문.
 - `mini-webserver/docs/spec-cjg.md` §11, "Defaults taken from practice"
   generator가 고른 값마다 출처(nginx, fail2ban, Cloudflare, Anubis, RFC). Use for: 퀴즈의 "왜 이 값인가".
 - `mini-webserver/docs/measurements/20261124-arena-layers.md`

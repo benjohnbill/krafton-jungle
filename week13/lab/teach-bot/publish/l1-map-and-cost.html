@@ -238,67 +238,87 @@ function mountQuiz(root, items, lesson) {
   }
 }
 </script>
+<style>
+.stages { display: flex; flex-wrap: wrap; gap: .3rem; margin: 1rem 0 .4rem; }
+.stages div { flex: 1 1 6.5rem; border: 1px solid var(--rule); border-radius: 6px; padding: .4rem .5rem; font-size: .9rem; }
+.stages div small { display: block; color: var(--muted); }
+.stages .on, tr.on td { border-color: var(--read); background: var(--read-soft, #e8f3f6); font-weight: 600; }
+.cap { color: var(--muted); font-size: .9rem; }
+</style>
 </head>
 <body>
 <div class="wrap">
 <a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
 
 <h1>L1 TCP, ClientHello: 규칙 표</h1>
-<p class="sub">rproxy 방어 layer L1, 약 10분 (읽기 포함)<br>목표: TLS handshake 전에 서버가 무엇을 볼 수 있는지, 그리고 drop이 왜 싼지 말하기</p>
+<p class="sub">rproxy 방어 layer L1, 약 5분<br>목표: 요구분석의 ①, ② 단계에서 TLS handshake 전에 서버가 무엇을 보고, drop이 왜 싼지 말하기</p>
 
-<h2>1. 먼저 읽기</h2>
-<p>설명은 노트가 맡는다. 아래 네 절을 이 순서로 읽는다. 각 줄의 "볼 것"이 퀴즈에 나온다.</p>
+<h2>1. 이번 lesson의 자리</h2>
+<div class="stages">
+  <div class="on">① TCP<small>L1</small></div>
+  <div class="on">② ClientHello<small>L1, L2</small></div>
+  <div>③ ServerHello부터<small>거르지 않음</small></div>
+  <div>④ HTTP<small>L3, L4, L5</small></div>
+  <div>⑤ Cache<small>L6</small></div>
+  <div>⑥ Origin<small>L6</small></div>
+</div>
 <table>
-  <tr><th>절</th><th>볼 것</th></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/00-overview.html#layers">노트 00 §1 요청이 지나는 layer</a></td><td>layer 여덟 개의 순서, 마지막 layer가 묻는 질문</td></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/01-cost.html#paths">노트 01 §1 사람의 요청과 crawler의 요청</a></td><td>crawler의 요청이 비싼 이유: 어느 칸을 지나치나</td></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/02-history.html#rounds">노트 02 §1 방어와 우회의 11 라운드</a></td><td>라운드 4: IP 차단에 crawler가 무엇으로 답했나</td></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-tcp">rproxy 요구분석 ① TCP, ② TLS handshake: ClientHello, ③ TLS handshake: ServerHello부터 카드</a></td><td>Connection Verdict가 보는 것, drop이 치르지 않는 비용</td></tr>
+  <tr><th>①, ②의 규칙</th><th>맞는 조건</th><th>Verdict</th></tr>
+  <tr class="on"><td>① 시간 제한</td><td>ClientHello를 5초 안에 다 보내지 않음</td><td>닫음</td></tr>
+  <tr class="on"><td>② Block list</td><td>client IP가 <code>--block-list</code>의 CIDR 범위 안</td><td>drop</td></tr>
+  <tr class="on"><td>② Block table</td><td>client IP나 JA4가 표에 있음</td><td>drop</td></tr>
+  <tr><td>맞는 규칙 없음</td><td></td><td>pass → ③ TLS handshake</td></tr>
 </table>
-<p>rproxy 요구분석의 카드 ①~③이 이 lesson의 중심이다. 나머지 셋은 "왜 막나"와 "막으면 crawler가 어떻게 하나"를 준다.</p>
+<p class="cap">위에서부터 보고, 처음 맞는 규칙이 Connection Verdict를 정한다. 출처: <a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-tcp">요구분석 ① TCP</a>, <a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-hello">② TLS handshake: ClientHello</a> 카드의 "거르는 기준". JA4를 만드는 법은 L2.</p>
 
-<h2>2. 예측: <code>spread</code>는 몇 번 drop되나</h2>
-<p>퀴즈 전에 숫자 하나를 예측한다. Scene의 <code>layers</code> preset에서 Crawler script <code>spread</code>를 10초 돌렸다.</p>
-<p>먼저 세 낱말이다.</p>
-<ul>
-  <li><strong>Scene</strong>: <code>bench/arena/scene.sh</code>. <code>rproxy</code>를 켜고, Crawler script 하나를 10초 동안 돌린 뒤, 응답 상태를 센다.</li>
-  <li><strong>preset</strong>: <code>rproxy</code>에 주는 옵션 묶음의 이름이다. 어느 방어 layer를 켤지 정한다. <code>none</code>은 거의 다 끈 상태, <code>layers</code>는 block list, JA4 table, rate limit, Proof of work, 402, cache를 모두 켠 상태다.</li>
-  <li><strong><code>000</code></strong>: Crawler script는 curl로 요청하고, 응답마다 HTTP 상태 코드(<code>200</code>, <code>429</code> …)를 적는다. 서버가 HTTP 응답을 한 바이트도 주지 않고 연결을 끊으면 curl은 <code>000</code>을 적는다. 즉 <code>000</code> = drop이다.</li>
-</ul>
-<p>그리고 이번 실험의 조건이다.</p>
-<ul>
-  <li><code>spread</code>는 127.0.0.2부터 127.0.0.33까지, 주소 32개를 차례로 돌며 보낸다.</li>
-  <li><code>layers</code> preset의 block list(<code>bench/arena/layers-block.txt</code>)에는 <code>127.0.0.16/28</code> 한 줄이 있다.</li>
-  <li>10초 동안 보낸 요청은 모두 10240개다.</li>
-</ul>
-<p>curl은 HTTP 응답을 하나도 못 받으면 상태를 <code>000</code>으로 적는다. <code>000</code>은 몇 개일까? 맨 아래 답안 칸에 숫자와 이유 한 줄을 적는다. 정답은 퀴즈를 다 푼 뒤 5절에서 연다.</p>
+<table>
+  <tr><th></th><th>핵심</th><th>가져온 곳, 이유</th></tr>
+  <tr><td>왜 막나</td><td>crawler는 드문 페이지를 긁어서 cache를 지나 Origin까지 간다</td><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/01-cost.html#paths">노트 01 §1</a>. 막을 이유가 비용이라서, 가장 싼 곳에서 거르는 것이 이 lesson의 출발점이다</td></tr>
+  <tr><td>보는 것</td><td>client IP, JA4, Block table. HTTP는 아직 없다</td><td>② 카드의 "보이는 신호". ClientHello는 평문이라 <code>MSG_PEEK</code>로 엿볼 수 있다</td></tr>
+  <tr><td>거르는 것</td><td>drop: 응답 없이 닫는다. 403은 HTTP 응답이라 아직 못 쓴다</td><td>② 카드의 "거르는 기준"과 "고려할 점"</td></tr>
+  <tr><td>비용</td><td>drop은 ③의 TLS 서명부터 그 뒤 모든 비용을 쓰지 않는다</td><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-tls">③ 카드</a>의 "서버 비용". ②를 왜 따로 두는지가 여기서 나온다</td></tr>
+  <tr><td>약점</td><td>IP는 바꾸면 끝이다</td><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/02-history.html#rounds">노트 02 §1</a> 라운드 4. 그래서 IP 대신 묶을 키(JA4)가 L2에서 나온다</td></tr>
+</table>
 
-<h2>3. 퀴즈</h2>
-<p>1절의 노트를 읽어야 풀린다. 막히면 해설 끝의 링크로 돌아간다.</p>
+<h2>2. 퀴즈</h2>
+<p>1절과 그 링크를 읽어야 풀린다. 막히면 해설 끝의 링크로 돌아간다.</p>
 <div id="quiz"></div>
 
-<h2>4. 우리 코드: <code>connection_decide</code></h2>
-<table>
-  <tr><th>위치</th><th>무엇</th></tr>
-  <tr><td><code>src/rproxy/connection_verdict.h</code> 전체</td><td><code>enum connection_verdict</code> 세 값과 <code>struct connection_signals</code> 세 칸. 먼저 읽기만 한다.</td></tr>
-  <tr><td><code>src/rproxy/connection_verdict.c:10-44</code></td><td>규칙 표 <code>connection_rules[]</code>와 <code>connection_decide</code>. <strong>이것을 따라친다.</strong></td></tr>
-  <tr><td><code>src/rproxy/event_loop.c:590-606</code></td><td><code>connection_verdict_get</code>: 신호 세 칸을 채우는 곳. 읽기만 한다.</td></tr>
-  <tr><td><code>src/rproxy/event_loop.c:572-586</code></td><td><code>connection_verdict_apply</code>: drop이면 <code>STEP_CLOSE</code>, pass면 <code>handshake_start</code>. 읽기만 한다.</td></tr>
-</table>
+<h2>3. 우리 코드: <code>connection_decide</code></h2>
+<p class="scroll-hint" data-scroll-hint>옆으로 밀어 보기 →</p>
+<pre>struct connection_rule {
+    bool (*matches)(const struct connection_signals *signals);
+    enum connection_verdict verdict;
+};
 
-<h2>5. 예측의 답</h2>
-<details>
-<summary>예측을 적은 뒤 열기</summary>
-<p><code>000=5120</code>. <code>127.0.0.16/28</code>은 .16부터 .31까지 주소 16개다. 16개가 모두 <code>spread</code>의 32개 안에 있으니 요청의 절반이 TLS handshake 전에 닫힌다. 10240 ÷ 2 = 5120. 나머지 절반은 Request Verdict까지 가서 402를 받았다 (402는 L5). 출처: <code>mini-webserver/docs/measurements/20261124-arena-layers.md</code>의 <code>spread</code> 행.</p>
-<p>그 5120번에 Origin이 보낸 바이트는 0이고, 서버는 RSA 서명도 한 번도 하지 않았다. crawler 쪽 대응은 노트 02 라운드 4와 5다: block list에 없는 주소로 옮긴다.</p>
-</details>
+static bool ip_is_listed(const struct connection_signals *signals);
+static bool key_is_blocked(const struct connection_signals *signals);
+
+static const struct connection_rule connection_rules[] = {
+    {ip_is_listed, CONN_DROP},
+    {key_is_blocked, CONN_DROP},
+};
+
+enum connection_verdict
+connection_decide(const struct connection_signals *signals)
+{
+    size_t count = sizeof(connection_rules) / sizeof(connection_rules[0]);
+    for (size_t i = 0; i &lt; count; i++) {
+        if (connection_rules[i].matches(signals)) {
+            return connection_rules[i].verdict;
+        }
+    }
+
+    return CONN_PASS;
+}</pre>
+<p class="cap"><a href="https://github.com/benjohnbill/mini-webserver/blob/eee7073/src/rproxy/connection_verdict.c#L10-L34"><code>src/rproxy/connection_verdict.c:10-34</code></a>. 1절 표의 ② 두 줄이 <code>connection_rules[]</code>이고, 처음 맞는 규칙이 이긴다.</p>
 
 <nav class="links">
   다음: <code>connection_decide</code> 따라치기 → 질문, 그 뒤 <a href="l2-clienthello-fingerprint.html">L2 ClientHello: 지문</a> (<code>ja4_format</code>)<br>
   지식: <a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html">rproxy 요구분석</a>
 </nav>
 
-<div class="ask">막히는 곳이 있으면 절 번호와 함께 에이전트에게 물어보자. 예: "4절에서 <code>is_blocked</code>는 왜 IP와 JA4를 둘 다 봐?"</div>
+<div class="ask">막히는 곳이 있으면 절 번호와 함께 에이전트에게 물어보자. 예: "3절에서 <code>connection_rules[]</code>는 왜 함수 포인터 표야?"</div>
 
 <script>
 const N04 = "https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-hello";
@@ -334,7 +354,8 @@ mountQuiz(document.getElementById("quiz"), [
   next: "connection_decide 따라치기",
   record: "teach-bot/learning-records/0001-map-and-cost.md",
   predictions: [
-    "<code>layers</code> preset에서 <code>spread</code>(주소 32개, 요청 10240개)의 <code>000</code>은 몇 개일까? 이유 한 줄.",
+    "Connection Verdict에 규칙을 하나 더 넣는다면 무엇을 넣겠나? 왜 ④ HTTP가 아니라 ②에 두나?",
+    "drop은 응답 없이 닫는다. 사람이 잘못 막히면 그 사람은 무엇을 보게 되고, 그 대가는 왜 403보다 큰가?",
   ],
 });
 </script>

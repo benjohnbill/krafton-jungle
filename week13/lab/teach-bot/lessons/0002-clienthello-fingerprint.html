@@ -5,63 +5,75 @@
 <title>L2 ClientHello: 지문</title>
 <link rel="stylesheet" href="../assets/style.css">
 <script src="../assets/quiz.js"></script>
+<style>
+.stages { display: flex; flex-wrap: wrap; gap: .3rem; margin: 1rem 0 .4rem; }
+.stages div { flex: 1 1 6.5rem; border: 1px solid var(--rule); border-radius: 6px; padding: .4rem .5rem; font-size: .9rem; }
+.stages div small { display: block; color: var(--muted); }
+.stages .on, tr.on td { border-color: var(--read); background: var(--read-soft, #e8f3f6); font-weight: 600; }
+.cap { color: var(--muted); font-size: .9rem; }
+</style>
 </head>
 <body>
 
 <h1>L2 ClientHello: 지문</h1>
-<p class="sub">rproxy 방어 layer L2, 약 10분 (읽기 포함)<br>목표: JA4가 ClientHello의 어느 칸에서 나오고, 왜 사람이 아니라 TLS 라이브러리의 지문인지 말하기</p>
+<p class="sub">rproxy 방어 layer L2, 약 5분<br>목표: 요구분석의 ② 단계에서 JA4가 무엇의 지문이고, 어디에 쓰이는지 말하기</p>
 
-<h2>1. 먼저 읽기</h2>
-<p>설명은 노트가 맡는다. 아래 세 절을 이 순서로 읽는다. 각 줄의 "볼 것"이 퀴즈에 나온다.</p>
+<h2>1. 이번 lesson의 자리</h2>
+<div class="stages">
+  <div>① TCP<small>L1</small></div>
+  <div class="on">② ClientHello<small>L1, L2</small></div>
+  <div>③ ServerHello부터<small>거르지 않음</small></div>
+  <div>④ HTTP<small>L3, L4, L5</small></div>
+  <div>⑤ Cache<small>L6</small></div>
+  <div>⑥ Origin<small>L6</small></div>
+</div>
 <table>
-  <tr><th>절</th><th>볼 것</th></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-hello">rproxy 요구분석 ② TLS handshake: ClientHello 카드</a></td><td>JA4가 무엇의 지문인가, JA4로 막을 때의 약점</td></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/03-layers.html#m-ua">노트 03 User-Agent 차단</a></td><td>User-Agent가 왜 싸게 뚫리나</td></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/03-layers.html#m-tls">노트 03 TLS fingerprint: JA3에서 JA4로</a></td><td>JA3가 Chrome 때문에 무너진 이유, JA4가 고친 방법, 뚫리는 방식</td></tr>
+  <tr><th>JA4</th><th>단계</th><th>무엇</th><th>lesson</th></tr>
+  <tr class="on"><td>만드는 곳</td><td>②</td><td>엿본 ClientHello의 TLS 버전, cipher, extension, ALPN으로 문자열 하나를 만든다</td><td>L2</td></tr>
+  <tr><td>쓰는 곳</td><td>②</td><td>Block table에 JA4가 있으면 drop</td><td>L1</td></tr>
+  <tr><td>쓰는 곳</td><td>④ 규칙 6</td><td><code>Chrome/</code>인데 JA4 table의 label이 <code>browser</code>가 아니면 tarpit</td><td>L4</td></tr>
+  <tr><td>쓰는 곳</td><td>④ 규칙 8</td><td><code>--rate-key ja4</code>면 JA4마다 token bucket 하나</td><td>L3</td></tr>
 </table>
-<p>L1에서 Connection Verdict가 JA4를 본다는 것까지 했다. 이번에는 그 JA4가 어떻게 생겼는지를 본다.</p>
+<p class="cap">출처: <a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-hello">요구분석 ② TLS handshake: ClientHello 카드</a>의 "보이는 신호"와 <a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-http">④ HTTP 카드</a>의 규칙 순서. JA4는 ②에서 한 번 만들고 ②와 ④에서 쓴다.</p>
 
-<h2>2. JA4의 세 부분</h2>
-<p>JA4는 <code>a_b_c</code> 모양의 문자열이다. 규칙은 FoxIO 문서(<a href="https://github.com/FoxIO-LLC/ja4/blob/main/technical_details/JA4.md">technical_details/JA4.md</a>)가 정한다. 아래는 우리 Scene에서 curl이 낸 실제 JA4다 (<code>bench/arena/layers-ja4.txt</code>).</p>
-<pre>t13i3012h2 _ 1d37bd780c83 _ 8537cf56674e
-    a              b              c</pre>
 <table>
-  <tr><th>부분</th><th>ClientHello의 어느 칸</th><th>curl의 값</th></tr>
-  <tr><td>a</td><td><code>t</code>(TCP), TLS 버전, SNI가 있으면 <code>d</code> 없으면 <code>i</code>, cipher 개수, extension 개수, ALPN의 첫 글자와 끝 글자</td><td><code>t</code> <code>13</code> <code>i</code> <code>30</code> <code>12</code> <code>h2</code></td></tr>
-  <tr><td>b</td><td>cipher 목록을 정렬해 SHA-256, 앞 12글자</td><td><code>1d37bd780c83</code></td></tr>
-  <tr><td>c</td><td>extension 목록(SNI, ALPN 제외)을 정렬하고 signature algorithm을 붙여 SHA-256, 앞 12글자</td><td><code>8537cf56674e</code></td></tr>
+  <tr><th></th><th>핵심</th><th>가져온 곳, 이유</th></tr>
+  <tr><td>왜 지금</td><td>User-Agent는 header 한 줄이라 바로 속는다</td><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/03-layers.html#m-ua">노트 03 User-Agent 차단</a>. 속이기 어려운 신호가 필요해서 JA4로 온다</td></tr>
+  <tr><td>보는 것</td><td>ClientHello의 모양. 사람이 아니라 TLS 라이브러리의 지문이다</td><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/03-layers.html#m-tls">노트 03 TLS fingerprint</a>의 "보는 것". JA3가 순서 때문에 무너지고 JA4가 정렬로 고친 이야기도 여기 있다</td></tr>
+  <tr><td>거르는 것</td><td>User-Agent와 JA4가 서로 맞지 않는 client, 또는 Block table에 든 JA4</td><td>② 카드의 "거르는 기준"과 ④ 규칙 6</td></tr>
+  <tr><td>약점</td><td>같은 라이브러리를 쓰는 사람도 같은 JA4다. browser의 TLS로 빌드한 client는 뚫는다</td><td>② 카드의 약점과 노트 03의 "뚫리는 방식"</td></tr>
 </table>
-<p>Scene은 <code>127.0.0.1</code>, 즉 도메인이 아니라 IP로 접속한다. 그래서 SNI 칸이 <code>i</code>다.</p>
 
-<h2>3. 예측: <code>disguised</code>는 200을 몇 번 받나</h2>
-<p>퀴즈 전에 숫자 하나를 예측한다. <code>layers</code> preset에서 Crawler script <code>disguised</code>를 10초 돌렸다 (Scene과 preset은 L1 2절).</p>
-<ul>
-  <li><code>disguised</code>는 curl로 보내지만, User-Agent 칸에는 macOS의 Chrome 문자열을 쓴다. 연결 8개를 동시에 쓴다.</li>
-  <li><code>layers</code> preset의 JA4 table에는 두 줄이 있다: curl의 JA4는 label <code>curl</code>, Python의 JA4는 label <code>browser</code>.</li>
-  <li>Request Verdict의 규칙 6 "false browser": User-Agent에 <code>Chrome/</code>이 있는데 JA4 table의 label이 <code>browser</code>가 아니면 tarpit이다.</li>
-  <li><strong>tarpit</strong>: 연결을 <code>--tarpit</code>초(기본 10초) 붙잡은 뒤 응답 없이 닫는다.</li>
-</ul>
-<p>10초 동안 <code>disguised</code>가 받은 <code>200</code>은 몇 개일까? 맨 아래 답안 칸에 숫자와 이유 한 줄을 적는다. 정답은 6절에서 연다.</p>
-
-<h2>4. 퀴즈</h2>
-<p>1절의 노트와 2절의 표를 읽어야 풀린다. 막히면 해설 끝의 링크로 돌아간다.</p>
+<h2>2. 퀴즈</h2>
+<p>1절과 그 링크를 읽어야 풀린다. 막히면 해설 끝의 링크로 돌아간다.</p>
 <div id="quiz"></div>
 
-<h2>5. 우리 코드: <code>ja4_format</code></h2>
-<table>
-  <tr><th>위치</th><th>무엇</th></tr>
-  <tr><td><code>src/rproxy/ja4.h</code></td><td><code>JA4_LEN</code>(36)과 <code>ja4_format</code>의 선언. 먼저 읽기만 한다.</td></tr>
-  <tr><td><code>src/rproxy/ja4.c:35-58</code></td><td><code>ja4_format</code>: 2절 표의 a, b, c를 차례로 만들어 한 문자열로 잇는다. <strong>이것을 따라친다.</strong></td></tr>
-  <tr><td><code>src/rproxy/ja4.c:60-229</code></td><td>helper 함수들. 뼈대 파일에 미리 들어 있다. 따라칠 때 이름이 나오면 그 함수를 찾아 읽는다.</td></tr>
-  <tr><td><code>tests/test_ja4.c</code></td><td>테스트 17개. 이름이 곧 edge case 목록이다. 예: <code>grease_values_do_not_change_the_fingerprint</code>.</td></tr>
-</table>
+<h2>3. 우리 코드: <code>ja4_format</code></h2>
+<pre>void ja4_format(const struct client_hello *hello, char *ja4)
+{
+    uint16_t ciphers[CLIENT_HELLO_CIPHER_MAX];
+    size_t cipher_count =
+        list_copy_without_grease(ciphers, hello-&gt;ciphers, hello-&gt;cipher_count);
+    uint16_t extensions[CLIENT_HELLO_EXTENSION_MAX];
+    size_t extension_count = list_copy_without_grease(
+        extensions, hello-&gt;extensions, hello-&gt;extension_count);
 
-<h2>6. 예측의 답</h2>
-<details>
-<summary>예측을 적은 뒤 열기</summary>
-<p><code>200=0</code>. 요청이 하나도 끝나지 않았다 (Sent 0). <code>disguised</code>의 JA4는 curl의 JA4라서 label이 <code>curl</code>이고, User-Agent에는 <code>Chrome/</code>이 있다. 그래서 규칙 6에 걸려 tarpit을 받는다. 연결 8개가 각각 10초 붙잡혔고 Scene도 10초라서, 끝날 때까지 응답을 하나도 받지 못했다. <code>rproxy</code> 로그에는 tarpit Verdict가 8번 찍혔다. 출처: <code>mini-webserver/docs/measurements/20261124-arena-disguised-v3.md</code>.</p>
-<p>User-Agent만 봤다면 <code>disguised</code>는 Chrome으로 통과했다. 이 Verdict는 JA4와 User-Agent가 서로 맞지 않는 것을 본 결과다. crawler 쪽 대응은 노트 03의 "뚫리는 방식"이다: browser의 TLS 라이브러리로 보낸다.</p>
-</details>
+    char alpn[3];
+    alpn_format(hello, alpn);
+    char cipher_hash[HASH_LEN + 1];
+    cipher_hash_format(ciphers, cipher_count, cipher_hash);
+    char extension_hash[HASH_LEN + 1];
+    extension_hash_format(hello, extensions, extension_count, extension_hash);
+
+    /* &quot;d&quot;: the SNI extension is there (a domain); &quot;i&quot;: it is not (an IP). */
+    char sni =
+        extensions_has(extensions, extension_count, EXTENSION_SNI) ? &#x27;d&#x27; : &#x27;i&#x27;;
+    snprintf(ja4, JA4_LEN + 1, &quot;t%s%c%02zu%02zu%s_%s_%s&quot;,
+             version_get_text(hello), sni, count_get_capped(cipher_count),
+             count_get_capped(extension_count), alpn, cipher_hash,
+             extension_hash);
+}</pre>
+<p class="cap"><a href="https://github.com/benjohnbill/mini-webserver/blob/eee7073/src/rproxy/ja4.c#L35-L58"><code>src/rproxy/ja4.c:35-58</code></a>. GREASE를 뺀 cipher와 extension 목록을 정렬해 hash하고, 한 문자열로 잇는다. 정렬하기 때문에 순서를 섞어도 JA4는 같다.</p>
 
 <nav class="links">
   이전: <a href="0001-map-and-cost.html">L1 TCP, ClientHello: 규칙 표</a><br>
@@ -69,7 +81,7 @@
   지식: <a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html">rproxy 요구분석</a>
 </nav>
 
-<div class="ask">막히는 곳이 있으면 절 번호와 함께 에이전트에게 물어보자. 예: "2절에서 ALPN이 없으면 a 부분은 어떻게 돼?"</div>
+<div class="ask">막히는 곳이 있으면 절 번호와 함께 에이전트에게 물어보자. 예: "1절 표에서 JA4는 왜 ④에서도 쓰여?"</div>
 
 <script>
 const NHELLO = "https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-hello";
@@ -96,17 +108,14 @@ mountQuiz(document.getElementById("quiz"), [
     options: ["IP를 바꾸면 바로 다 풀림", "같은 라이브러리 사람도 막힘", "TLS 서명 비용이 더 늘어남"],
     answer: 1,
     why: `JA4는 소프트웨어의 지문이라, 같은 TLS 라이브러리를 쓰는 사람도 같은 JA4를 낸다. <a href="${NHELLO}">② TLS handshake: ClientHello 카드</a>의 "거르는 기준" 약점.` },
-  { q: "curl <code>t13i3012h2_1d37bd780c83_…</code>, Python <code>t13i301100_1d37bd780c83_…</code>. b가 같은 이유는?",
-    options: ["cipher 목록이 같아서", "ALPN 문자열이 같아서", "SNI 표시 글자가 같아서"],
-    answer: 0,
-    why: `b는 정렬한 cipher 목록의 hash다. 두 client 모두 OpenSSL을 써서 cipher 목록이 같다. ALPN은 다르다(h2 대 00). 그래서 a가 다르고, extension 개수도 12 대 11로 다르다. 2절의 표.` },
 ], {
   id: "w13-bot-l2",
   title: "L2 ClientHello: 지문",
   next: "ja4_format 따라치기",
   record: "teach-bot/learning-records/",
   predictions: [
-    "<code>layers</code> preset에서 <code>disguised</code>(Chrome User-Agent, curl의 TLS, 연결 8개, 10초)는 <code>200</code>을 몇 번 받나? 이유 한 줄.",
+    "User-Agent와 TLS를 둘 다 Chrome으로 맞춘 crawler가 오면, 다음 단계에서 무엇으로 잡을 수 있나?",
+    "JA4를 Block table에 넣어 drop하는 것과, JA4 label을 User-Agent와 맞춰 보는 것. 사람이 치르는 값은 어느 쪽이 크고 왜인가?",
   ],
 });
 </script>

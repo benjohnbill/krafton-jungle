@@ -45,6 +45,8 @@
 
 - 2026-11-24: Mission 확정. 그는 성공 기준이 "조금 빡세다"고 했다 (user said). 다섯 lesson이 끝난 뒤 기준을 다시 본다.
 - 2026-11-24: L1 `lessons/0001-map-and-cost.html` 작성. 코드 위치는 `CJG` `a1e0984` 기준 (Event loop 재작성 포함, push 전).
+- 2026-11-24: L1 따라치기 끝 (`type/connection_verdict.c`, 기록 0003). 함수 포인터에서 막혔고, 메모리 그림 한 장과 질문 하나로 풀렸다.
+- 2026-11-24: L2 `lessons/0002-clienthello-fingerprint.html` 작성. 코드 위치는 `CJG` `48bf7a0` 기준. 예측 답은 `20261124-arena-disguised-v3.md`. 따라칠 것은 `ja4_format`(35-58줄)뿐이고, helper는 뼈대 파일에 미리 넣는다.
 - 노트 링크는 lesson 안에서 해당 절의 앵커로 건다: "먼저 읽기" 표와 퀴즈 해설 끝 (user said "노트의 해당 부분을 내부적으로 링크 걸어서").
 - 예측 문제에 쓰는 낱말(Scene, preset, `000` 등)은 그 절 안에서 먼저 정의한다. L1에서 정의 없이 내서 그가 막혔다 (2026-11-24).
 - 낱말 "경기장"은 쓰지 않는다. `bench/arena/`의 한 번 실행은 GLOSSARY 용어 Scene으로 부른다 (user said 2026-11-24: "경기장이라는 표현 제발 쓰지 말아주라").

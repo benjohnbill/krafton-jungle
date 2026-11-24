@@ -6,9 +6,9 @@
 
 ## 그가 정한 규칙 (2026-11-24)
 
-- **노트는 지식, lesson은 연습.** 지식 본문은 crawler 노트 00~04가 맡는다. lesson이 노트가 이미 설명한 개념을 다시 설명하면, 그 문장을 노트 앵커 링크로 바꾼다. 퀴즈는 링크된 절을 읽어야 풀리게 낸다. 그래야 노트도 읽힌다. 노트 00~04는 이 workspace의 reference 역할도 한다. 따로 reference 문서를 만들기 전에 노트로 충분한지 먼저 본다.
+- **노트는 지식, lesson은 연습.** 지식 본문은 `rproxy 요구분석` 노트(`week13/notes/rproxy-requirements.html`, 사이트 `study/week13/mini-webserver/rproxy-requirements.html`)의 단계 카드와, 배경 노트 00~03이 맡는다. lesson이 노트가 이미 설명한 개념을 다시 설명하면, 그 문장을 노트 앵커 링크로 바꾼다. 퀴즈는 링크된 카드나 절을 읽어야 풀리게 낸다. 따로 reference 문서를 만들기 전에 노트로 충분한지 먼저 본다.
 - **흐름: lesson → 따라치기 → 질문.** lesson의 마지막 절은 따라칠 함수의 파일과 줄이다.
-- **lesson 5개.** 아래 표.
+- **lesson 6개, 단계 순서.** 아래 표. lesson 이름은 단계 이름이다 (user said 2026-11-24).
 - 용어는 `mini-webserver/GLOSSARY.md`를 따른다. 별도 glossary를 만들지 않는다.
 
 ## lesson 한 장의 틀
@@ -22,21 +22,22 @@
 
 ## 커리큘럼
 
-순서는 군비 경쟁 순서다. lesson마다 "crawler는 어떻게 피해 가나"의 답이 다음 lesson이 생긴 이유가 된다. 노트 02 `#rounds`가 같은 순서다.
+순서는 연결 하나가 지나는 단계 순서다: TCP → ClientHello → TLS → HTTP → Cache → Origin (user said 2026-11-24, grilling 1라운드). 각 lesson은 그 단계의 카드(보이는 신호, 거르는 기준, 구분하는 사용자, 서버 비용, 고려할 점)를 연습한다. 군비 경쟁 이야기는 카드의 "고려할 점"으로 옮겼다. HTTP 단계는 규칙이 몰려서 세 장으로 나눈다.
 
-| lesson | 승리 하나 | 먼저 읽기 | 예측할 arena 결과 | 따라칠 코드 |
+| lesson | 단계 카드 | 승리 하나 | 예측할 arena 결과 | 따라칠 코드 |
 |---|---|---|---|---|
-| L1 지도와 비용 | handshake 전에 서버가 무엇을 볼 수 있고, drop이 왜 싼지 말한다 | 00 `#layers`, 01 `#paths`, 02 `#rounds`, 04 `#flow` | `spread`의 000 (drop) 수 | `connection_decide` (`src/rproxy/connection_verdict.c:24`) |
-| L2 신원 묻기 | User-Agent는 거짓말할 수 있고 JA4는 어렵다는 것을 `disguised`로 말한다 | 03 `#m-robots`, `#m-ua`, `#m-tls`, `#m-ip`, 04 `#map` | `named` 402, `disguised`, `polite` 10 | `ja4_format` (`src/rproxy/ja4.c:35`) |
-| L3 양 제한하기 | 59 = 10 + 5 × 10을 token bucket으로 설명하고, Honeypot이 Block table로 이어지는 길을 말한다 | 03 `#m-rate`, `#m-honey`, 04 `#rules` | `repeat` 59, `trapped` 9와 6860 | `rate_limit_take` (`src/rproxy/rate_limit.c:60`) |
-| L4 시험과 비용 비대칭 | "방어는 서버가 crawler보다 싸게 치러야 한다"를 tarpit 실패로 말한다 | 03 `#m-pow`, `#m-tarpit`, 04 `#cost` | `solver` 200=55, `disguised` 때 `human.py` 0 | `pow_is_solved` (`src/rproxy/pow.c:36`), `tarpit_start` (`src/rproxy/event_loop.c:624`) |
-| L5 거래와 규칙 순서 | 착한 bot을 통과시키는 법과, `verdict_decide`의 규칙 8개 순서를 말한다 | 03 `#l0`, `#m-304`, `#m-pay`, `#m-wba`, 04 `#rules`, `#arena` | `signed` 대 `named`, `revalidate` 304=55 | `verdict_decide` (`src/rproxy/verdict.c:52`) |
+| L1 TCP, ClientHello: 규칙 표 (완료) | `#s-tcp`, `#s-hello`, `#s-tls` | handshake 전에 서버가 무엇을 볼 수 있고, drop이 왜 싼지 말한다 | `spread` 000=5120 | `connection_decide` (`src/rproxy/connection_verdict.c:24`) |
+| L2 ClientHello: 지문 | `#s-hello`, 03 `#m-tls`, `#m-ua` | JA4가 ClientHello의 어느 칸에서 나오고, 왜 라이브러리의 지문인지 말한다 | `disguised` (UA Chrome, JA4 curl) | `ja4_format` (`src/rproxy/ja4.c:35`) |
+| L3 HTTP ①: 양 | `#s-http`, 03 `#m-rate` | 59 = 10 + 5 × 10을 token bucket으로 설명한다 | `repeat` 200=59 | `rate_limit_take` (`src/rproxy/rate_limit.c:60`) |
+| L4 HTTP ②: 시험과 비용 비대칭 | `#s-http`, `#cost`, 03 `#m-pow`, `#m-tarpit` | "방어 비용 < crawler가 피해 가는 비용"을 Proof of work와 tarpit 실패로 말한다 | `solver` 200=55, `disguised` 때 `human.py` 0 | `pow_is_solved` (`src/rproxy/pow.c:36`), `tarpit_start` (`src/rproxy/event_loop.c:642`) |
+| L5 HTTP ③: 신원, 거래, 규칙 순서 | `#s-http`, `#rules`, 03 `#m-honey`, `#m-pay`, `#m-wba` | 착한 bot을 통과시키는 법과 `verdict_decide`의 규칙 8개 순서를 말한다 | `signed` 대 `named`, `trapped` 6860 | `verdict_decide` (`src/rproxy/verdict.c:52`) |
+| L6 Cache, Origin: 통과한 요청의 비용 | `#s-cache`, `#s-origin`, `#arena` | cache가 crawler 비용을 줄이지 못하는 이유와 304를 말한다 | `revalidate` 304=55, `repeat` MiB | `cache_find` (`src/rproxy/event_loop.c:996` 호출부) |
 
-줄 번호는 `CJG`의 2026-11-24 작업 트리 기준이다. lesson을 만들 때 다시 확인한다.
+줄 번호는 `CJG` commit `a1e0984`(Event loop) 기준이다. lesson을 만들 때 다시 확인한다.
 
 ## 주의
 
-- `mini-webserver/`는 Event loop 재작성(SPEC §11 step 13)이 push될 때까지 읽기만 한다. `event_loop.c`의 `tarpit_start`는 그 작업 안에 있어서, L4의 코드 위치는 push 뒤에 확정한다.
+- `mini-webserver/`는 Event loop 재작성(SPEC §11 step 13)이 push될 때까지 읽기만 한다. `event_loop.c`의 `tarpit_start`는 `a1e0984`에서 642줄이다. push 전이라 GitHub 링크는 걸 수 없다.
 - 알려진 버그: Origin이 query string이 붙은 정적 경로에 404를 준다. lesson 문제에 query string을 쓰지 않는다.
 - 사이트 게시는 `../teach/publish/build.py`의 방식을 따른다: 원본 lesson → `publish/` 사본 → 사이트 `study/week13/mini-webserver/lessons/` (노트는 `study/week13/mini-webserver/notes/`, 2026-11-24 user said). 사이트에 올리기 전에 `benjohnbill.github.io/AGENTS.md`의 "Site rules"를 읽는다. `assets/`는 `../teach/assets/`에서 복사했다 (`flow-lanes.js`는 요청 흐름 전용이라 빼고).
 

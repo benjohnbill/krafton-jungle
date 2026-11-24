@@ -13,9 +13,9 @@
 - tarpit이 `human.py`를 굶긴 이유와, Event loop의 timer가 그 비용을 어떻게 없애는지 말한다.
 
 ## Constraints
-- 지식은 crawler 노트 00~04가 맡는다. lesson은 노트를 다시 설명하지 않고 링크한다. lesson이 맡는 것은 예측, 퀴즈, 코드 위치다.
+- 지식은 `rproxy 요구분석` 노트의 단계 카드와 배경 노트 00~03이 맡는다. lesson은 노트를 다시 설명하지 않고 링크한다. lesson이 맡는 것은 예측, 퀴즈, 코드 위치다.
 - 흐름: lesson → 그 코드 따라치기 → 질문.
-- lesson은 5개 (NOTES.md의 표).
+- lesson은 6개, 연결 하나의 단계 순서 (NOTES.md의 표, 2026-11-24 user said).
 - 한국어 본문. 용어는 `mini-webserver/GLOSSARY.md`가 쓰는 대로 쓴다 (Verdict, Block table, Crawler script …).
 
 ## Out of scope

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>L1 지도와 비용: handshake 전에 서버가 정할 수 있는 것</title>
+<title>L1 TCP, ClientHello: 규칙 표</title>
 <link rel="stylesheet" href="https://benjohnbill.github.io/assets/site.css">
 <style>
 :root {
@@ -243,7 +243,7 @@ function mountQuiz(root, items, lesson) {
 <div class="wrap">
 <a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
 
-<h1>지도와 비용: handshake 전에 서버가 정할 수 있는 것</h1>
+<h1>L1 TCP, ClientHello: 규칙 표</h1>
 <p class="sub">rproxy 방어 layer L1, 약 10분 (읽기 포함)<br>목표: TLS handshake 전에 서버가 무엇을 볼 수 있는지, 그리고 drop이 왜 싼지 말하기</p>
 
 <h2>1. 먼저 읽기</h2>
@@ -253,9 +253,9 @@ function mountQuiz(root, items, lesson) {
   <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/00-overview.html#layers">노트 00 §1 요청이 지나는 layer</a></td><td>layer 여덟 개의 순서, 마지막 layer가 묻는 질문</td></tr>
   <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/01-cost.html#paths">노트 01 §1 사람의 요청과 crawler의 요청</a></td><td>crawler의 요청이 비싼 이유: 어느 칸을 지나치나</td></tr>
   <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/02-history.html#rounds">노트 02 §1 방어와 우회의 11 라운드</a></td><td>라운드 4: IP 차단에 crawler가 무엇으로 답했나</td></tr>
-  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/04-reverse-proxy.html#flow">노트 04 §2 연결 하나의 길</a></td><td>Connection Verdict가 보는 것, drop이 치르지 않는 비용</td></tr>
+  <tr><td><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-tcp">rproxy 요구분석 ① TCP, ② ClientHello, ③ TLS 카드</a></td><td>Connection Verdict가 보는 것, drop이 치르지 않는 비용</td></tr>
 </table>
-<p>노트 04 §2가 이 lesson의 중심이다. 나머지 셋은 "왜 막나"와 "막으면 crawler가 어떻게 하나"를 준다.</p>
+<p>rproxy 요구분석의 카드 ①~③이 이 lesson의 중심이다. 나머지 셋은 "왜 막나"와 "막으면 crawler가 어떻게 하나"를 준다.</p>
 
 <h2>2. 예측: <code>spread</code>는 몇 번 drop되나</h2>
 <p>퀴즈 전에 숫자 하나를 예측한다. arena의 <code>layers</code> preset에서 Crawler script <code>spread</code>를 10초 돌렸다.</p>
@@ -301,7 +301,7 @@ function mountQuiz(root, items, lesson) {
 <p>퀴즈 아래의 답안 칸에 예측을 적고 복사 버튼을 누른다. 세션에 붙여 넣으면 에이전트가 <code>learning-records/</code>에 기록한다.</p>
 
 <h2>6. 주 자료</h2>
-<p><a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/04-reverse-proxy.html#flow">노트 04 §2 연결 하나의 길</a>의 그림과 표. 표 아래 첫 문단의 "drop한 연결에는 RSA-2048 서명이 없다"가 이 lesson의 한 줄이다.</p>
+<p><a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-hello">rproxy 요구분석 ② ClientHello 카드</a>와 ③ TLS 카드. ③의 "②에서 drop하면 이 비용을 통째로 아낀다"가 이 lesson의 한 줄이다.</p>
 
 <h2>7. 예측의 답</h2>
 <details>
@@ -312,30 +312,31 @@ function mountQuiz(root, items, lesson) {
 
 <nav class="links">
   다음: <code>connection_decide</code> 따라치기 → 질문, 그 뒤 L2 신원 묻기 (<code>ja4_format</code>)<br>
-  지식: <a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/04-reverse-proxy.html">노트 04 우리 Reverse Proxy의 방어 layer</a>
+  지식: <a href="https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html">rproxy 요구분석</a>
 </nav>
 
 <div class="ask">막히는 곳이 있으면 절 번호와 함께 에이전트에게 물어보자. 예: "4절에서 <code>is_blocked</code>는 왜 IP와 JA4를 둘 다 봐?"</div>
 
 <script>
-const N04 = "https://benjohnbill.github.io/study/week13/mini-webserver/notes/04-reverse-proxy.html#flow";
+const N04 = "https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-hello";
+const NTLS = "https://benjohnbill.github.io/study/week13/mini-webserver/rproxy-requirements.html#s-tls";
 mountQuiz(document.getElementById("quiz"), [
   { q: "Connection Verdict는 TLS handshake 전에 돈다. 이때 서버가 볼 수 있는 신호는?",
     options: ["User-Agent, target", "IP, JA4, Block table", "PoW 풀이, bot 서명"],
     answer: 1,
-    why: `ClientHello를 엿본 뒤라 IP와 JA4는 있지만, HTTP request는 아직 암호 안에도 오지 않았다. User-Agent와 서명은 Request Verdict의 몫이다. <a href="${N04}">노트 04 §2</a> 표의 "보는 것" 열.` },
+    why: `ClientHello를 엿본 뒤라 IP와 JA4는 있지만, HTTP request는 아직 암호 안에도 오지 않았다. User-Agent와 서명은 Request Verdict의 몫이다. <a href="${N04}">② ClientHello 카드</a>의 "보이는 신호".` },
   { q: "Connection Verdict가 403 대신 drop만 고를 수 있는 이유는?",
     options: ["403이 더 비싸서", "TLS가 막고 있어서", "HTTP가 아직 없어서"],
     answer: 2,
-    why: `403은 HTTP 응답이다. handshake 전에는 HTTP가 없으니 닫거나 붙잡는 것만 할 수 있다. <a href="${N04}">노트 04 §2</a> 표 아래 첫 문장.` },
+    why: `403은 HTTP 응답이다. handshake 전에는 HTTP가 없으니 닫거나 붙잡는 것만 할 수 있다. <a href="${N04}">② ClientHello 카드</a>의 "고려할 점" 첫 줄.` },
   { q: "drop된 연결과 403을 받은 연결을 비교하면, drop이 서버에 아껴 주는 비용은?",
     options: ["TLS handshake 서명", "Origin까지의 왕복", "cache를 찾는 시간"],
     answer: 0,
-    why: `403도 Origin에는 가지 않는다. 차이는 handshake의 RSA-2048 서명이다: 요청 하나의 CPU 2.1 ms 중 0.9 ms. <a href="${N04}">노트 04 §2</a>.` },
+    why: `403도 Origin에는 가지 않는다. 차이는 handshake의 RSA-2048 서명이다: 요청 하나의 CPU 2.1 ms 중 0.9 ms. <a href="${NTLS}">③ TLS 카드</a>의 "서버 비용".` },
   { q: "drop은 엿본 ClientHello를 읽지 않은 채 socket을 닫는다. client 쪽에 오는 것은?",
     options: ["TLS alert 한 개", "RST, TLS 바이트 0", "빈 HTTP 응답 한 개"],
     answer: 1,
-    why: `MSG_PEEK는 바이트를 Receive Buffer에 남긴다. 읽지 않은 바이트가 남은 채 close하면 kernel이 RST를 보낸다. nginx의 <code>return 444</code>를 본뜬 것이다. <a href="${N04}">노트 04 §2</a>.` },
+    why: `MSG_PEEK는 바이트를 Receive Buffer에 남긴다. 읽지 않은 바이트가 남은 채 close하면 kernel이 RST를 보낸다. nginx의 <code>return 444</code>를 본뜬 것이다. <a href="${N04}">② ClientHello 카드</a>의 "서버 비용".` },
   { q: "crawler의 요청이 사람의 요청보다 서버에 비싼 까닭은?",
     options: ["드문 페이지라 cache miss", "header가 훨씬 커서", "TLS를 매번 새로 맺어서"],
     answer: 0,
@@ -346,7 +347,7 @@ mountQuiz(document.getElementById("quiz"), [
     why: `Bidder's Edge: "We eventually adopted the rotating proxy servers." <code>spread</code>가 주소 32개를 쓰는 이유가 이것이다. <a href="https://benjohnbill.github.io/study/week13/mini-webserver/notes/02-history.html#rounds">노트 02 §1</a> 라운드 4.` },
 ], {
   id: "w13-bot-l1",
-  title: "L1 지도와 비용",
+  title: "L1 TCP, ClientHello: 규칙 표",
   next: "connection_decide 따라치기",
   record: "teach-bot/learning-records/0001-map-and-cost.md",
   predictions: [

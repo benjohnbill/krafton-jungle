@@ -115,7 +115,7 @@ function mountQuiz(root, items, lesson) {
   if (seeded) {
     const from = document.createElement("p");
     from.className = "seed";
-    from.textContent = `아래 선택과 예측은 ${seed.date}에 직접 고르고 쓴 답이다.`;
+    from.textContent = `아래 선택과 주관식 답은 ${seed.date}에 직접 고르고 쓴 답이다.`;
     root.append(from);
   }
   let done = 0;
@@ -170,7 +170,7 @@ function mountQuiz(root, items, lesson) {
   (lesson.predictions || []).forEach((q, n) => {
     const box = document.createElement("div");
     box.className = "item";
-    box.innerHTML = `<div class="q">예측 ${n + 1}. ${q}</div>`;
+    box.innerHTML = `<div class="q">주관식 ${n + 1}. ${q}</div>`;
     const ta = document.createElement("textarea");
     ta.value = state.notes[n] || "";
     ta.addEventListener("input", () => {
@@ -228,7 +228,7 @@ function mountQuiz(root, items, lesson) {
       else lines.push(q + `${plain(it.options[k])} ✗ (정답: ${plain(it.options[it.answer])})`);
     });
     if ((lesson.predictions || []).length) {
-      lines.push("", "## 예측");
+      lines.push("", "## 주관식");
       lesson.predictions.forEach((q, n) => {
         const a = (state.notes[n] || "").trim() || "(비어 있음)";
         lines.push(`${n + 1}. ${plain(q)} → ${a}`);

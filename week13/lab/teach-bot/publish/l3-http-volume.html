@@ -115,7 +115,7 @@ function mountQuiz(root, items, lesson) {
   if (seeded) {
     const from = document.createElement("p");
     from.className = "seed";
-    from.textContent = `아래 선택과 예측은 ${seed.date}에 직접 고르고 쓴 답이다.`;
+    from.textContent = `아래 선택과 주관식 답은 ${seed.date}에 직접 고르고 쓴 답이다.`;
     root.append(from);
   }
   let done = 0;
@@ -170,7 +170,7 @@ function mountQuiz(root, items, lesson) {
   (lesson.predictions || []).forEach((q, n) => {
     const box = document.createElement("div");
     box.className = "item";
-    box.innerHTML = `<div class="q">예측 ${n + 1}. ${q}</div>`;
+    box.innerHTML = `<div class="q">주관식 ${n + 1}. ${q}</div>`;
     const ta = document.createElement("textarea");
     ta.value = state.notes[n] || "";
     ta.addEventListener("input", () => {
@@ -228,7 +228,7 @@ function mountQuiz(root, items, lesson) {
       else lines.push(q + `${plain(it.options[k])} ✗ (정답: ${plain(it.options[it.answer])})`);
     });
     if ((lesson.predictions || []).length) {
-      lines.push("", "## 예측");
+      lines.push("", "## 주관식");
       lesson.predictions.forEach((q, n) => {
         const a = (state.notes[n] || "").trim() || "(비어 있음)";
         lines.push(`${n + 1}. ${plain(q)} → ${a}`);
@@ -288,14 +288,26 @@ function mountQuiz(root, items, lesson) {
 <div id="quiz"></div>
 
 <h2>3. 우리 코드: <code>rate_limit_take</code></h2>
-<table>
-  <tr><th>위치</th><th>무엇</th></tr>
-  <tr><td><code>src/rproxy/rate_limit.h</code></td><td><code>struct rate_limit_options</code>와 <code>rate_limit_take</code>의 선언, 돌려주는 값의 약속. 먼저 읽기만 한다.</td></tr>
-  <tr><td><code>src/rproxy/rate_limit.c:60-77</code></td><td><code>rate_limit_take</code>: lock, key 찾기, 채우기, token 하나 쓰기 또는 기다릴 초 계산. <strong>이것을 따라친다.</strong></td></tr>
-  <tr><td><code>src/rproxy/rate_limit.c:79-128</code></td><td>helper 넷: <code>bucket_find</code>, <code>bucket_claim</code>, <code>bucket_refill</code>, <code>bucket_get_wait</code>. 뼈대 파일에 미리 들어 있다. 따라칠 때 이름이 나오면 그 함수를 찾아 읽는다.</td></tr>
-  <tr><td><code>src/rproxy/event_loop.c:881-886</code></td><td>호출하는 곳: key를 IP나 JA4로 고르고, 지금 시각을 넘긴다.</td></tr>
-  <tr><td><code>tests/test_rate_limit.c</code></td><td>테스트 7개. 이름이 곧 edge case 목록이다. 예: <code>a_refused_request_takes_no_token</code>.</td></tr>
-</table>
+<p class="scroll-hint" data-scroll-hint>옆으로 밀어 보기 →</p>
+<pre>int rate_limit_take(struct rate_limit *limit, const char *key, double now)
+{
+    pthread_mutex_lock(&amp;limit-&gt;lock);
+    struct bucket *bucket = bucket_find(limit, key);
+    if (bucket == NULL) {
+        bucket = bucket_claim(limit, key, now);
+    }
+    bucket_refill(bucket, &amp;limit-&gt;options, now);
+    int wait = 0;
+    if (bucket-&gt;tokens &gt;= 1) {
+        bucket-&gt;tokens -= 1;
+    } else {
+        wait = bucket_get_wait(bucket, limit-&gt;options.rate);
+    }
+    pthread_mutex_unlock(&amp;limit-&gt;lock);
+
+    return wait;
+}</pre>
+<p class="cap"><a href="https://github.com/benjohnbill/mini-webserver/blob/eee7073/src/rproxy/rate_limit.c#L60-L77"><code>src/rproxy/rate_limit.c:60-77</code></a>. 8번 규칙의 "token 없음"을 정하는 함수다. 돌려준 초가 429의 <code>Retry-After</code>가 된다.</p>
 
 <nav class="links">
   이전: <a href="l2-clienthello-fingerprint.html">L2 ClientHello: 지문</a><br>
@@ -330,6 +342,10 @@ mountQuiz(document.getElementById("quiz"), [
   title: "L3 HTTP ①: 양",
   next: "rate_limit_take 따라치기",
   record: "teach-bot/learning-records/",
+  predictions: [
+    "rate limit은 왜 규칙 표의 마지막(8번)에 있을까? 앞으로 올리면 무엇이 달라지나?",
+    "rate limit을 켜자 Origin 비용은 거의 0이 됐지만 rproxy CPU는 늘었다. 이 늘어난 비용을 줄이려면 무엇을 바꿀까?",
+  ],
 });
 </script>
 </div>

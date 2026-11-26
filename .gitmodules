@@ -46,3 +46,9 @@
 [submodule "week13/mini-webserver"]
 	path = week13/mini-webserver
 	url = git@github.com:benjohnbill/mini-webserver.git
+[submodule "week14-15/mnist"]
+	path = week14-15/mnist
+	url = https://github.com/jonggeonyu/mnist.git
+[submodule "week14-15/LLM-from-scratch"]
+	path = week14-15/LLM-from-scratch
+	url = https://github.com/jonggeonyu/LLM-from-scratch.git

@@ -28,7 +28,7 @@ Course words (LMS `learning/1325`, read 2026-11-26): "AI는 개념 이해, PyTor
 ## Environment
 
 - Repositories (submodules of the workspace root): `mnist/` (`origin` `jonggeonyu/mnist`, template `krafton-jungle/mnist-lab-v2`) and `LLM-from-scratch/` (`origin` `jonggeonyu/LLM-from-scratch`, template `krafton-jungle/gpt-lab-v2`). A teammate (종건) uploads the templates.
-- Python 3.12 in conda: `mnist-nn` for `mnist`, `gpt-lab` for `LLM-from-scratch`; `pip install -r requirements.txt`. `mnist` code he writes uses numpy, math, random, time, matplotlib, and pytest only.
+- Python 3.12 in a `uv` venv, not conda. conda is not installed on this machine (user said 2026-11-26: keep `uv`). `week14-15/.venv` serves `mnist` and `lab/dlfs-course/`: `uv venv --python 3.12 .venv`, then `uv pip install --python .venv/bin/python -r mnist/requirements.txt`. `LLM-from-scratch` gets its own venv when that work starts. The template README's conda commands give the same packages. `mnist` code he writes uses numpy, math, random, time, matplotlib, and pytest only.
 - Data, checkpoints, tokens, and personal environment files are never committed (course rule).
 
 Verify, in order: (1) the terms and requirements for the stage are in `GLOSSARY.md` and the sheet; (2) agent-generated tests in his own test files, separate from the template `tests/`; (3) `pytest` for the current Day and every earlier Day; (4) `python tools/selfcheck.py --day N` (`LLM-from-scratch`); gradient check and a falling loss (`mnist`).

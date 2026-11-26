@@ -6,7 +6,7 @@ reply; numbered bold headings count as a list). Signals audit row
 numbered-headings-still-numbered, accepted 2026-11-21.
 
 Input: the Stop hook JSON on stdin. Acts only when cwd is under
-~/dev/krafton-jungle. Output: {"decision": "block", "reason": ...} when the
+~/dev/learning/krafton-jungle. Output: {"decision": "block", "reason": ...} when the
 last reply has more than one top-level number sequence; nothing otherwise.
 
 Self-test: check-numbering.py --test
@@ -16,7 +16,7 @@ import os
 import re
 import sys
 
-ROOT = os.path.expanduser("~/dev/krafton-jungle")
+ROOT = os.path.expanduser("~/dev/learning/krafton-jungle")
 
 # Top-level numbered line: "1. x", "**1. x**", "## 1. x". Indented lines are
 # sub-lists inside an item and do not start a new sequence.

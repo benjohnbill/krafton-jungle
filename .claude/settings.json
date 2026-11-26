@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /home/benjohnbill/dev/krafton-jungle/.claude/hooks/protect-upstream-tests.py"
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-upstream-tests.py"
           }
         ]
       }

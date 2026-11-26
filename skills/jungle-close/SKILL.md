@@ -12,7 +12,7 @@ exercise he calls done (step 1). Report at the end as a numbered list.
 ## 0. Facts
 
 - `WEEK` = `git rev-parse --show-toplevel`.
-- Week dir = the directory directly under `~/dev/krafton-jungle/` that
+- Week dir = the directory directly under `~/dev/learning/krafton-jungle/` that
   holds `cwd` (`week13` for `week13/mini-webserver`). It can differ from
   `WEEK`: `week11-12/` and `week13/` are not repositories, and `week13/`'s
   personal rules sit above the team repository.
@@ -27,7 +27,7 @@ exercise he calls done (step 1). Report at the end as a numbered list.
   `git status --porcelain` (week05: `challenges/NN_name/`), plus what he
   named in the request.
 - Memory dir = `~/.claude/projects/<WEEK with every "/" replaced by "-">/memory/`
-  (`/home/benjohnbill/dev/krafton-jungle/week05` →
+  (`/home/benjohnbill/dev/learning/krafton-jungle/week05` →
   `-home-benjohnbill-dev-krafton-jungle-week05`).
 
 ## 1. Verify
@@ -47,7 +47,7 @@ close.
 
 1. **Sheet against card.** The sheet row holds the intended shape; the
    `pintos-index` card shows the actual shape. Rebuild the index
-   (`cd ~/dev/krafton-jungle/tools/pintos-index && uv run pintos-index`).
+   (`cd ~/dev/learning/krafton-jungle/tools/pintos-index && uv run pintos-index`).
    For each function changed since the last close
    (`git diff --name-only` plus today's commits, then the functions in those
    hunks) that has a row in `notes/sheets/<stage>/`, compare the row's
@@ -82,7 +82,7 @@ prose, no headers.
 4. Where it was verified and the exit code ("Verified on the host and in the
    container (glibc 2.39): exit 0.").
 
-Reference: `git -C ~/dev/krafton-jungle/week05 show eca29f3`.
+Reference: `git -C ~/dev/learning/krafton-jungle/week05 show eca29f3`.
 
 WIP title: `WIP NN_name: <where he stopped>`. Body: what was confirmed, what
 was killed, the next step.
@@ -172,7 +172,7 @@ Checks that the agent still follows `docs/tutor-spine.md` § His signals.
 Design and its reasons: `~/.claude/plans/signals-audit/FINAL.md`.
 
 ```
-python3 ~/dev/krafton-jungle/scripts/signals-audit.py scan > <scratchpad>/signals.json
+python3 ~/dev/learning/krafton-jungle/scripts/signals-audit.py scan > <scratchpad>/signals.json
 ```
 
 - `{"skip": N}` → the last report is under 14 days old. The close report
@@ -194,11 +194,11 @@ python3 ~/dev/krafton-jungle/scripts/signals-audit.py scan > <scratchpad>/signal
   Keep the 3 strongest. Each row: id, evidence quotes (120 chars at most),
   and a proposed spine diff. A new bullet names one to cut when the spine
   already has 6.
-- Write `~/dev/krafton-jungle/signals/YYYY-MM-DD.md`: counts, every judged
+- Write `~/dev/learning/krafton-jungle/signals/YYYY-MM-DD.md`: counts, every judged
   case with session id and timestamp, the rows. Put the rows into
   `signals/state.json` `rows` with `status: pending`. Then run
   `signals-audit.py record YYYY-MM-DD '<counts JSON>'`.
-- Commit in `~/dev/krafton-jungle`: `git add signals/` only. If
+- Commit in `~/dev/learning/krafton-jungle`: `git add signals/` only. If
   `git diff --cached --name-only` shows any path outside `signals/`, unstage
   and stop. Title `Signals audit YYYY-MM-DD`. Push under the rule of step 3.
 - Do not edit the spine here. He answers rows by number, now or at a later

@@ -81,7 +81,7 @@ Read `~/.claude/docs/tool-guides/barrier-placement.md` first.
 
 1. **Test protection.** If the repo has `pintos/tests/`, write
    `.claude/settings.local.json` with the `PreToolUse` hook that runs
-   `~/dev/krafton-jungle/.claude/hooks/protect-upstream-tests.py` (copy it
+   `~/dev/learning/krafton-jungle/.claude/hooks/protect-upstream-tests.py` (copy it
    from `week09/.claude/settings.local.json`). Criterion: a real `claude -p`
    session started in the week repo is blocked when it edits an upstream
    test, and a new test file passes.
@@ -101,7 +101,7 @@ Build outputs (`build/`, `build-docker/`, binaries beside sources).
 
 ## 4. Issues — solo week, if `issue-template/weekN_issues_complete.csv` exists
 
-Copy `~/dev/krafton-jungle/make_week05_issues.py` to `make_weekNN_issues.py`
+Copy `~/dev/learning/krafton-jungle/make_week05_issues.py` to `make_weekNN_issues.py`
 beside it; adapt `REPO`, `WEEK`, `ROOT`, `CSV`, and the collector that pulls
 each exercise's statement (question 6). The five `공통 -` rows are the same
 every week. `--dry-run`, then run. Criterion: `gh issue list --limit 100`
@@ -141,11 +141,11 @@ Plus, for a team or build week, `Mode:` on the first line.
 Draft from the answers to questions 2–7; the Mode section records the
 course words and his answers to 3–4. `LATEST/AGENTS.md` is the shape
 reference. The week's `CLAUDE.md` is only the shim: an exact copy of
-`~/dev/study/CLAUDE.md`, which imports `@AGENTS.md`. In a team week both files
+`~/dev/learning/study/CLAUDE.md`, which imports `@AGENTS.md`. In a team week both files
 are local: add `AGENTS.md` and `CLAUDE.md` to `.git/info/exclude`. If the repo
 tracks a `CLAUDE.md` or `AGENTS.md`, use `CLAUDE.local.md` instead (Claude Code
 only). The week rules are user scope: write the draft to
-`~/dev/krafton-jungle/docs/proposals/weekNN-agents-md.md` and give him the
+`~/dev/learning/krafton-jungle/docs/proposals/weekNN-agents-md.md` and give him the
 two copy commands (the draft to `AGENTS.md`, the shim to `CLAUDE.md`).
 Criterion: he confirms both files are in place.
 
@@ -191,7 +191,7 @@ with `Status: active`.
 
 - Solo week: the Map includes the personal layer from §1 to §6b. Commit
   the README with §8.
-- Team week: write `~/dev/krafton-jungle/docs/proposals/weekNN-readme.md`
+- Team week: write `~/dev/learning/krafton-jungle/docs/proposals/weekNN-readme.md`
   only when the repo has no README or the upstream test from §0 holds. Its
   Map lists only paths a teammate's clone has, and it also carries the team
   sections. Otherwise skip aloud. When he owns the repo and asks, commit the
@@ -201,7 +201,7 @@ Criterion: `~/.claude/scripts/readme-check <readme> <repo>` exits 0.
 
 ## 7. Study index — the previous week's WIL link and this week's heading
 
-In `~/dev/krafton-jungle/benjohnbill.github.io/index.html` (rules: that
+In `~/dev/learning/krafton-jungle/benjohnbill.github.io/index.html` (rules: that
 repository's `AGENTS.md`):
 
 - Add `<a class="wil" href="<URL>">WIL →</a>` inside the previous week's

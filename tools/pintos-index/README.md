@@ -9,7 +9,7 @@ Aside agent (Markdown cards). Design: `~/.claude/plans/pintos-clangd-index/FINAL
 ## Commands
 
 ```sh
-cd ~/dev/krafton-jungle/tools/pintos-index
+cd ~/dev/learning/krafton-jungle/tools/pintos-index
 uv run pintos-index            # build week09/.code-index (about 3 s)
 uv run pintos-index-verify     # gate: freshness, kernel set, diagnostics, clangd oracle, golden, run time
 uv run pintos-index-mutate     # proof that verify fails when a fact disappears

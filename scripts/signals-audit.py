@@ -130,7 +130,7 @@ def scan(root, since):
             ref = {k: e[k] for k in ('ts', 'sid', 'cwd', 'branch')}
             if e['kind'] == 'A' and numbering_collision(e['text']):
                 cand['numbered'].append(dict(ref, reply=clip(e['text'], 1500)))
-            if e['kind'] == 'W' and e['text'].startswith(os.path.expanduser('~/dev/krafton-jungle/')) \
+            if e['kind'] == 'W' and e['text'].startswith(os.path.expanduser('~/dev/learning/krafton-jungle/')) \
                     and CODE_FILE.search(e['text']) and not NOT_EXERCISE.search(e['text']):
                 before = [x['text'] for x in events[:i] if x['kind'] == 'U'][-3:]
                 cand['probe'].append(dict(ref, path=e['text'],

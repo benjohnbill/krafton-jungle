@@ -75,7 +75,7 @@ directories rather than assuming ownership.
   Put requested probe programs in its `lab/` or designated scratch directory.
 - Each independent child repository keeps its instructions in its own
   `AGENTS.md`, with a `CLAUDE.md` shim that is an exact copy of
-  `~/dev/study/CLAUDE.md`. Add both when setting up a new repository here.
+  `~/dev/learning/study/CLAUDE.md`. Add both when setting up a new repository here.
 - Before touching the study site (`benjohnbill.github.io/`), read its
   `AGENTS.md`, section "Site rules": page paths, copies of originals, card
   attributes, week headings.

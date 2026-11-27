@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>σ(Wa + b)는 우리 mnist 코드 어디에</title>
+<link rel="stylesheet" href="https://benjohnbill.github.io/assets/site.css">
+<style>
+/* type scale follows DESIGN.md: root 19px, headings ×1.25, secondary .85rem (16px Korean floor), code 16px */
+html { font-size: 19px; }
+body { font-size: 1rem; }
+.wrap { max-width: 900px; margin: 0 auto; padding: 32px 16px 72px; display: flex; flex-direction: column; }
+h1 { font-family: var(--font-head); font-size: 1.95rem; line-height: 1.25; margin: 12px 0 6px; }
+h2 { font-family: var(--font-head); font-size: 1.56rem; line-height: 1.35; margin: 64px 0 10px; }
+h3 { font-family: var(--font-head); font-size: 1.25rem; line-height: 1.4; margin: 28px 0 6px; }
+p { margin: 14px 0 0; }
+.sub { color: var(--ink-2); margin: 0; }
+.lead { font-size: 1.1rem; line-height: 1.75; margin-top: 10px; }
+/* the question itself: the one sentence the team argues about */
+.ask { font-size: 1.1rem; line-height: 1.75; font-weight: 600; margin-top: 18px; }
+.flow, .predict { margin: 14px 0 0; padding-left: 1.4em; }
+.flow li + li, .predict li + li { margin-top: 6px; }
+pre { background: var(--surface-2); border-radius: 4px; padding: 12px 14px; overflow-x: auto; font-size: 16px; line-height: 1.6; margin: 10px 0 0; }
+pre .cm { color: var(--muted); }
+.ends { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 14px 0 0; }
+.ends h3 { margin: 0 0 2px; font-size: 1.05rem; }
+.ends pre { margin-top: 6px; font-size: 14px; }
+@media (max-width: 760px) { .ends { grid-template-columns: 1fr; } }
+/* phones: wrap code instead of scrolling it (DESIGN.md rejects horizontal scroll in code); flex children may shrink */
+.wrap > * { min-width: 0; }
+/* a table's min-content width ignores break-word, so cells and inline code must break anywhere on phones */
+@media (max-width: 760px) { pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; } th, td { overflow-wrap: anywhere; padding: 8px 6px; } }
+table { border-collapse: collapse; width: 100%; font-size: .95rem; line-height: 1.6; border: 1px solid var(--line); margin-top: 14px; }
+th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+/* fold card from DESIGN.md § 6: the answer stays shut until the team has argued */
+details.fold { border: 1px solid var(--line); border-radius: 4px; margin: 22px 0 0; }
+details.fold > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: .6em; padding: 12px 16px; font-weight: 600; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::before { content: ""; flex: none; width: .5em; height: .5em; border-right: 2px solid var(--ink-2); border-bottom: 2px solid var(--ink-2); transform: rotate(-45deg); transition: transform .15s; align-self: center; }
+details.fold[open] > summary::before { transform: rotate(45deg); }
+details.fold > summary::after { content: "펼치기"; margin-left: auto; flex: none; font: 400 .75rem var(--font-code); color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 1px 8px; }
+details.fold[open] > summary::after { content: "접기"; }
+details.fold > summary:hover { background: var(--surface-2); }
+details.fold > summary:hover::after { color: var(--ink); border-color: var(--ink-2); }
+details.fold > summary:focus-visible { outline: 2px solid var(--s3); outline-offset: -2px; }
+details.fold[open] > summary { border-bottom: 1px solid var(--line); }
+details.fold > .in { padding: 4px 16px 18px; }
+details.fold h4 { font-family: var(--font-head); font-size: 1.05rem; margin: 20px 0 4px; }
+details.fold ul { margin: 8px 0 0; padding-left: 1.3em; }
+details.fold li + li { margin-top: 6px; }
+::selection { background: var(--s3-soft); }
+</style>
+</head>
+<body>
+<main class="wrap">
+<a class="home" href="https://benjohnbill.github.io/">← 학습 기록</a>
+
+<h1>σ(Wa + b)는 우리 mnist 코드 어디에</h1>
+<p class="sub"><a href="https://youtu.be/_blFagKJhks">3Blue1Brown 「신경망이란? | 딥 러닝 개론 1」</a>을 본 뒤 함께 푸는 두 문제<br>목표는 정답보다 근거: 영상의 한 장면이 코드의 어느 줄인지 맞춰 보기</p>
+
+<h2>1. 진행</h2>
+<ol class="flow">
+<li>질문을 읽고 각자 예측을 먼저 적음</li>
+<li>한 사람씩 예측과 근거를 말함</li>
+<li>의견이 갈리면 영상 장면을 다시 보거나 코드를 실행하거나 AI에게 물음</li>
+<li>생각이 맞춰지면 접힌 칸을 펼쳐 비교</li>
+</ol>
+<p>AI에게는 예측을 말한 뒤에 물음. 먼저 물으면 토론이 거기서 끝남</p>
+
+<h2>2. 같은 식, 두 코드</h2>
+<p class="lead">영상 <a href="https://youtu.be/_blFagKJhks?t=806">13:26</a> 이후: 한 layer의 식 <code>a⁽¹⁾ = σ(W a⁽⁰⁾ + b)</code>를 Python 한 줄로 바꿈<br>우리 mnist에도 같은 일을 하는 코드가 있음</p>
+<div class="ends">
+<div>
+<h3>영상 (Michael Nielsen 코드)</h3>
+<pre><span class="cm"># 영상 화면 그대로</span>
+def feedforward(self, a):
+    for b, w in zip(self.biases, self.weights):
+        a = sigmoid(np.dot(w, a) + b)
+    return a</pre>
+</div>
+<div>
+<h3>우리 mnist (요약)</h3>
+<pre><span class="cm"># src/network.py, BatchNorm과 Dropout은 뺌</span>
+self.layers = [Affine(W1, b1), ReLU(),
+               Affine(W2, b2)]
+
+def forward(self, x):
+    out = x
+    for layer in self.layers:
+        out = layer.forward(out)
+    return out  <span class="cm"># logits</span>
+
+<span class="cm"># src/layers.py, Affine docstring:</span>
+<span class="cm"># 수식은 y = x @ W + b 입니다.</span></pre>
+</div>
+</div>
+<table>
+<tr><th></th><th>영상</th><th>우리 mnist</th></tr>
+<tr><td>layer 구조</td><td>784 → 16 → 16 → 10</td><td>784 → 128 → 10</td></tr>
+<tr><td>한 layer의 계산</td><td><code>sigmoid(np.dot(w, a) + b)</code></td><td><code>Affine</code> (<code>x @ W + b</code>) 뒤에 <code>ReLU</code></td></tr>
+<tr><td>마지막 layer</td><td>sigmoid</td><td>activation function 없음</td></tr>
+</table>
+
+<h2>3. 문제 1: neuron 하나의 weight는 W1의 어디에?</h2>
+<p class="lead">영상 <a href="https://youtu.be/_blFagKJhks?t=519">8:39</a>: 두 번째 layer의 neuron 하나에 연결선 784개<br>그 weight 784개를 28×28 격자 그림으로 보여 줌</p>
+<p class="ask">그 격자 그림 한 장은 우리 <code>W1</code>의 어디일까? 그리고 영상은 <code>np.dot(w, a)</code>, 우리는 <code>x @ W</code>: 곱하는 순서는 왜 반대일까?</p>
+<p>실행하기 전에 A부터 F까지 출력을 예측. <code>mnist/src</code>에서 <code>python</code>을 켜고 붙여 넣음</p>
+<pre>import numpy as np
+from network import TwoLayerNet
+
+W1 = TwoLayerNet().params["W1"]
+print("A", W1.shape)
+print("B", W1[0].shape, W1[:, 0].shape)
+print("C", W1[:, 0].reshape(28, 28).shape)
+
+x = np.random.default_rng(1).random((4, 784))  <span class="cm"># batch: 이미지 4장</span>
+print("D", (x @ W1).shape)
+print("E", np.allclose(W1.T @ x[0], (x @ W1)[0]))
+W1 @ x[0]  <span class="cm"># F: 영상 순서 그대로 곱하면?</span></pre>
+<ul class="predict">
+<li>B: 둘 중 neuron 하나의 weight 784개는 어느 쪽?</li>
+<li>E: <code>True</code>와 <code>False</code> 중 어느 쪽?</li>
+<li>F: 에러가 난다면 왜?</li>
+</ul>
+
+<details class="fold">
+<summary>실행 결과와 해설</summary>
+<div class="in">
+<pre>A (784, 128)
+B (128,) (784,)
+C (28, 28)
+D (4, 128)
+E True
+ValueError: matmul: Input operand 1 has a mismatch in its core dimension 0, ...
+(size 784 is different from 128)</pre>
+<h4>영상의 W와 우리 W1</h4>
+<ul>
+<li>영상 <code>W</code>는 <code>(16, 784)</code>: 행 하나 = neuron 하나. 입력 <code>a</code>는 이미지 1장을 세운 <code>(784,)</code>, 결과 <code>np.dot(w, a)</code>는 <code>(16,)</code></li>
+<li>우리 <code>W1</code>은 <code>(784, 128)</code>: 열 하나 = neuron 하나 (A)</li>
+<li>그래서 영상의 격자 그림 = <code>W1[:, 0].reshape(28, 28)</code> (B의 두 번째, C)</li>
+<li><code>W1[0]</code>은 <code>(128,)</code>: 픽셀 0번 하나가 neuron 128개 각각에 주는 weight</li>
+</ul>
+<h4>순서가 반대인 이유</h4>
+<ul>
+<li>우리 <code>x</code>는 <code>(N, 784)</code>: 행 하나 = 이미지 1장. batch를 한 번에 계산하려고 이미지를 행으로 쌓음</li>
+<li><code>x @ W1</code> = <code>(N, 784) @ (784, 128)</code> → <code>(N, 128)</code> (D)</li>
+<li>이미지 1장만 떼어 영상 방향으로 쓰면 <code>W1.T @ x[0]</code>, 값이 같음 (E). 우리 <code>W1</code> = 영상 <code>W</code>의 전치</li>
+<li><code>W1 @ x[0]</code>은 안쪽 차원이 128과 784로 달라서 에러 (F). 곱하는 순서는 <code>shape</code>이 정함</li>
+</ul>
+<p>정리: 식은 같음. 차이는 이미지 N장을 행으로 쌓은 것 하나</p>
+</div>
+</details>
+
+<h2>4. 문제 2: 마지막 layer, sigmoid 없이도 답을 고를까?</h2>
+<p class="lead">영상 <a href="https://youtu.be/_blFagKJhks?t=615">10:15</a>: 모든 layer에 sigmoid, activation은 전부 0~1 사이<br>영상 <a href="https://youtu.be/_blFagKJhks?t=1010">16:50</a>: 요즘은 sigmoid 대신 <code>ReLU</code></p>
+<p>우리 mnist는 다름. hidden layer에는 <code>ReLU</code>, 마지막 <code>Affine</code> 뒤에는 activation function 없음. <code>forward</code> docstring: <q>(batch_size, 10) logits. 확률이 아니라 점수입니다.</q></p>
+<p class="ask">sigmoid로 0~1에 눌러 주지 않아도, 영상의 "가장 밝은 neuron이 답"은 그대로 통할까?</p>
+<p>아래 코드는 어디서든 실행됨. <code>logits</code>는 이미지 1장에 대해 지어낸 값</p>
+<pre>import numpy as np
+
+logits = np.array([1.3, -0.4, 2.7, 0.2, -1.8, 0.9, 3.4, -0.6, 2.1, 0.0])
+sigmoid = 1 / (1 + np.exp(-logits))
+print("A", logits.argmax(), sigmoid.argmax())
+print("B", sigmoid.round(2))
+print("C", sigmoid.sum().round(2))</pre>
+<ul class="predict">
+<li>A: 두 숫자는 같을까?</li>
+<li>C: sigmoid 10개의 합은 1일까?</li>
+</ul>
+
+<details class="fold">
+<summary>실행 결과와 해설</summary>
+<div class="in">
+<pre>A 6 6
+B [0.79 0.4  0.94 0.55 0.14 0.71 0.97 0.35 0.89 0.5 ]
+C 6.24</pre>
+<h4>답 고르기에는 순서만 필요</h4>
+<ul>
+<li>sigmoid는 큰 값을 더 큰 값으로 보내는 함수(단조 증가) → 순서가 그대로 → <code>argmax</code>도 같음 (A)</li>
+<li>softmax도 마찬가지. <code>network.py</code>의 <code>predict</code> docstring에 같은 설명 있음</li>
+<li>그래서 <code>logits</code>가 음수거나 1보다 커도 가장 큰 값이 답</li>
+</ul>
+<h4>0~1 사이라고 확률은 아님</h4>
+<ul>
+<li>sigmoid 값은 하나하나 0~1 사이 (B), 그러나 합은 6.24 (C)</li>
+<li>neuron 10개가 각자 따로 매긴 점수일 뿐, 확률 분포가 아님</li>
+<li>합이 1인 확률은 softmax가 만듦. 우리 코드에서는 <code>SoftmaxWithLoss</code>가 맡음</li>
+</ul>
+<h4>hidden layer의 <code>ReLU</code></h4>
+<ul>
+<li><code>ReLU</code> = <code>max(0, x)</code>: 0 이상, 위로는 한계 없음</li>
+<li>영상의 "neuron = 0~1 사이 숫자를 담는 칸"은 우리 hidden layer에서는 성립하지 않음</li>
+<li>영상 p.s.의 이유: <code>ReLU</code>가 학습이 훨씬 쉬움</li>
+</ul>
+</div>
+</details>
+
+<h2>5. 남는 질문</h2>
+<p class="lead">답은 순서만으로 고를 수 있음 → 그러면 softmax로 확률을 만드는 이유는?<br>이어지는 곳: 영상 2편, 책 4장 loss</p>
+</main>
+</body>
+</html>
